@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SUPER_ADMIN'];
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SUPER_ADMIN';
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ─── Users ────────────────────────────────────────────────────────────────
+    // All reads/writes go through server-side API routes (Firebase Admin SDK).
+    // Client SDK access is locked down entirely.
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if false; // Server only
+    }
+
+    // ─── MCQs ─────────────────────────────────────────────────────────────────
+
+    match /mcqs/{mcqId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Server only
+    }
+
+    // ─── Subjects ─────────────────────────────────────────────────────────────
+
+    match /subjects/{subjectId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ─── Categories ───────────────────────────────────────────────────────────
+
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ─── Tags ─────────────────────────────────────────────────────────────────
+
+    match /tags/{tagId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ─── Tests ────────────────────────────────────────────────────────────────
+
+    match /tests/{testId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ─── Test Attempts ────────────────────────────────────────────────────────
+
+    match /testAttempts/{attemptId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+
+    // ─── Mock Sessions ────────────────────────────────────────────────────────
+
+    match /mockSessions/{sessionId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+
+    // ─── Groups ───────────────────────────────────────────────────────────────
+
+    match /groups/{groupId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ─── Default deny ─────────────────────────────────────────────────────────
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
