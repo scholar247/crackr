@@ -5,6 +5,7 @@ import { DEFAULT_PROFILE } from '@/types';
 import { userRepository } from '@/server/repositories/user.repository';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
