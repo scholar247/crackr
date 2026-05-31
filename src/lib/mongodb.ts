@@ -9,7 +9,7 @@ export async function getMongoDb(): Promise<Db> {
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error('MONGODB_URI environment variable is not set');
 
-  const dbName = process.env.MONGODB_DB ?? 'crackr';
+  const dbName = process.env.MONGODB_DB ?? 'scholar247';
 
   if (!client) {
     client = new MongoClient(uri, {

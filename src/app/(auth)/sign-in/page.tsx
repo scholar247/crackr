@@ -5,7 +5,7 @@ import { SignInForm } from './sign-in-form';
 
 export const metadata: Metadata = {
   title: 'Sign In',
-  description: 'Sign in to Crackr with your Google account',
+  description: 'Sign in to Scholar247 with your Google account',
 };
 
 export default async function SignInPage({

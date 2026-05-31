@@ -8,7 +8,7 @@ import { MongoClient } from 'mongodb';
 async function setup() {
   const uri = process.env.MONGODB_URI;
   if (!uri) throw new Error('MONGODB_URI not set');
-  const dbName = process.env.MONGODB_DB ?? 'crackr';
+  const dbName = process.env.MONGODB_DB ?? 'scholar247';
 
   const client = new MongoClient(uri);
   await client.connect();

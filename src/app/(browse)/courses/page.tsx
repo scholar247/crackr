@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Courses — Expert-led prep for competitive exams | crackr',
+  title: 'Courses — Expert-led prep for competitive exams | scholar247',
   description: 'Live and recorded courses by industry engineers and IIT-NIT faculty. Mock tests, rankings, counselling — everything you need to crack your exam.',
 };
 

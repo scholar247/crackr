@@ -3,7 +3,7 @@ import { PracticeBrowser } from './practice-browser';
 import { SectionErrorBoundary } from '@/components/shared/section-error';
 
 export const metadata: Metadata = {
-  title: 'Practice | crackr',
+  title: 'Practice | scholar247',
   description: 'Practice MCQs filtered by subject, difficulty, and topic with instant explanations.',
 };
 

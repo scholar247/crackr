@@ -54,7 +54,7 @@ export function AdminReportsClient() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `crackr-top-tests-${days}d.csv`;
+    a.download = `scholar247-top-tests-${days}d.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -66,7 +66,7 @@ export function AdminReportsClient() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `crackr-daily-attempts-${days}d.csv`;
+    a.download = `scholar247-daily-attempts-${days}d.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

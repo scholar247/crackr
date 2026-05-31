@@ -6,7 +6,7 @@ import { ProgressClient } from './progress-client';
 import { SectionErrorBoundary } from '@/components/shared/section-error';
 
 export const metadata: Metadata = {
-  title: 'Progress | crackr',
+  title: 'Progress | scholar247',
   description: 'Track your learning progress',
 };
 

@@ -4,7 +4,7 @@ import { BookOpen, ClipboardList, Users, Activity, Plus, BarChart2, Tag, FolderO
 import { Button } from '@/components/ui/button';
 import { AdminDashboardStats } from './admin-dashboard-stats';
 
-export const metadata: Metadata = { title: 'Admin Dashboard | crackr' };
+export const metadata: Metadata = { title: 'Admin Dashboard | scholar247' };
 
 const QUICK_ACTIONS = [
   { label: 'New MCQ', href: '/admin/mcq/new', icon: Plus },

@@ -279,7 +279,7 @@ export function LandingPage({ session, enrolledCourseId }: LandingPageProps = {}
           <div className="text-center space-y-3">
             <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Everything you need to succeed</h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              From daily practice to full-length tests, crackr has every tool a serious aspirant needs.
+              From daily practice to full-length tests, scholar247 has every tool a serious aspirant needs.
             </p>
           </div>
 
@@ -471,7 +471,7 @@ export function LandingPage({ session, enrolledCourseId }: LandingPageProps = {}
               {
                 name: 'Arjun Mehta',
                 exam: 'JEE Advanced — AIR 247',
-                quote: 'crackr\'s analytics showed me exactly which chapters were dragging my score down. Fixed them in 2 weeks.',
+                quote: 'scholar247\'s analytics showed me exactly which chapters were dragging my score down. Fixed them in 2 weeks.',
               },
               {
                 name: 'Priya Sharma',
@@ -658,14 +658,14 @@ export function LandingPage({ session, enrolledCourseId }: LandingPageProps = {}
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
                 <Zap className="h-3.5 w-3.5 text-primary-foreground" />
               </div>
-              <span className="font-bold">crackr</span>
+              <span className="font-bold">scholar247</span>
               <span className="text-muted-foreground text-sm">— Learn, Practice, Progress, Crack</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
               <a href="#" className="hover:text-foreground transition-colors">Terms</a>
               <a href="#" className="hover:text-foreground transition-colors">Contact</a>
-              <span>© {new Date().getFullYear()} crackr</span>
+              <span>© {new Date().getFullYear()} scholar247</span>
             </div>
           </div>
         </div>

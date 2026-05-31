@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { serverGet } from '@/lib/server-fetch';
 import { StudyPlanClient } from './study-plan-client';
 
-export const metadata: Metadata = { title: 'Study Plan | crackr' };
+export const metadata: Metadata = { title: 'Study Plan | scholar247' };
 
 const NIMCET_EXAM_DATE = '2025-06-01T09:00:00+05:30';
 

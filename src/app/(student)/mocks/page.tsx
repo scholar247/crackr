@@ -3,7 +3,7 @@ import { MocksClient } from './mocks-client';
 import { SectionErrorBoundary } from '@/components/shared/section-error';
 
 export const metadata: Metadata = {
-  title: 'Mock Tests | crackr',
+  title: 'Mock Tests | scholar247',
   description: 'Generate and take timed full-length mock tests. See your rank and percentile.',
 };
 

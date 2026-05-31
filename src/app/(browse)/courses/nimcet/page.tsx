@@ -30,7 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'NIMCET 2025 Live Course | crackr',
+  title: 'NIMCET 2025 Live Course | scholar247',
   description:
     'Crack NIMCET 2025 with live daily classes, weekend marathons, IIT/NIT expert faculty, personalised counselling, full mock tests series and detailed rank analytics.',
 };
@@ -194,7 +194,7 @@ export default async function NimcetCourseLandingPage() {
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
                   Crack{' '}
                   <span className="text-primary">NIMCET 2025</span>
-                  <br />with crackr
+                  <br />with scholar247
                 </h1>
                 <p className="mt-4 text-lg text-muted-foreground max-w-lg leading-relaxed">
                   India's most comprehensive NIMCET prep platform — live daily classes, weekend marathons, IIT/NIT faculty, personalised counselling and an AI-powered mock test series with real-time rankings.
@@ -559,7 +559,7 @@ export default async function NimcetCourseLandingPage() {
             Your NIMCET 2025 journey starts today.
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Join 1 200+ students already preparing with crackr. Seats in the live batch are limited.
+            Join 1 200+ students already preparing with scholar247. Seats in the live batch are limited.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button size="lg" asChild>

@@ -4,11 +4,11 @@ import type { Metadata } from 'next';
 import { serverGet } from '@/lib/server-fetch';
 
 export const metadata: Metadata = {
-  title: 'crackr — Learn, Practice, Progress, Crack Exams',
+  title: 'scholar247 — Learn, Practice, Progress, Crack Exams',
   description:
     'The smartest way to prepare for competitive exams. Practice thousands of MCQs, take timed mock tests, track your progress with analytics, and crack your target exam.',
   openGraph: {
-    title: 'crackr — Crack Your Exam',
+    title: 'scholar247 — Crack Your Exam',
     description: 'Practice MCQs, take mock tests, track progress. Built for exam toppers.',
     type: 'website',
   },

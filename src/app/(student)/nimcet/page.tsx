@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { NimcetCountdown } from './nimcet-countdown';
 import type { SubjectClient } from '@/types';
 
-export const metadata: Metadata = { title: 'NIMCET Preparation | crackr' };
+export const metadata: Metadata = { title: 'NIMCET Preparation | scholar247' };
 
 // NIMCET 2025 tentative date (May last week / June first week)
 const NIMCET_EXAM_DATE = '2025-06-01T09:00:00+05:30';

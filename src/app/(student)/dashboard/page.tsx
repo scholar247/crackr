@@ -28,7 +28,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { serverGet } from '@/lib/server-fetch';
 
-export const metadata: Metadata = { title: 'Dashboard | crackr' };
+export const metadata: Metadata = { title: 'Dashboard | scholar247' };
 
 const QUICK_LINKS = [
   { label: 'NIMCET Hub', href: '/nimcet', icon: Target, description: 'Exam overview & countdown' },

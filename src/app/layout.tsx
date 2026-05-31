@@ -12,14 +12,14 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'crackr — Learn, Practice, Progress, Crack',
-    template: '%s | crackr',
+    default: 'Scholar247 — Learn, Practice, Progress, Crack',
+    template: '%s | scholar247',
   },
   description:
-    'crackr is an EdTech platform for practising MCQs, taking mock tests, and tracking your exam preparation progress. Built for JEE, NEET, UPSC, and more.',
+    'scholar247 is an EdTech platform for practising MCQs, taking mock tests, and tracking your exam preparation progress. Built for JEE, NEET, UPSC, and more.',
   keywords: ['MCQ', 'practice', 'exam preparation', 'mock test', 'JEE', 'NEET', 'UPSC', 'EdTech'],
   openGraph: {
-    siteName: 'crackr',
+    siteName: 'scholar247',
     type: 'website',
   },
 };

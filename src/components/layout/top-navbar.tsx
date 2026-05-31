@@ -66,8 +66,8 @@ export function TopNavbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center shrink-0">
               <NextImage
-                src="/crackr_logo.svg"
-                alt="crackr"
+                src="/logo.svg"
+                alt="scholar247"
                 width={144}
                 height={30}
                 className="dark:invert"
@@ -120,8 +120,8 @@ export function TopNavbar() {
         <div className="w-full px-4 md:px-6 flex items-center">
           <Link href="/dashboard" className="flex items-center shrink-0">
             <NextImage
-              src="/crackr_logo.svg"
-              alt="crackr"
+              src="/logo.svg"
+              alt="scholar247"
               width={96}
               height={29}
               className="dark:invert"

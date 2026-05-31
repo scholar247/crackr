@@ -23,9 +23,9 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const config = getExamConfig(slug);
-  if (!config) return { title: 'Exam Hub | crackr' };
+  if (!config) return { title: 'Exam Hub | scholar247' };
   return {
-    title: `${config.name} Preparation | crackr`,
+    title: `${config.name} Preparation | scholar247`,
     description: config.heroDesc,
   };
 }

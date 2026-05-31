@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { serverGet } from '@/lib/server-fetch';
 import { TeacherDashboardClient } from './teacher-dashboard-client';
 
-export const metadata: Metadata = { title: 'Teacher Dashboard | crackr' };
+export const metadata: Metadata = { title: 'Teacher Dashboard | scholar247' };
 
 export default async function TeacherDashboardPage() {
   const session = await auth();

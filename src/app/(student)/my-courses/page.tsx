@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { serverGet } from '@/lib/server-fetch';
 import { MyCoursesClient } from './my-courses-client';
 
-export const metadata: Metadata = { title: 'My Courses | crackr' };
+export const metadata: Metadata = { title: 'My Courses | scholar247' };
 
 export default async function MyCoursesPage() {
   const session = await auth();

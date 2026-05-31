@@ -8,9 +8,9 @@ export async function generateMetadata({ params }: { params: Promise<{ courseId:
   const { courseId } = await params;
   try {
     const data = await serverGet<{ courseTitle: string }>(`/api/student/courses/${courseId}/learn`);
-    return { title: `Learn: ${data.courseTitle} | crackr` };
+    return { title: `Learn: ${data.courseTitle} | scholar247` };
   } catch {
-    return { title: 'Course Player | crackr' };
+    return { title: 'Course Player | scholar247' };
   }
 }
 

@@ -1,4 +1,4 @@
-# crackr
+# scholar247
 
 An EdTech platform for practising MCQs, taking mock tests, and tracking exam preparation progress. Built for JEE, NEET, UPSC, and similar competitive exams.
 

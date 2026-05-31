@@ -422,7 +422,7 @@ export function OnboardingClient() {
       });
       // Force JWT token refresh so onboardingCompleted is true before navigating
       await updateSession();
-      toast.success('Welcome to crackr! Your profile is ready.');
+      toast.success('Welcome to scholar247! Your profile is ready.');
       window.location.replace('/dashboard');
     }
   };
@@ -440,7 +440,7 @@ export function OnboardingClient() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
             <Zap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold tracking-tight">crackr</span>
+          <span className="text-2xl font-bold tracking-tight">scholar247</span>
         </div>
 
         {/* Progress */}

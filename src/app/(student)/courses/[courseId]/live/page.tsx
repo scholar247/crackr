@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-export const metadata: Metadata = { title: 'Live Sessions | crackr' };
+export const metadata: Metadata = { title: 'Live Sessions | scholar247' };
 
 export default async function CourseLivePage({ params }: { params: Promise<{ courseId: string }> }) {
   const session = await auth();

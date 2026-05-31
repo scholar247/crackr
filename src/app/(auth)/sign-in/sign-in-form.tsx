@@ -2,7 +2,8 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import { Zap, AlertCircle } from 'lucide-react';
+import NextImage from 'next/image';
+import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 
@@ -43,13 +44,15 @@ export function SignInForm({ error, callbackUrl }: SignInFormProps) {
       <div className="w-full max-w-sm space-y-8">
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg">
-            <Zap className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight">crackr</h1>
-            <p className="text-muted-foreground mt-1">Learn smarter. Score higher.</p>
-          </div>
+          <NextImage
+            src="/logo.svg"
+            alt="scholar247"
+            width={160}
+            height={48}
+            className="dark:invert"
+            priority
+          />
+          <p className="text-muted-foreground">Learn smarter. Score higher.</p>
         </div>
 
         {/* Card */}
