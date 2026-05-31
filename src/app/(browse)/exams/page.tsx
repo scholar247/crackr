@@ -69,12 +69,14 @@ export default async function ExamsPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {byCategory[category]!.map((exam) => (
-                <Link
+                <div
                   key={exam.id}
-                  href={`/exams/${exam.slug}`}
                   className={`group relative rounded-2xl border p-5 transition-all hover:shadow-md hover:-translate-y-0.5 ${CATEGORY_COLORS[category]}`}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-3">
+                  {/* Main card link covers everything except the PYP button */}
+                  <Link href={`/exams/${exam.slug}`} className="absolute inset-0 rounded-2xl" aria-label={exam.name} />
+
+                  <div className="relative flex items-start justify-between gap-2 mb-3">
                     <div>
                       <div className="flex items-center gap-2 mb-0.5">
                         <h3 className="font-bold text-foreground">{exam.name}</h3>
@@ -88,10 +90,10 @@ export default async function ExamsPage() {
                   </div>
 
                   {exam.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{exam.description}</p>
+                    <p className="relative text-xs text-muted-foreground line-clamp-2 mb-3">{exam.description}</p>
                   )}
 
-                  <div className="flex items-center gap-3 flex-wrap">
+                  <div className="relative flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Hash className="h-3 w-3" />
                       <span>{(exam.mcqCount ?? 0).toLocaleString()} questions</span>
@@ -103,14 +105,13 @@ export default async function ExamsPage() {
                     )}
                     <Link
                       href={`/pyp/${exam.slug}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-1 text-xs text-primary hover:underline"
+                      className="relative flex items-center gap-1 text-xs text-primary hover:underline z-10"
                     >
                       <ScrollText className="h-3 w-3" />
                       PYP
                     </Link>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </section>
