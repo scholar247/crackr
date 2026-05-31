@@ -24,13 +24,15 @@ export default async function StudentLayout({
     layoutData = await serverGet('/api/student/layout');
   } catch { /* ok */ }
 
-  if (!layoutData?.onboardingCompleted) {
+  const dbRole = (layoutData?.role ?? session.user.role) as UserRole;
+  const isElevated = ADMIN_ROLES.includes(dbRole);
+
+  if (!isElevated && !layoutData?.onboardingCompleted) {
     redirect('/onboarding');
   }
 
   // If DB role is elevated but JWT is stale, SessionSync will refresh + redirect.
   // We still render the layout so the client has a page context to run the effect in.
-  const dbRole = (layoutData?.role ?? session.user.role) as UserRole;
   const jwtRole = session.user.role as UserRole;
   const roleStale = dbRole !== jwtRole;
 
