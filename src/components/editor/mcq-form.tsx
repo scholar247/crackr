@@ -62,9 +62,8 @@ async function fetchExamSections(examId: string): Promise<ExamSectionClient[]> {
   return (await res.json()).data as ExamSectionClient[];
 }
 
-async function fetchTopicTree(examIds: string[], subjectId: string): Promise<TopicTreeNode[]> {
-  const params = new URLSearchParams({ examIds: examIds.join(','), subjectId });
-  const res = await fetch(`/api/topics/for-exams?${params}`);
+async function fetchTopicTree(subjectId: string): Promise<TopicTreeNode[]> {
+  const res = await fetch(`/api/subjects/${subjectId}/topics?tree=true`);
   return (await res.json()).data as TopicTreeNode[];
 }
 
@@ -137,12 +136,11 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
   const { data: allExams } = useQuery({ queryKey: ['exams'], queryFn: fetchExams });
   const { data: tags } = useQuery({ queryKey: ['tags'], queryFn: fetchTags });
 
-  // Topic tree from for-exams API (requires both exam + subject selection)
-  const canFetchTopicTree = selectedExamIds.length > 0 && !!watchSubjectId;
+  // Topic tree: scoped to subject only — topics belong to subjects, not exams
   const { data: topicTree = [], isFetching: topicTreeLoading } = useQuery({
-    queryKey: ['topic-tree-for-exams', selectedExamIds, watchSubjectId],
-    queryFn: () => fetchTopicTree(selectedExamIds, watchSubjectId),
-    enabled: canFetchTopicTree,
+    queryKey: ['topic-tree', watchSubjectId],
+    queryFn: () => fetchTopicTree(watchSubjectId),
+    enabled: !!watchSubjectId,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -532,16 +530,12 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
               <p className="text-xs text-muted-foreground">Select a subject to pick a topic.</p>
             )}
 
-            {watchSubjectId && selectedExamIds.length === 0 && (
-              <p className="text-xs text-muted-foreground">Select at least one exam above to browse syllabus topics.</p>
-            )}
-
-            {watchSubjectId && selectedExamIds.length > 0 && (
+            {watchSubjectId && (
               <TopicTreeSelect
                 tree={topicTree}
                 value={watchTopicId ?? null}
                 onChange={(id) => form.setValue('topicId', id ?? '')}
-                placeholder={topicTreeLoading ? 'Loading topics…' : 'Select topic'}
+                placeholder={topicTreeLoading ? 'Loading topics…' : topicTree.length === 0 ? 'No topics found for this subject' : 'Select topic'}
                 disabled={topicTreeLoading}
                 selectableAll
               />
