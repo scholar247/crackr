@@ -34,6 +34,14 @@ export class MongoPYPRepository {
       .sort((a, b) => b.year - a.year || b.month - a.month);
   }
 
+  /** Dedup check — (examId, year, month) should be unique */
+  async findByExamYearMonth(examId: string, year: number, month: number): Promise<PYPClient | null> {
+    const col = await this.col();
+    const doc = await col.findOne({ examId, year, month });
+    if (!doc) return null;
+    return fromMongo(doc) as PYPClient;
+  }
+
   async findByExam(examId: string, activeOnly = true): Promise<PYPClient[]> {
     const col = await this.col();
     const filter = activeOnly ? { examId, isActive: true } : { examId };

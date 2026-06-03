@@ -180,6 +180,14 @@ export class MongoTopicRepository {
     await this._incrementSubjectTopicCount(topic.subjectId, -1);
   }
 
+  /** Dedup check for seeding — unique key is (slug, subjectId, parentId) */
+  async findBySlugInSubject(slug: string, subjectId: string, parentId: string | null): Promise<TopicClient | null> {
+    const col = await this.col();
+    const doc = await col.findOne({ slug, subjectId, parentId: parentId ?? null });
+    if (!doc) return null;
+    return fromMongo(doc) as TopicClient;
+  }
+
   async getTopicsByIds(ids: string[]): Promise<TopicClient[]> {
     if (ids.length === 0) return [];
     const col = await this.col();

@@ -2,6 +2,31 @@ import { auth } from '@/lib/auth';
 import { apiError } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
+/**
+ * Validates the SEED_API_KEY from the Authorization header.
+ * Accepts:  Authorization: Bearer <key>
+ *           Authorization: Basic base64(anything:<key>)
+ * Returns a Response on failure, null on success.
+ */
+export function requireApiKey(req: Request): Response | null {
+  const key = process.env.SEED_API_KEY;
+  if (!key) return apiError('Seed API not enabled — set SEED_API_KEY', 503);
+
+  const auth = req.headers.get('authorization') ?? '';
+
+  if (auth.startsWith('Bearer ') && auth.slice(7) === key) return null;
+
+  if (auth.startsWith('Basic ')) {
+    try {
+      const decoded = Buffer.from(auth.slice(6), 'base64').toString('utf-8');
+      const password = decoded.split(':').slice(1).join(':');
+      if (password === key) return null;
+    } catch { /* fall through */ }
+  }
+
+  return apiError('Invalid API key', 401);
+}
+
 const ROLE_HIERARCHY: Record<UserRole, number> = {
   STUDENT: 0,
   REVIEWER: 1,
