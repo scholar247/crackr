@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
   Plus, Pencil, Trash2, ChevronDown, ChevronRight, GraduationCap,
-  BookOpen, Star,
+  BookOpen, Star, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -68,12 +68,21 @@ interface SectionFormData {
   order: number;
 }
 
-function ExamRow({ exam, onEdit, onDelete, onManageSections }: {
+function ExamRow({ exam, onEdit, onDelete, onManageSections, onRefresh }: {
   exam: ExamClient;
   onEdit: (exam: ExamClient) => void;
   onDelete: (exam: ExamClient) => void;
   onManageSections: (exam: ExamClient) => void;
+  onRefresh: (id: string) => Promise<void>;
 }) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await onRefresh(exam.id);
+    setRefreshing(false);
+  };
+
   return (
     <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors border-b border-border last:border-0">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -102,6 +111,15 @@ function ExamRow({ exam, onEdit, onDelete, onManageSections }: {
         <Button variant="outline" size="sm" onClick={() => onManageSections(exam)}>
           <BookOpen className="h-3.5 w-3.5" />
           Syllabus
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          title="Refresh MCQ count"
+          disabled={refreshing}
+          onClick={handleRefresh}
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
         </Button>
         <Button variant="ghost" size="icon-sm" onClick={() => onEdit(exam)}>
           <Pencil className="h-3.5 w-3.5" />
@@ -200,6 +218,17 @@ export function ExamsClient() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  const handleRefreshExam = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/exams/${id}/refresh-counts`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed');
+      await qc.invalidateQueries({ queryKey: ['admin-exams'] });
+      toast.success('MCQ count refreshed');
+    } catch {
+      toast.error('Failed to refresh count');
+    }
+  };
 
   const deleteExamMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -315,6 +344,7 @@ export function ExamsClient() {
               onEdit={openEditExam}
               onDelete={(e) => deleteExamMutation.mutate(e.id)}
               onManageSections={(e) => setSectionsExam(e)}
+              onRefresh={handleRefreshExam}
             />
           ))}
         </div>
