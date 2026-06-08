@@ -4,7 +4,24 @@ import { requireApiKey } from '@/lib/api-helpers';
 import { apiSuccess, apiError } from '@/lib/utils';
 import { mcqService } from '@/server/services/mcq.service';
 import { DifficultySchema, QuestionTypeSchema, ContentBlockTypeSchema } from '@/schemas';
+import { getMongoDb } from '@/lib/mongodb';
+import { fromMongo } from '@/server/repositories/mongo/helpers';
 import type { ContentBlock } from '@/types';
+
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function findDuplicate(subjectId: string, firstBlockContent: string) {
+  const db = await getMongoDb();
+  const qt = firstBlockContent.trim().toLowerCase();
+  if (!qt) return null;
+  const doc = await db.collection('mcqs').findOne({
+    subjectId,
+    'question.0.content': { $regex: new RegExp(`^${escapeRegex(qt)}$`, 'i') },
+  });
+  return doc ? fromMongo(doc) : null;
+}
 
 // ─── Content helpers ──────────────────────────────────────────────────────────
 
@@ -96,31 +113,42 @@ export async function POST(req: Request) {
 
   if (isBulk) {
     const items = parsed.data as z.infer<typeof MCQSeedSchema>[];
-    const results: { id?: string; error?: string; index: number }[] = [];
+    const results: { id?: string; error?: string; existing?: boolean; index: number }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       try {
-        const mcq = await mcqService.create(normalise(items[i]) as never, SYSTEM_USER);
-        results.push({ index: i, id: mcq.id });
+        const n = normalise(items[i]);
+        const firstContent = n.question[0]?.content ?? '';
+        const dupe = await findDuplicate(n.subjectId, firstContent);
+        if (dupe) {
+          results.push({ index: i, id: (dupe as { id: string }).id, existing: true });
+          continue;
+        }
+        const mcq = await mcqService.create(n as never, SYSTEM_USER);
+        results.push({ index: i, id: mcq.id, existing: false });
       } catch (e) {
         results.push({ index: i, error: e instanceof Error ? e.message : 'Unknown error' });
       }
     }
 
     const failed = results.filter((r) => r.error);
+    const existingCount = results.filter((r) => r.existing).length;
+    const createdCount = results.filter((r) => r.id && !r.existing).length;
     return apiSuccess(
-      { created: results.filter((r) => r.id).map((r) => ({ index: r.index, id: r.id })), failed },
-      { total: items.length, succeeded: items.length - failed.length, failed: failed.length },
+      { results },
+      { total: items.length, created: createdCount, existing: existingCount, failed: failed.length },
       failed.length === items.length ? 400 : 201
     );
   }
 
   try {
-    const mcq = await mcqService.create(
-      normalise(parsed.data as z.infer<typeof MCQSeedSchema>) as never,
-      SYSTEM_USER
-    );
-    return apiSuccess(mcq, undefined, 201);
+    const n = normalise(parsed.data as z.infer<typeof MCQSeedSchema>);
+    const firstContent = n.question[0]?.content ?? '';
+    const dupe = await findDuplicate(n.subjectId, firstContent);
+    if (dupe) return apiSuccess(dupe, { existing: true }, 200);
+
+    const mcq = await mcqService.create(n as never, SYSTEM_USER);
+    return apiSuccess(mcq, { existing: false }, 201);
   } catch (e) {
     console.error('[seed/mcqs]', e);
     return apiError(e instanceof Error ? e.message : 'Failed to create MCQ', 500);
