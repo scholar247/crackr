@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, RefreshCw, Hash, TreePine } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,21 @@ export function SubjectsClient() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SubjectClient | null>(null);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+
+  const refreshCounts = async (id: string) => {
+    setRefreshingId(id);
+    try {
+      const res = await fetch(`/api/admin/subjects/${id}/refresh-counts`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed');
+      await qc.invalidateQueries({ queryKey: ['admin-subjects'] });
+      toast.success('Counts refreshed');
+    } catch {
+      toast.error('Failed to refresh counts');
+    } finally {
+      setRefreshingId(null);
+    }
+  };
 
   const { data: subjects, isLoading } = useQuery({
     queryKey: ['admin-subjects'],
@@ -133,6 +148,8 @@ export function SubjectsClient() {
               <tr>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Name</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Slug</th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Topics</th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">MCQs</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Status</th>
                 <th className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Actions</th>
               </tr>
@@ -140,21 +157,30 @@ export function SubjectsClient() {
             <tbody className="divide-y divide-border">
               {subjects?.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center text-muted-foreground py-10">No subjects yet</td>
+                  <td colSpan={6} className="text-center text-muted-foreground py-10">No subjects yet</td>
                 </tr>
               ) : (
                 subjects?.map((subject, i) => (
                   <tr key={subject.id} className={i % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span
-                          className="h-3 w-3 rounded-full shrink-0"
-                          style={{ background: subject.color }}
-                        />
+                        <span className="h-3 w-3 rounded-full shrink-0" style={{ background: subject.color }} />
                         <span className="font-medium text-sm">{subject.name}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground font-mono">{subject.slug}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <TreePine className="h-3.5 w-3.5" />
+                        <span>{subject.topicCount ?? 0}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Hash className="h-3.5 w-3.5" />
+                        <span>{subject.mcqCount ?? 0}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <Badge variant={subject.isActive ? 'success' : 'secondary'} className="text-xs">
                         {subject.isActive ? 'Active' : 'Inactive'}
@@ -162,6 +188,15 @@ export function SubjectsClient() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title="Refresh topic & MCQ counts"
+                          disabled={refreshingId === subject.id}
+                          onClick={() => refreshCounts(subject.id)}
+                        >
+                          <RefreshCw className={`h-4 w-4 ${refreshingId === subject.id ? 'animate-spin' : ''}`} />
+                        </Button>
                         <Button variant="ghost" size="icon-sm" onClick={() => openEdit(subject)}>
                           <Edit className="h-4 w-4" />
                         </Button>

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ChevronRight, ChevronDown, Plus, Pencil, Trash2, TreePine,
-  GripVertical, FolderOpen, Folder,
+  GripVertical, FolderOpen, Folder, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,7 @@ function TopicNode({
   onAddChild,
   onEdit,
   onDelete,
+  onRefresh,
 }: {
   node: TopicTreeNode;
   depth: number;
@@ -57,8 +58,16 @@ function TopicNode({
   onAddChild: (parentId: string, depth: number) => void;
   onEdit: (node: TopicTreeNode) => void;
   onDelete: (node: TopicTreeNode) => void;
+  onRefresh: (id: string) => Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await onRefresh(node.id);
+    setRefreshing(false);
+  };
   const hasChildren = node.children.length > 0;
   const canAddChild = depth < 2; // max depth 2 (0-indexed = subtopic level)
 
@@ -94,10 +103,10 @@ function TopicNode({
         {/* Name */}
         <span className="flex-1 text-sm truncate">{node.name}</span>
 
-        {/* MCQ count badge */}
-        {node.mcqCount > 0 && (
-          <Badge variant="secondary" className="text-xs h-5 px-1.5">{node.mcqCount}</Badge>
-        )}
+        {/* MCQ count badge — always visible, shows 0 if none */}
+        <Badge variant="secondary" className="text-xs h-5 px-1.5 tabular-nums">
+          {node.mcqCount ?? 0}
+        </Badge>
 
         {/* Depth label */}
         <Badge variant="outline" className="text-xs h-5 px-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -106,6 +115,15 @@ function TopicNode({
 
         {/* Actions */}
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            title="Refresh MCQ count"
+            disabled={refreshing}
+            onClick={handleRefresh}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
           {canAddChild && (
             <Button
               variant="ghost"
@@ -164,6 +182,7 @@ function TopicNode({
               onAddChild={onAddChild}
               onEdit={onEdit}
               onDelete={onDelete}
+              onRefresh={onRefresh}
             />
           ))}
         </div>
@@ -264,6 +283,17 @@ export function TopicsClient() {
     deleteMutation.mutate(node.id);
   };
 
+  const handleRefreshTopic = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/topics/${id}/refresh-counts`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed');
+      await qc.invalidateQueries({ queryKey: ['topic-tree', selectedSubjectId] });
+      toast.success('MCQ count refreshed');
+    } catch {
+      toast.error('Failed to refresh count');
+    }
+  };
+
   const dialogTitle = editingTopic
     ? `Edit "${editingTopic.name}"`
     : `Add ${DEPTH_LABELS[addingDepth] ?? 'Topic'}${addingParentId ? ' (child)' : ''}`;
@@ -328,6 +358,7 @@ export function TopicsClient() {
               onAddChild={(parentId, depth) => openAdd(parentId, depth)}
               onEdit={openEdit}
               onDelete={handleDelete}
+              onRefresh={handleRefreshTopic}
             />
           ))}
         </div>

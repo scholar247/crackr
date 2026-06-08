@@ -1,25 +1,48 @@
 import { MongoClient, type Db } from 'mongodb';
 
-let client: MongoClient | null = null;
-let db: Db | null = null;
+const uri    = process.env.MONGODB_URI ?? '';
+const dbName = process.env.MONGODB_DB  ?? 'scholar247';
 
-export async function getMongoDb(): Promise<Db> {
-  if (db) return db;
+if (!uri) throw new Error('MONGODB_URI is not set');
 
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error('MONGODB_URI environment variable is not set');
+const OPTIONS = {
+  maxPoolSize:               10,
+  minPoolSize:               2,         // keep at least 2 connections warm
+  serverSelectionTimeoutMS:  10_000,
+  socketTimeoutMS:           45_000,
+  connectTimeoutMS:          10_000,
+  maxIdleTimeMS:             60_000,    // recycle idle sockets before server kills them
+  retryReads:                true,
+  retryWrites:               true,
+};
 
-  const dbName = process.env.MONGODB_DB ?? 'scholar247';
+// ─── Global cache ─────────────────────────────────────────────────────────────
+// Storing the promise on `global` ensures a single MongoClient per Node.js
+// process, surviving Next.js hot-module reloads in development.
+declare global {
+  // eslint-disable-next-line no-var
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
+}
 
-  if (!client) {
-    client = new MongoClient(uri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    await client.connect();
+function createClientPromise(): Promise<MongoClient> {
+  return new MongoClient(uri, OPTIONS).connect();
+}
+
+let clientPromise: Promise<MongoClient>;
+
+if (process.env.NODE_ENV !== 'production') {
+  // Dev: reuse across HMR cycles so we don't exhaust connection limits
+  if (!global._mongoClientPromise) {
+    global._mongoClientPromise = createClientPromise();
   }
+  clientPromise = global._mongoClientPromise;
+} else {
+  // Production: module-level singleton (one per worker process)
+  clientPromise = createClientPromise();
+}
 
-  db = client.db(dbName);
-  return db;
+// ─── Public API ───────────────────────────────────────────────────────────────
+export async function getMongoDb(): Promise<Db> {
+  const client = await clientPromise;
+  return client.db(dbName);
 }

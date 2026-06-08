@@ -10,10 +10,16 @@ export default auth((req) => {
 
   // Public routes — never redirect
   if (
+    pathname === '/' ||
     pathname.startsWith('/sign-in') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon')
+    pathname.startsWith('/favicon') ||
+    // Public browse pages — accessible without login
+    pathname.startsWith('/exams') ||
+    pathname.startsWith('/subjects') ||
+    pathname.startsWith('/pyp') ||
+    pathname.startsWith('/courses')
   ) {
     return NextResponse.next();
   }

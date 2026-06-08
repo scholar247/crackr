@@ -40,21 +40,27 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: slug } = await params;
-  const exam = await examRepository.findBySlug(slug);
-  if (!exam) return apiError('Exam not found', 404);
 
-  const linkedSubjects = exam.subjectIds.length > 0
-    ? await subjectRepository.getSubjectsByIds(exam.subjectIds)
-    : [];
-  const examSubjects = linkedSubjects
-    .filter((s) => s.isActive)
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((s) => ({ id: s.id, name: s.name }));
+  try {
+    const exam = await examRepository.findBySlug(slug);
+    if (!exam) return apiError('Exam not found', 404);
 
-  const firstSubjectId = examSubjects[0]?.id ?? null;
-  const initialTopicTree = firstSubjectId
-    ? await buildExamTopicTree(exam.id, firstSubjectId)
-    : [];
+    const linkedSubjects = exam.subjectIds.length > 0
+      ? await subjectRepository.getSubjectsByIds(exam.subjectIds)
+      : [];
+    const examSubjects = linkedSubjects
+      .filter((s) => s.isActive)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((s) => ({ id: s.id, name: s.name }));
 
-  return apiSuccess({ exam, examSubjects, initialTopicTree });
+    const firstSubjectId = examSubjects[0]?.id ?? null;
+    const initialTopicTree = firstSubjectId
+      ? await buildExamTopicTree(exam.id, firstSubjectId)
+      : [];
+
+    return apiSuccess({ exam, examSubjects, initialTopicTree });
+  } catch (err) {
+    console.error('[GET /api/public/exams/[id]]', err);
+    return apiError('Failed to fetch exam', 500);
+  }
 }
