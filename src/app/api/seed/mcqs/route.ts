@@ -57,7 +57,6 @@ const MCQSeedSchema = z.object({
   topicId: z.string().min(1),
   examIds: z.array(z.string()).min(1),
   examSectionIds: z.array(z.string()).default([]),
-  difficultyPerExam: z.record(z.string(), DifficultySchema).default({}),
   questionType: QuestionTypeSchema.default('SINGLE'),
   difficulty: DifficultySchema,
   question: ContentInput,

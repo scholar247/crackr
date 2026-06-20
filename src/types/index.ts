@@ -186,6 +186,7 @@ export interface ContentBlock {
 
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
 export type QuestionType = 'SINGLE' | 'MULTIPLE';
+export type MCQStatus = 'DRAFT' | 'PENDING' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface MCQOption {
   id: string;
@@ -205,7 +206,6 @@ export interface MCQ {
   // Exam mapping
   examIds: string[];
   examSectionIds: string[];
-  difficultyPerExam: Record<string, Difficulty>;
 
   // Content
   questionType: QuestionType;
@@ -225,6 +225,8 @@ export interface MCQ {
   // Status
   isActive: boolean;
   isVerified: boolean;
+  status: MCQStatus;
+  creatorEmail: string;
   createdBy: string;
   verifiedBy?: string;
   createdAt: Timestamp;

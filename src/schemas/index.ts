@@ -3,6 +3,7 @@ import { z } from 'zod';
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export const UserRoleSchema = z.enum(['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'EDITOR', 'REVIEWER', 'STUDENT']);
+export const MCQStatusSchema = z.enum(['DRAFT', 'PENDING', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED']);
 export const DifficultySchema = z.enum(['EASY', 'MEDIUM', 'HARD', 'EXPERT']);
 export const DifficultyMixedSchema = z.enum(['EASY', 'MEDIUM', 'HARD', 'EXPERT', 'MIXED']);
 export const QuestionTypeSchema = z.enum(['SINGLE', 'MULTIPLE']);
@@ -107,7 +108,6 @@ const MCQBaseSchema = z.object({
   topicId: z.string().min(1, 'Topic is required'),
   examIds: z.array(z.string()).min(1, 'At least one exam required'),
   examSectionIds: z.array(z.string()).default([]),
-  difficultyPerExam: z.record(z.string(), DifficultySchema).default({}),
   questionType: QuestionTypeSchema,
   difficulty: DifficultySchema,
   question: z.array(ContentBlockSchema).min(1, 'Question must have content'),
@@ -122,7 +122,7 @@ const MCQBaseSchema = z.object({
   source: z.string().max(200).optional(),
   isPreviousYear: z.boolean().default(false),
   previousYearExam: z.string().optional(),
-  isActive: z.boolean().default(true),
+  status: MCQStatusSchema.optional(),
 });
 
 export const CreateMCQSchema = MCQBaseSchema.refine(
@@ -270,6 +270,7 @@ export const MCQListQuerySchema = z.object({
   isPreviousYear: z.coerce.boolean().optional(),
   isVerified: z.coerce.boolean().optional(),
   isActive: z.coerce.boolean().optional(),
+  status: MCQStatusSchema.optional(),
   search: z.string().optional(),
   pypId: z.string().optional(),
 });
@@ -305,3 +306,4 @@ export type UpdatePYPInput = z.infer<typeof UpdatePYPSchema>;
 export type AddMCQsToPYPInput = z.infer<typeof AddMCQsToPYPSchema>;
 export type MCQListQuery = z.infer<typeof MCQListQuerySchema>;
 export type ProgressQuery = z.infer<typeof ProgressQuerySchema>;
+export type MCQStatus = z.infer<typeof MCQStatusSchema>;

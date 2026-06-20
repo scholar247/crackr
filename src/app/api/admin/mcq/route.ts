@@ -1,5 +1,5 @@
 import { requireAuth } from '@/lib/api-helpers';
-import { apiError, apiSuccess } from '@/lib/utils';
+import { apiSuccess } from '@/lib/utils';
 import { mcqService } from '@/server/services/mcq.service';
 import { CreateMCQSchema, MCQListQuerySchema } from '@/schemas';
 
@@ -32,6 +32,6 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const mcq = await mcqService.create(parsed.data, session!.user.id);
+  const mcq = await mcqService.create(parsed.data, session!.user.id, session!.user.email ?? 'join.scholar@gmail.com');
   return apiSuccess(mcq, undefined, 201);
 }

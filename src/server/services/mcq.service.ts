@@ -12,8 +12,9 @@ export const mcqService = {
     return mcqRepository.findById(id);
   },
 
-  async create(data: CreateMCQInput, userId: string): Promise<MCQClient> {
-    const mcq = await mcqRepository.create(data, userId);
+  async create(data: CreateMCQInput, userId: string, userEmail?: string): Promise<MCQClient> {
+    const creatorEmail = userEmail ?? 'join.scholar@gmail.com';
+    const mcq = await mcqRepository.create(data, userId, creatorEmail);
 
     // Increment usage counts for all tags
     if (data.tagIds.length > 0) {

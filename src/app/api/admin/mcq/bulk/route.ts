@@ -4,10 +4,11 @@ import { mcqRepository } from '@/server/repositories/mcq.repository';
 import { topicRepository } from '@/server/repositories/topic.repository';
 import { getMongoDb } from '@/lib/mongodb';
 import { z } from 'zod';
+import { MCQStatusSchema } from '@/schemas';
 
 const BulkSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('delete'), ids: z.array(z.string()).min(1).max(100) }),
-  z.object({ action: z.literal('setStatus'), ids: z.array(z.string()).min(1).max(100), isActive: z.boolean() }),
+  z.object({ action: z.literal('setStatus'), ids: z.array(z.string()).min(1).max(100), status: MCQStatusSchema }),
 ]);
 
 export async function POST(req: Request) {
@@ -43,11 +44,12 @@ export async function POST(req: Request) {
   }
 
   if (action === 'setStatus') {
-    const { isActive } = parsed.data;
+    const { status } = parsed.data;
+    const isActive = status === 'PUBLISHED';
     const db = await getMongoDb();
     await db.collection('mcqs').updateMany(
       { id: { $in: ids } },
-      { $set: { isActive, updatedAt: new Date().toISOString() } }
+      { $set: { status, isActive, updatedAt: new Date().toISOString() } }
     );
     return apiSuccess({ updated: ids.length });
   }

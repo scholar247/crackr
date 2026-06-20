@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Edit, Trash2, Search, CheckSquare, Square, ToggleLeft, ToggleRight, X } from 'lucide-react';
+import { Edit, Trash2, Search, CheckSquare, Square, X, Globe, Eye, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,9 +24,33 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import type { MCQClient, SubjectClient, TopicClient } from '@/types';
+import type { MCQClient, MCQStatus, SubjectClient, TopicClient } from '@/types';
 import type { Difficulty } from '@/types';
 import { cn } from '@/lib/utils';
+
+const STATUS_BADGE_VARIANTS: Record<MCQStatus, 'secondary' | 'outline' | 'default' | 'destructive' | 'success'> = {
+  DRAFT: 'secondary',
+  PENDING: 'outline',
+  IN_REVIEW: 'default',
+  PUBLISHED: 'success',
+  ARCHIVED: 'destructive',
+};
+
+const STATUS_LABELS: Record<MCQStatus, string> = {
+  DRAFT: 'Draft',
+  PENDING: 'Pending',
+  IN_REVIEW: 'In Review',
+  PUBLISHED: 'Published',
+  ARCHIVED: 'Archived',
+};
+
+function MCQStatusBadge({ status }: { status: MCQStatus }) {
+  return (
+    <Badge variant={STATUS_BADGE_VARIANTS[status]} className="text-xs">
+      {STATUS_LABELS[status]}
+    </Badge>
+  );
+}
 
 async function fetchMCQs(params: URLSearchParams) {
   const res = await fetch(`/api/admin/mcq?${params}`);
@@ -44,7 +68,7 @@ async function fetchTopics(subjectId?: string) {
   return (await res.json()).data as TopicClient[];
 }
 
-async function bulkAction(body: { action: 'delete' | 'setStatus'; ids: string[]; isActive?: boolean }) {
+async function bulkAction(body: { action: 'delete'; ids: string[] } | { action: 'setStatus'; ids: string[]; status: MCQStatus }) {
   const res = await fetch('/api/admin/mcq/bulk', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -62,6 +86,7 @@ export function MCQListClient() {
   const [subjectId, setSubjectId] = useState<string>('');
   const [topicId, setTopicId] = useState<string>('');
   const [difficulty, setDifficulty] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(1);
 
   // Selection
@@ -74,6 +99,7 @@ export function MCQListClient() {
     ...(subjectId ? { subjectId } : {}),
     ...(topicId ? { topicId } : {}),
     ...(difficulty ? { difficulty } : {}),
+    ...(statusFilter ? { status: statusFilter } : {}),
   });
 
   const { data, isLoading } = useQuery({
@@ -115,17 +141,17 @@ export function MCQListClient() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const bulkActivateMutation = useMutation({
-    mutationFn: (isActive: boolean) => bulkAction({ action: 'setStatus', ids: [...selectedIds], isActive }),
-    onSuccess: (_data, isActive) => {
+  const bulkStatusMutation = useMutation({
+    mutationFn: (status: MCQStatus) => bulkAction({ action: 'setStatus', ids: [...selectedIds], status }),
+    onSuccess: (_data, status) => {
       qc.invalidateQueries({ queryKey: ['admin-mcqs'] });
-      toast.success(`${selectedIds.size} MCQ${selectedIds.size > 1 ? 's' : ''} marked ${isActive ? 'active' : 'inactive'}`);
+      toast.success(`${selectedIds.size} MCQ${selectedIds.size > 1 ? 's' : ''} set to ${status}`);
       setSelectedIds(new Set());
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const isBulkPending = bulkDeleteMutation.isPending || bulkActivateMutation.isPending;
+  const isBulkPending = bulkDeleteMutation.isPending || bulkStatusMutation.isPending;
 
   // ── Selection helpers ────────────────────────────────────────────────────────
   const toggleOne = (id: string) =>
@@ -192,6 +218,18 @@ export function MCQListClient() {
             ))}
           </SelectContent>
         </Select>
+
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v === 'all' ? '' : v); setPage(1); setSelectedIds(new Set()); }}>
+          <SelectTrigger className="w-36">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            {(['DRAFT', 'PENDING', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED'] as MCQStatus[]).map((s) => (
+              <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Bulk action bar */}
@@ -203,22 +241,32 @@ export function MCQListClient() {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => bulkActivateMutation.mutate(true)}
+              onClick={() => bulkStatusMutation.mutate('PUBLISHED')}
               disabled={isBulkPending}
               className="gap-1.5"
             >
-              <ToggleRight className="h-3.5 w-3.5" />
-              Set Active
+              <Globe className="h-3.5 w-3.5" />
+              Publish
             </Button>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => bulkActivateMutation.mutate(false)}
+              onClick={() => bulkStatusMutation.mutate('IN_REVIEW')}
               disabled={isBulkPending}
               className="gap-1.5"
             >
-              <ToggleLeft className="h-3.5 w-3.5" />
-              Set Inactive
+              <Eye className="h-3.5 w-3.5" />
+              Send for Review
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => bulkStatusMutation.mutate('ARCHIVED')}
+              disabled={isBulkPending}
+              className="gap-1.5"
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archive
             </Button>
 
             <AlertDialog>
@@ -336,9 +384,7 @@ export function MCQListClient() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={mcq.isActive ? 'success' : 'secondary'} className="text-xs">
-                          {mcq.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
+                        <MCQStatusBadge status={mcq.status ?? (mcq.isActive ? 'PUBLISHED' : 'DRAFT')} />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">

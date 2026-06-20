@@ -20,6 +20,16 @@ export class MongoMCQRepository {
     const col = await this.col();
     const doc = await col.findOne({ id });
     if (!doc) return null;
+    if (!doc.creatorEmail) {
+      // Fire-and-forget background update for legacy docs missing creatorEmail
+      col.updateOne(
+        { id },
+        { $set: { creatorEmail: 'join.scholar@gmail.com', status: 'PUBLISHED', isActive: true, updatedAt: nowIso() } }
+      );
+      doc.creatorEmail = 'join.scholar@gmail.com';
+      doc.status = 'PUBLISHED';
+      doc.isActive = true;
+    }
     return fromMongo(doc) as MCQClient;
   }
 
@@ -42,6 +52,7 @@ export class MongoMCQRepository {
     if (query.isPreviousYear !== undefined) filter.isPreviousYear = query.isPreviousYear;
     if (query.isVerified !== undefined) filter.isVerified = query.isVerified;
     if (query.isActive !== undefined) filter.isActive = query.isActive;
+    if (query.status) filter.status = query.status;
 
     if (query.examIds) {
       const examList = query.examIds.split(',').filter(Boolean);
@@ -88,7 +99,7 @@ export class MongoMCQRepository {
     };
   }
 
-  async create(data: CreateMCQInput, createdBy: string): Promise<MCQClient> {
+  async create(data: CreateMCQInput, createdBy: string, creatorEmail: string): Promise<MCQClient> {
     const col = await this.col();
     const topicRepo = await getTopicRepo();
     const topic = await topicRepo.findById(data.topicId);
@@ -105,6 +116,9 @@ export class MongoMCQRepository {
       topicPath,
       topicPathNames,
       createdBy,
+      creatorEmail,
+      status: 'DRAFT' as const,
+      isActive: false,
       isVerified: false,
       pyps: [],
       usageCount: 0,
@@ -126,6 +140,10 @@ export class MongoMCQRepository {
     if (!existing) return null;
 
     const updates: Record<string, unknown> = { ...data, updatedAt: nowIso() };
+
+    if (data.status !== undefined) {
+      updates.isActive = data.status === 'PUBLISHED';
+    }
 
     if (data.topicId && data.topicId !== existing.topicId) {
       const topicRepo = await getTopicRepo();

@@ -116,7 +116,7 @@ export function TopNavbar() {
         </div>
       ) : (
         <div className="w-full px-4 md:px-6 flex items-center">
-          <Link href="/dashboard" className="flex items-center shrink-0">
+          <Link href="/" className="flex items-center shrink-0">
             <NextImage
               src="/logo.svg"
               alt="scholar247"

@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CreateMCQSchema, type CreateMCQInput } from '@/schemas';
-import type { MCQClient, SubjectClient, ExamClient, ExamSectionClient, Tag, Difficulty, TopicTreeNode } from '@/types';
+import type { MCQClient, MCQStatus, SubjectClient, ExamClient, ExamSectionClient, Tag, Difficulty, TopicTreeNode } from '@/types';
 import { cn } from '@/lib/utils';
 import { TopicTreeSelect } from '@/components/filters/TopicTreeSelect';
 
@@ -37,6 +37,13 @@ interface MCQFormProps {
 
 const DIFFICULTY_OPTIONS: Difficulty[] = ['EASY', 'MEDIUM', 'HARD', 'EXPERT'];
 const OPTION_IDS = ['A', 'B', 'C', 'D', 'E', 'F'];
+const STATUS_OPTIONS: { value: MCQStatus; label: string }[] = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'IN_REVIEW', label: 'In Review' },
+  { value: 'PUBLISHED', label: 'Published' },
+  { value: 'ARCHIVED', label: 'Archived' },
+];
 
 const EXAM_CATEGORY_ORDER = [
   'ENGINEERING', 'MEDICAL', 'MANAGEMENT', 'BANKING', 'GOVERNMENT', 'SCHOOL', 'OTHER',
@@ -77,9 +84,6 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initialData?.tagIds ?? []);
   const [selectedExamIds, setSelectedExamIds] = useState<string[]>(initialData?.examIds ?? []);
   const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>(initialData?.examSectionIds ?? []);
-  const [difficultyPerExam, setDifficultyPerExam] = useState<Record<string, Difficulty>>(
-    initialData?.difficultyPerExam ?? {}
-  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<CreateMCQInput>({
@@ -90,7 +94,6 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
           topicId: initialData.topicId,
           examIds: initialData.examIds,
           examSectionIds: initialData.examSectionIds,
-          difficultyPerExam: initialData.difficultyPerExam ?? {},
           tagIds: initialData.tagIds,
           difficulty: initialData.difficulty,
           questionType: initialData.questionType,
@@ -98,7 +101,7 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
           options: initialData.options,
           explanation: initialData.explanation ?? [],
           hint: initialData.hint ?? [],
-          isActive: initialData.isActive,
+          status: (initialData.status ?? 'DRAFT') as MCQStatus,
           isPreviousYear: initialData.isPreviousYear ?? false,
           source: initialData.source ?? '',
         }
@@ -115,8 +118,7 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
           tagIds: [],
           examIds: [],
           examSectionIds: [],
-          difficultyPerExam: {},
-          isActive: true,
+          status: 'DRAFT' as MCQStatus,
           isPreviousYear: false,
         },
   });
@@ -172,7 +174,6 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
           tagIds: selectedTagIds,
           examIds: selectedExamIds,
           examSectionIds: selectedSectionIds,
-          difficultyPerExam,
         }),
       });
       if (!res.ok) {
@@ -233,7 +234,6 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
       tagIds: selectedTagIds,
       examIds: selectedExamIds,
       examSectionIds: selectedSectionIds,
-      difficultyPerExam,
     });
   });
 
@@ -248,12 +248,6 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
       // Remove sections belonging to this exam if deselecting
       const examSections = examSectionsMap?.get(examId)?.map((s) => s.id) ?? [];
       setSelectedSectionIds((prev) => prev.filter((id) => !examSections.includes(id)));
-      // Remove per-exam difficulty entry
-      setDifficultyPerExam((prev) => {
-        const n = { ...prev };
-        delete n[examId];
-        return n;
-      });
       // Reset subject/topic if no selected exam covers them
       form.setValue('topicId', '');
     }
@@ -300,8 +294,8 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
     nodes.forEach(walk);
     return result;
   }
-  const flatTopics = flattenTree(topicTree);
-  const selectedTopicNode = watchTopicId ? flatTopics.find((n) => n.id === watchTopicId) ?? null : null;
+  // const flatTopics = flattenTree(topicTree);
+  // const selectedTopicNode = watchTopicId ? flatTopics.find((n) => n.id === watchTopicId) ?? null : null;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -450,46 +444,6 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
             )}
           </div>
 
-          {/* ── Per-exam difficulty ───────────────────────────────────────── */}
-          {selectedExamIds.length > 0 && (
-            <div className="space-y-2">
-              <Label>Difficulty per Exam <span className="text-muted-foreground">(optional)</span></Label>
-              <p className="text-xs text-muted-foreground">Override difficulty for specific exams.</p>
-              <div className="space-y-2">
-                {selectedExamIds.map((examId) => {
-                  const exam = allExams?.find((e) => e.id === examId);
-                  return (
-                    <div key={examId} className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground flex-1 truncate">{exam?.name ?? examId}</span>
-                      <Select
-                        value={difficultyPerExam[examId] ?? '__default__'}
-                        onValueChange={(val) =>
-                          setDifficultyPerExam((prev) => {
-                            if (val === '__default__') {
-                              const next = { ...prev };
-                              delete next[examId];
-                              return next;
-                            }
-                            return { ...prev, [examId]: val as Difficulty };
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-32 h-8 text-xs">
-                          <SelectValue placeholder="Default" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__default__">Default</SelectItem>
-                          {DIFFICULTY_OPTIONS.map((d) => (
-                            <SelectItem key={d} value={d}>{d.charAt(0) + d.slice(1).toLowerCase()}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
           <Separator />
 
           {/* ── Subject & Topic ───────────────────────────────────────────── */}
@@ -565,18 +519,28 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
 
             <div className="space-y-2">
               <Label>Status</Label>
-              <div className="flex items-center gap-2 h-10">
+              {mode === 'create' ? (
+                <div className="flex items-center h-10">
+                  <Badge variant="secondary" className="text-xs">Will be saved as Draft</Badge>
+                </div>
+              ) : (
                 <Controller
                   control={form.control}
-                  name="isActive"
+                  name="status"
                   render={({ field }) => (
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                 />
-                <span className="text-sm text-muted-foreground">
-                  {form.watch('isActive') ? 'Active' : 'Inactive'}
-                </span>
-              </div>
+              )}
             </div>
 
             <div className="space-y-2 col-span-2">
