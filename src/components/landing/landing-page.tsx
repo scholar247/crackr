@@ -219,8 +219,7 @@ export function LandingPage({ session, enrolledCourseId }: LandingPageProps = {}
               </h1>
 
               <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
-                Practice thousands of MCQs curated by experts, take timed mock tests, and track your progress with deep analytics. Built for JEE, NEET, UPSC, and more.
-              </p>
+                Get unlimited access to MCQs, mock tests, quizzes, and full courses. See your weak spots, track your growth, and walk into your exam fully prepared.              </p>
 
               <div className="flex flex-wrap gap-3">
                 <Button size="lg" asChild>
@@ -650,26 +649,7 @@ export function LandingPage({ session, enrolledCourseId }: LandingPageProps = {}
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-border py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-                <Zap className="h-3.5 w-3.5 text-primary-foreground" />
-              </div>
-              <span className="font-bold">scholar247</span>
-              <span className="text-muted-foreground text-sm">— Learn, Practice, Progress, Crack</span>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-              <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-              <a href="#" className="hover:text-foreground transition-colors">Contact</a>
-              <span>© {new Date().getFullYear()} scholar247</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Footer is rendered globally via <SiteFooter /> in app/layout.tsx */}
     </div>
   );
 }

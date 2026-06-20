@@ -13,5 +13,6 @@ export async function serverGet<T>(path: string): Promise<T> {
   });
   if (!res.ok) throw new Error(`[serverGet] ${path} → ${res.status}`);
   const json: { data: T } = await res.json();
+  console.log(path, "res",json.data);
   return json.data;
 }

@@ -106,9 +106,7 @@ export function TopNavbar() {
               <UserMenu showDashboard />
             ) : (
               <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/sign-in">Log in</Link>
-                </Button>
+
                 <Button size="sm" asChild>
                   <Link href="/sign-in">Get started free</Link>
                 </Button>

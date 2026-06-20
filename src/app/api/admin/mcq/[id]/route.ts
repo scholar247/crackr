@@ -7,7 +7,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAuth('ADMIN');
+  const { error } = await requireAuth('EDITOR');
   if (error) return error;
 
   const { id } = await params;
@@ -20,7 +20,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { session, error } = await requireAuth('ADMIN');
+  const { session, error } = await requireAuth('EDITOR');
   if (error) return error;
 
   const { id } = await params;

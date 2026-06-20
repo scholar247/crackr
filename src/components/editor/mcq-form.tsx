@@ -4,7 +4,7 @@ import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { Plus, Trash2, Eye, Check } from 'lucide-react';
@@ -176,12 +176,18 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
         }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        const fieldErrors = err.details?.fieldErrors;
-        const error = new Error(err.error ?? 'Save failed') as Error & { fieldMessages?: string };
+        let errBody: Record<string, unknown> = {};
+        try { errBody = await res.json(); } catch { /* non-JSON response */ }
+        const fieldErrors = (errBody.details as { fieldErrors?: Record<string, string[]> } | undefined)?.fieldErrors;
+        const message =
+          (errBody.error as string | undefined) ??
+          (res.status === 403 ? 'You do not have permission to perform this action' :
+           res.status === 401 ? 'Please sign in to continue' :
+           `Request failed (${res.status})`);
+        const error = new Error(message) as Error & { fieldMessages?: string };
         if (fieldErrors) {
           error.fieldMessages = Object.entries(fieldErrors)
-            .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+            .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
             .join('\n');
         }
         throw error;
@@ -233,20 +239,22 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
 
   const toggleExam = (examId: string) => {
     const removing = selectedExamIds.includes(examId);
-    setSelectedExamIds((prev) =>
-      removing ? prev.filter((id) => id !== examId) : [...prev, examId]
-    );
+    const next = removing
+      ? selectedExamIds.filter((id) => id !== examId)
+      : [...selectedExamIds, examId];
+    setSelectedExamIds(next);
+    form.setValue('examIds', next);
     if (removing) {
       // Remove sections belonging to this exam if deselecting
       const examSections = examSectionsMap?.get(examId)?.map((s) => s.id) ?? [];
       setSelectedSectionIds((prev) => prev.filter((id) => !examSections.includes(id)));
       // Remove per-exam difficulty entry
       setDifficultyPerExam((prev) => {
-        const next = { ...prev };
-        delete next[examId];
-        return next;
+        const n = { ...prev };
+        delete n[examId];
+        return n;
       });
-      // Reset topic if topic tree might be invalid now
+      // Reset subject/topic if no selected exam covers them
       form.setValue('topicId', '');
     }
   };
@@ -256,6 +264,26 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
       prev.includes(sectionId) ? prev.filter((id) => id !== sectionId) : [...prev, sectionId]
     );
   };
+
+  // Subjects that belong to the selected exams (or all if none selected)
+  const filteredSubjects = (() => {
+    if (selectedExamIds.length === 0) return subjects ?? [];
+    const allowedIds = new Set(
+      (allExams ?? [])
+        .filter((e) => selectedExamIds.includes(e.id))
+        .flatMap((e) => e.subjectIds)
+    );
+    return (subjects ?? []).filter((s) => allowedIds.has(s.id));
+  })();
+
+  // Reset subject/topic when selected subject is no longer in the filtered list
+  useEffect(() => {
+    if (watchSubjectId && filteredSubjects.length > 0 && !filteredSubjects.find((s) => s.id === watchSubjectId)) {
+      form.setValue('subjectId', '');
+      form.setValue('topicId', '');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredSubjects]);
 
   // Group exams by category
   const examsByCategory = (allExams ?? []).reduce<Record<string, ExamClient[]>>((acc, e) => {
@@ -462,41 +490,6 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
               </div>
             </div>
           )}
-
-          {/* ── Exam Sections ─────────────────────────────────────────────── */}
-          {selectedExamIds.length > 0 && examSectionsMap && (
-            <div className="space-y-3">
-              <Label>Exam Sections <span className="text-muted-foreground">(optional)</span></Label>
-              <p className="text-xs text-muted-foreground">Tag this question to specific syllabus sections.</p>
-              <div className="space-y-3">
-                {selectedExamIds.map((examId) => {
-                  const sections = examSectionsMap.get(examId) ?? [];
-                  const exam = allExams?.find((e) => e.id === examId);
-                  if (sections.length === 0) return null;
-                  return (
-                    <div key={examId}>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">{exam?.name}</p>
-                      <div className="space-y-1 pl-2">
-                        {sections.map((section) => (
-                          <div key={section.id} className="flex items-center gap-2">
-                            <Checkbox
-                              id={`section-${section.id}`}
-                              checked={selectedSectionIds.includes(section.id)}
-                              onCheckedChange={() => toggleSection(section.id)}
-                            />
-                            <Label htmlFor={`section-${section.id}`} className="font-normal cursor-pointer text-sm">
-                              {section.displayName ?? section.topicId}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <Separator />
 
           {/* ── Subject & Topic ───────────────────────────────────────────── */}
@@ -519,7 +512,7 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {subjects?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    {filteredSubjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}

@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { TopNavbar } from '@/components/layout/top-navbar';
+import { SiteFooter } from '@/components/layout/site-footer';
 import { cn } from '@/lib/utils';
 
 const inter = Inter({
@@ -40,6 +41,7 @@ export default function RootLayout({
         <Providers>
           <TopNavbar />
           {children}
+          <SiteFooter />
         </Providers>
       </body>
     </html>

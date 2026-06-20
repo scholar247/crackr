@@ -4,7 +4,7 @@ import { mcqService } from '@/server/services/mcq.service';
 import { CreateMCQSchema, MCQListQuerySchema } from '@/schemas';
 
 export async function GET(req: Request) {
-  const { session, error } = await requireAuth('ADMIN');
+  const { session, error } = await requireAuth('EDITOR');
   if (error) return error;
 
   const { searchParams } = new URL(req.url);
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { session, error } = await requireAuth('ADMIN');
+  const { session, error } = await requireAuth('EDITOR');
   if (error) return error;
 
   const body = await req.json();
