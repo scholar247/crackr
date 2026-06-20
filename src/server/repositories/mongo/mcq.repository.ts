@@ -24,9 +24,9 @@ export class MongoMCQRepository {
       // Fire-and-forget background update for legacy docs missing creatorEmail
       col.updateOne(
         { id },
-        { $set: { creatorEmail: 'join.scholar@gmail.com', status: 'PUBLISHED', isActive: true, updatedAt: nowIso() } }
+        { $set: { creatorEmail: 'join.scholar247@gmail.com', status: 'PUBLISHED', isActive: true, updatedAt: nowIso() } }
       );
-      doc.creatorEmail = 'join.scholar@gmail.com';
+      doc.creatorEmail = 'join.scholar247@gmail.com';
       doc.status = 'PUBLISHED';
       doc.isActive = true;
     }
