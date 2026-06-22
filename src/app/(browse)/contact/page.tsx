@@ -4,6 +4,7 @@ import { Mail, MessageSquare, Clock } from 'lucide-react';
 export const metadata: Metadata = {
   title: 'Contact Us',
   description: 'Get in touch with the scholar247 team. We respond to all queries within 48 hours.',
+  alternates: { canonical: '/contact' },
 };
 
 export default function ContactPage() {

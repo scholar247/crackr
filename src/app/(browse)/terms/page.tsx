@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: 'Terms of Service',
   description:
     'Read the scholar247 Terms of Service to understand the rules and guidelines governing your use of our exam preparation platform.',
+  alternates: { canonical: '/terms' },
 };
 
 const LAST_UPDATED = 'June 21, 2026';

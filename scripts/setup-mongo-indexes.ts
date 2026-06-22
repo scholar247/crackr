@@ -1,6 +1,6 @@
 /**
  * One-time MongoDB index setup for all collections.
- * Run: npx tsx --env-file=.env.local scripts/setup-mongo-indexes.ts
+ * Run: npx tsx --env-file=.env.development scripts/setup-mongo-indexes.ts
  */
 
 import { MongoClient } from 'mongodb';

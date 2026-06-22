@@ -1,7 +1,7 @@
 /**
  * Seed tags.
  * Supports both Firebase and MongoDB via DATABASE_PROVIDER env var.
- * Run: npx tsx --env-file=.env.local scripts/seed-tags.ts
+ * Run: npx tsx --env-file=.env.development scripts/seed-tags.ts
  */
 
 import { getAdapter, slugify } from './seed-helpers';

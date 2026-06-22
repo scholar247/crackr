@@ -5,6 +5,7 @@ import { BookOpen, Target, Users, Zap } from 'lucide-react';
 export const metadata: Metadata = {
   title: 'About Us',
   description: 'Learn about scholar247 — the free EdTech platform built to help students crack competitive exams like JEE, NEET, NIMCET, UPSC and more.',
+  alternates: { canonical: '/about' },
 };
 
 const pillars = [

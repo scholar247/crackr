@@ -1,7 +1,7 @@
 /**
  * Seed script: creates Indian competitive exams.
  * Supports both Firebase and MongoDB via DATABASE_PROVIDER env var.
- * Run: npx tsx --env-file=.env.local scripts/seed-exams.ts
+ * Run: npx tsx --env-file=.env.development scripts/seed-exams.ts
  */
 
 import { getAdapter, slugify } from './seed-helpers';

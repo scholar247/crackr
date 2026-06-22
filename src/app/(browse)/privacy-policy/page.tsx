@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: 'Privacy Policy',
   description:
     'Read the scholar247 Privacy Policy to understand how we collect, use, and protect your information, including our use of cookies and Google advertising services.',
+  alternates: { canonical: '/privacy-policy' },
 };
 
 const LAST_UPDATED = 'June 21, 2026';

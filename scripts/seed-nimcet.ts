@@ -1,6 +1,6 @@
 /**
  * NIMCET full seed: exam → subjects → topics → starter NIMCET course.
- * Run: npx tsx --env-file=.env.local scripts/seed-nimcet.ts
+ * Run: npx tsx --env-file=.env.development scripts/seed-nimcet.ts
  */
 
 import { getAdapter, slugify, nowIso, generateId } from './seed-helpers';

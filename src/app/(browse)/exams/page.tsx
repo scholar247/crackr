@@ -8,6 +8,7 @@ import type { ExamCategory, ExamClient } from '@/types';
 export const metadata: Metadata = {
   title: 'Browse Exams',
   description: 'Practice MCQs for JEE, NEET, UPSC, CAT, and more — free, no login required.',
+  alternates: { canonical: '/exams' },
 };
 
 const CATEGORY_ORDER: ExamCategory[] = [

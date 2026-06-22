@@ -8,6 +8,7 @@ import type { ExamCategory, ExamClient } from '@/types';
 export const metadata: Metadata = {
   title: 'Previous Year Papers',
   description: 'Solve previous year exam questions for JEE, NEET, NIMCET, UPSC and more — free, no login required.',
+  alternates: { canonical: '/pyp' },
 };
 
 const CATEGORY_ORDER: ExamCategory[] = [

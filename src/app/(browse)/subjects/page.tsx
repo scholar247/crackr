@@ -8,6 +8,7 @@ import type { SubjectClient } from '@/types';
 export const metadata: Metadata = {
   title: 'Browse Subjects',
   description: 'Practice MCQs by subject — Physics, Chemistry, Maths, Biology, and more.',
+  alternates: { canonical: '/subjects' },
 };
 
 const SUBJECT_COLORS: Record<string, string> = {

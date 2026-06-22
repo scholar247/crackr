@@ -1,7 +1,7 @@
 /**
  * Seed MCQs — 5 questions per chapter across Physics, Chemistry, Mathematics, Biology.
  * Supports both Firebase and MongoDB via DATABASE_PROVIDER env var.
- * Run: npx tsx --env-file=.env.local scripts/seed-mcqs.ts
+ * Run: npx tsx --env-file=.env.development scripts/seed-mcqs.ts
  *
  * Prerequisites: seed-all.ts and seed-tags.ts must have been run first.
  */

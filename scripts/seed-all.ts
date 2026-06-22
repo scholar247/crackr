@@ -1,7 +1,7 @@
 /**
  * Full seed: subjects → topics → exams → examSections
  * Supports both Firebase and MongoDB via DATABASE_PROVIDER env var.
- * Run: npx tsx --env-file=.env.local scripts/seed-all.ts
+ * Run: npx tsx --env-file=.env.development scripts/seed-all.ts
  */
 
 import { getAdapter, slugify } from './seed-helpers';

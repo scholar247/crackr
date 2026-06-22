@@ -1,6 +1,6 @@
 /**
  * MongoDB-only seeder helpers.
- * Run: npx tsx --env-file=.env.local scripts/seed-all.ts
+ * Run: npx tsx --env-file=.env.development scripts/seed-all.ts
  */
 
 import { randomUUID } from 'crypto';
