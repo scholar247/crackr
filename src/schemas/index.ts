@@ -273,6 +273,7 @@ export const MCQListQuerySchema = z.object({
   status: MCQStatusSchema.optional(),
   search: z.string().optional(),
   pypId: z.string().optional(),
+  creatorEmail: z.string().optional(),
 });
 
 export const ProgressQuerySchema = z.object({

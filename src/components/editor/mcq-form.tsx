@@ -543,6 +543,15 @@ export function MCQForm({ initialData, mode }: MCQFormProps) {
               )}
             </div>
 
+            {mode === 'edit' && initialData?.creatorEmail && (
+              <div className="space-y-2 col-span-2">
+                <Label className="text-muted-foreground text-xs">Created by</Label>
+                <div className="flex items-center h-9 px-3 rounded-md border bg-muted/40 text-sm text-muted-foreground">
+                  {initialData.creatorEmail}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2 col-span-2">
               <div className="flex items-center gap-2">
                 <Controller

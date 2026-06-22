@@ -79,6 +79,10 @@ export class MongoMCQRepository {
       filter['pyps.pypId'] = query.pypId;
     }
 
+    if (query.creatorEmail) {
+      filter.creatorEmail = { $regex: query.creatorEmail, $options: 'i' };
+    }
+
     const pageSize = query.pageSize ?? 20;
     const page = query.page ?? 1;
     const skip = (page - 1) * pageSize;

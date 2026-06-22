@@ -24,7 +24,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import type { MCQClient, MCQStatus, SubjectClient, TopicClient } from '@/types';
+import type { MCQClient, MCQStatus, SubjectClient, TopicClient, ExamClient } from '@/types';
 import type { Difficulty } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -68,6 +68,11 @@ async function fetchTopics(subjectId?: string) {
   return (await res.json()).data as TopicClient[];
 }
 
+async function fetchExams() {
+  const res = await fetch('/api/exams');
+  return (await res.json()).data as ExamClient[];
+}
+
 async function bulkAction(body: { action: 'delete'; ids: string[] } | { action: 'setStatus'; ids: string[]; status: MCQStatus }) {
   const res = await fetch('/api/admin/mcq/bulk', {
     method: 'POST',
@@ -87,6 +92,8 @@ export function MCQListClient() {
   const [topicId, setTopicId] = useState<string>('');
   const [difficulty, setDifficulty] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [examId, setExamId] = useState<string>('');
+  const [creatorEmailFilter, setCreatorEmailFilter] = useState<string>('');
   const [page, setPage] = useState(1);
 
   // Selection
@@ -100,6 +107,8 @@ export function MCQListClient() {
     ...(topicId ? { topicId } : {}),
     ...(difficulty ? { difficulty } : {}),
     ...(statusFilter ? { status: statusFilter } : {}),
+    ...(examId ? { examIds: examId } : {}),
+    ...(creatorEmailFilter ? { creatorEmail: creatorEmailFilter } : {}),
   });
 
   const { data, isLoading } = useQuery({
@@ -108,6 +117,7 @@ export function MCQListClient() {
   });
 
   const { data: subjects } = useQuery({ queryKey: ['subjects'], queryFn: fetchSubjects });
+  const { data: exams } = useQuery({ queryKey: ['exams'], queryFn: fetchExams });
   const { data: topics } = useQuery({
     queryKey: ['topics', subjectId],
     queryFn: () => fetchTopics(subjectId || undefined),
@@ -187,6 +197,16 @@ export function MCQListClient() {
           />
         </div>
 
+        <Select value={examId} onValueChange={(v) => { setExamId(v === 'all' ? '' : v); setPage(1); setSelectedIds(new Set()); }}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="All exams" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All exams</SelectItem>
+            {exams?.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+
         <Select value={subjectId} onValueChange={(v) => { setSubjectId(v === 'all' ? '' : v); setTopicId(''); setPage(1); setSelectedIds(new Set()); }}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder="All subjects" />
@@ -230,6 +250,16 @@ export function MCQListClient() {
             ))}
           </SelectContent>
         </Select>
+
+        <div className="relative min-w-48">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter by creator email…"
+            className="pl-9"
+            value={creatorEmailFilter}
+            onChange={(e) => { setCreatorEmailFilter(e.target.value); setPage(1); setSelectedIds(new Set()); }}
+          />
+        </div>
       </div>
 
       {/* Bulk action bar */}
@@ -336,9 +366,10 @@ export function MCQListClient() {
                     )}
                   </button>
                 </th>
-                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 w-[42%]">Question</th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3 w-[35%]">Question</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Difficulty</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Type</th>
+                <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Creator</th>
                 <th className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Status</th>
                 <th className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground px-4 py-3">Actions</th>
               </tr>
@@ -346,7 +377,7 @@ export function MCQListClient() {
             <tbody className="divide-y divide-border">
               {mcqs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center text-muted-foreground py-12">
+                  <td colSpan={7} className="text-center text-muted-foreground py-12">
                     No MCQs found
                   </td>
                 </tr>
@@ -384,7 +415,12 @@ export function MCQListClient() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <MCQStatusBadge status={mcq.status ?? (mcq.isActive ? 'PUBLISHED' : 'DRAFT')} />
+                        <span className="text-xs text-muted-foreground truncate max-w-[140px] block" title={mcq.creatorEmail}>
+                          {mcq.creatorEmail ?? '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <MCQStatusBadge status={mcq.status ?? 'DRAFT'} />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
