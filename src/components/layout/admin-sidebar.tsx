@@ -19,6 +19,7 @@ import {
   Video,
   UserCheck,
   ScrollText,
+  Newspaper,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const NAV_GROUPS = [
     label: 'Content',
     items: [
       { label: 'MCQs', href: '/admin/mcq', icon: BookOpen },
+      { label: 'Blogs', href: '/admin/blogs', icon: Newspaper },
       { label: 'Subjects', href: '/admin/subjects', icon: Layers },
       { label: 'Topics', href: '/admin/topics', icon: TreePine },
       { label: 'Exams', href: '/admin/exams', icon: GraduationCap },

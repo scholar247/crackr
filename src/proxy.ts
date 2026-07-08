@@ -15,11 +15,21 @@ export default auth((req) => {
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    // Public browse pages — accessible without login
+    // Crawlable / SEO files
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
+    pathname.startsWith('/sitemap-') ||
+    // Public browse pages — accessible without login, must be indexed by Google
     pathname.startsWith('/exams') ||
     pathname.startsWith('/subjects') ||
+    pathname.startsWith('/blogs') ||
     pathname.startsWith('/pyp') ||
-    pathname.startsWith('/courses')
+    pathname.startsWith('/courses') ||
+    // Static info pages
+    pathname.startsWith('/about') ||
+    pathname.startsWith('/contact') ||
+    pathname.startsWith('/privacy-policy') ||
+    pathname.startsWith('/terms')
   ) {
     return NextResponse.next();
   }

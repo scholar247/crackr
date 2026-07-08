@@ -415,6 +415,83 @@ export type MockSessionClient = Omit<MockSession, 'createdAt'> & {
   attempt?: TestAttemptClient;
 };
 
+// ─── Blog ─────────────────────────────────────────────────────────────────────
+
+export type BlogStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type BlogType = 'THEORY' | 'QUICK_LEARN';
+
+export interface BlogSEO {
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+  canonicalUrl?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  twitterTitle?: string;
+  twitterDescription?: string;
+  twitterImage?: string;
+  robots?: string;        // e.g. "index,follow"
+  schemaType?: string;    // e.g. "Article", "HowTo"
+}
+
+export interface BlogSlugHistoryEntry {
+  slug: string;
+  replacedAt: Timestamp;
+}
+
+export interface Blog {
+  id: string;
+  type: BlogType;
+  title: string;
+  slug: string;
+  slugHistory: BlogSlugHistoryEntry[];
+
+  // Taxonomy (many-to-many)
+  examIds: string[];
+  subjectIds: string[];
+  topicIds: string[];
+
+  // Content (HTML string from Tiptap rich editor)
+  summary: string;         // plain-text excerpt for cards/SEO fallback
+  content: string;
+
+  // Media
+  featuredImage?: string;
+  thumbnail?: string;
+
+  // Related
+  relatedBlogIds: string[];
+
+  // Tags
+  tagIds: string[];
+
+  // SEO
+  seo: BlogSEO;
+
+  // Analytics (computed / cached)
+  readingTimeMinutes: number;
+  viewCount: number;
+
+  // Status
+  status: BlogStatus;
+  isActive: boolean;       // true when PUBLISHED
+  publishedAt?: Timestamp;
+  archivedAt?: Timestamp;
+
+  // Auth
+  createdBy: string;
+  creatorEmail: string;
+
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export type BlogClient = Omit<Blog, 'createdAt' | 'updatedAt'> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
 // ─── Progress ─────────────────────────────────────────────────────────────────
 
 export interface ProgressSummary {

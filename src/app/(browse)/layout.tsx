@@ -17,6 +17,7 @@ export default async function BrowseLayout({ children }: { children: React.React
             <Link href="/subjects" className="hover:text-foreground transition-colors">Subjects</Link>
             <Link href="/exams" className="hover:text-foreground transition-colors">Exams</Link>
             <Link href="/pyp" className="hover:text-foreground transition-colors">PYP</Link>
+            <Link href="/blogs" className="hover:text-foreground transition-colors">Blogs</Link>
             <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
             <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
             <Link href="/privacy-policy" className="hover:text-foreground transition-colors">Privacy</Link>
