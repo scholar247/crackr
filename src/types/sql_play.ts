@@ -1,3 +1,23 @@
+export interface Column {
+  name: string;
+  type: string;
+  isPrimary?: boolean;
+  isForeign?: boolean;
+  isUnique?: boolean;
+  isNullable?: boolean;
+}
+
+export interface TableDef {
+  name: string;
+  rowCount: string;
+  columns: Column[];
+}
+
+export interface DbSchema {
+  name: string;
+  tables: TableDef[];
+}
+
 export interface QueryResult {
   columns: string[];
   rows: (string | number | boolean | null)[][];
@@ -33,6 +53,6 @@ export type DbEngine = "postgresql" | "mysql" | "sqlite" | "mssql" | "mongodb";
 export interface DbConnection {
   id: string;
   name: string;
-  engine: DbEngine;
   template: string;
+  engine: DbEngine;
 }

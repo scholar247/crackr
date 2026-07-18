@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 
 import type { Tab, HistoryItem,DbConnection, Theme, BottomPanel } from "../../types/sql_play";
-import { generateMockResult, INITIAL_HISTORY, DEFAULT_QUERY } from "../../components/sql_playground/mockData";
+import { INITIAL_HISTORY, DEFAULT_QUERY } from "../../components/sql_playground/mockData";
 import { formatSQL } from "../../lib/sqlHighlight";
 import SchemaSidebar from "../../components/sql_playground/SchemaSidebar";
 import TabBar from "../../components/sql_playground/TabBar";
@@ -118,18 +118,26 @@ const updateTabTitle = (sql: string, template: string) => {
 
         const data = await response.json();
 
-        const result = {
-            rows: Array.isArray(data.result) ? data.result : [],
-            executionTime: data.executionTime,
-            planningTime: 0,
-            totalRows: Array.isArray(data.result)
-                ? data.result.length
-                : data.result?.changes ?? 0,
-            error: data.status ? null : data.error,
-            metadata: Array.isArray(data.result)
-                ? {}
-                : data.result,
-        };
+const rawRows = Array.isArray(data.result) ? data.result : [];
+
+const columns =
+    rawRows.length > 0
+        ? Object.keys(rawRows[0])
+        : [];
+
+const rows = rawRows.map(row =>
+    columns.map(col => row[col])
+);
+
+const result = {
+    columns,
+    rows,
+    executionTime: data.executionTime,
+    planningTime: 0,
+    totalRows: rows.length,
+    error: data.status ? null : data.error,
+    metadata: {},
+};
 
         setTabs((ts) =>
             ts.map((t) =>
@@ -357,7 +365,7 @@ const updateTabTitle = (sql: string, template: string) => {
             background: "var(--card)",
           }}
         >
-          {sidebarOpen && <SchemaSidebar onInsert={insertText} />}
+          {sidebarOpen && <SchemaSidebar onInsert={insertText} template={selectedDb.template} />}
         </aside>
 
         {/* Center column */}
@@ -382,6 +390,8 @@ const updateTabTitle = (sql: string, template: string) => {
             }}
           >
             <EditorToolbar
+              primaryColor={primaryColor}
+              primaryGradient={`linear-gradient(90deg, ${primaryColor} 0%, ${primaryColor} 100%)`}
               isRunning={currentTab?.isRunning ?? false}
               charCount={currentTab?.query.length ?? 0}
               lineCount={currentTab?.query.split("\n").length ?? 0}

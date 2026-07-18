@@ -4,6 +4,8 @@ interface Props {
   isRunning: boolean;
   charCount: number;
   lineCount: number;
+  primaryColor: string;
+  primaryGradient: string;
   onRun: () => void;
   onFormat: () => void;
   onCopy: () => void;
@@ -14,6 +16,8 @@ export default function EditorToolbar({
   isRunning,
   charCount,
   lineCount,
+  primaryColor,
+  primaryGradient,
   onRun,
   onFormat,
   onCopy,
@@ -34,7 +38,8 @@ export default function EditorToolbar({
       <button
         onClick={onRun}
         disabled={isRunning}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 hover:brightness-110 bg-primary text-primary-foreground"
+        className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 hover:brightness-110"
+        style={{ background: primaryGradient, color: "#fff" }}
       >
         {isRunning ? (
           <>
@@ -44,6 +49,15 @@ export default function EditorToolbar({
           <>
             <Play size={12} fill="currentColor" />
             Run
+            <kbd
+              className="ml-1 px-1 py-0.5 rounded text-xs opacity-60"
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              ⌘↵
+            </kbd>
           </>
         )}
       </button>
@@ -55,7 +69,12 @@ export default function EditorToolbar({
         <button
           key={btn.label}
           onClick={btn.action}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-opacity hover:opacity-80 bg-muted text-muted-foreground border border-border"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-opacity hover:opacity-80"
+          style={{
+            background: "var(--muted)",
+            color: "var(--muted-foreground)",
+            border: "1px solid var(--border)",
+          }}
         >
           {btn.icon}
           {btn.label}
