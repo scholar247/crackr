@@ -41,29 +41,28 @@ export default function SQLEditor({ value, onChange, onRun }: Props) {
 
   const lineCount = value.split("\n").length;
 
-  return (
+   return (
     <div
       className="flex h-full overflow-hidden"
       style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px" }}
     >
       {/* Gutter */}
       <div
-        className="select-none text-right overflow-hidden shrink-0 pt-4 pb-4"
+        className="select-none shrink-0 overflow-hidden text-right py-4"
         style={{
-          minWidth: "52px",
-          paddingLeft: "8px",
-          paddingRight: "12px",
+          width: "48px",
+          paddingLeft: "6px",
+          paddingRight: "10px",
           color: "var(--muted-foreground)",
           lineHeight: "1.65",
           borderRight: "1px solid var(--border)",
-          background: "rgba(0,0,0,0.2)",
-          opacity: 0.7,
+          background: "rgba(0,0,0,0.18)",
+          opacity: 0.55,
+          fontSize: "11px",
         }}
       >
         {Array.from({ length: lineCount }, (_, i) => (
-          <div key={i} style={{ lineHeight: "1.65" }}>
-            {i + 1}
-          </div>
+          <div key={i} style={{ lineHeight: "1.65" }}>{i + 1}</div>
         ))}
       </div>
 
@@ -71,23 +70,23 @@ export default function SQLEditor({ value, onChange, onRun }: Props) {
       <div className="relative flex-1 overflow-hidden">
         <pre
           ref={preRef}
-          aria-hidden="true"
+          aria-hidden
           className="absolute inset-0 p-4 m-0 overflow-hidden pointer-events-none"
           style={{
             lineHeight: "1.65",
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
-            color: "var(--foreground)",
             background: "transparent",
             fontFamily: "inherit",
             fontSize: "inherit",
+            color: "var(--foreground)",
           }}
           dangerouslySetInnerHTML={{ __html: highlighted + "\n" }}
         />
         <textarea
           ref={textareaRef}
           value={value}
-          onChange={(e) => { onChange(e.target.value); syncScroll(); }}
+          onChange={e => { onChange(e.target.value); syncScroll(); }}
           onScroll={syncScroll}
           onKeyDown={handleKeyDown}
           className="absolute inset-0 w-full h-full p-4 resize-none outline-none bg-transparent"
@@ -96,7 +95,7 @@ export default function SQLEditor({ value, onChange, onRun }: Props) {
             fontFamily: "inherit",
             fontSize: "inherit",
             color: "transparent",
-            caretColor: "var(--primary)",
+            caretColor: "#a78bfa",
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
             border: "none",

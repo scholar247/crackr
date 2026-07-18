@@ -5,27 +5,7 @@ import {
   Zap, Shield, Globe,
 } from "lucide-react";
 import type { DbConnection, DbEngine, Theme } from  "../../types/sql_play";
-
-const SEED_CONNECTIONS: DbConnection[] = [
-  {
-    id: "airway",
-    name: "Airways Database",
-    template: "airway",
-    engine: "sqlite",
-  },
-  {
-    id: "college",
-    name: "College Database",
-    template: "college",
-    engine: "sqlite",
-  },
-  {
-    id: "library",
-    name: "Library Database",
-    template: "library",
-    engine: "sqlite",
-  },
-];
+import { SEED_CONNECTIONS } from "./mockData";
 
 // ─── Engine metadata ──────────────────────────────────────────────────────────
 const ENGINE_META: Record<DbEngine, { label: string; defaultPort: number; color: string; icon: string }> = {
@@ -40,12 +20,11 @@ interface CardProps {
   conn: DbConnection;
   onConnect: (conn: DbConnection) => void;
   connecting: string | null;
-  theme: Theme;
 }
 
-function ConnectionCard({ conn, onConnect, connecting, theme }: CardProps) {
+function ConnectionCard({ conn, onConnect, connecting }: CardProps) {
   const meta = ENGINE_META[conn.engine];
-  const primary = theme === "light" ? "#0f9d8a" : "#6c63ff";
+  const primary ="#0f9d8a";
   const isConnecting = connecting === conn.id;
 
   return (
@@ -75,7 +54,7 @@ function ConnectionCard({ conn, onConnect, connecting, theme }: CardProps) {
       <button onClick={() => onConnect(conn)} disabled={!!connecting}
         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-60 hover:brightness-110"
         style={{
-          background: isConnecting ? `${primary}20` : `linear-gradient(135deg, ${primary}, ${theme === "light" ? "#0d7a6b" : "#4f46e5"})`,
+          background: isConnecting ? `${primary}20` : `linear-gradient(135deg, ${primary}, ${"#0d7a6b"})`,
           color: isConnecting ? primary : "#fff",
           border: isConnecting ? `1px solid ${primary}40` : "none",
         }}>
@@ -90,31 +69,28 @@ function ConnectionCard({ conn, onConnect, connecting, theme }: CardProps) {
 // ─── Database Selector ────────────────────────────────────────────────────────
 
 interface Props {
-  onConnect: (conn: DbConnection) => void;
-  theme: Theme;
-  onToggleTheme: () => void;
+  onConnect: (conn: string) => void;
 }
 
-export default function DatabaseSelector({ onConnect, theme, onToggleTheme }: Props) {
+export default function DatabaseSelector({ onConnect }: Props) {
   const [connecting, setConnecting] = useState<string | null>(null);
-  const primary = theme === "light" ? "#0f9d8a" : "#6c63ff";
+  const primary = "#0f9d8a";
 
   const handleConnect = (conn: DbConnection) => {
     setConnecting(conn.id);
     setTimeout(() => {
       setConnecting(null);
-      onConnect(conn);
+      onConnect(conn.template);
     }, 1200);
   };
 
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden"
+    <div className="flex flex-col"
       style={{ background: "var(--background)", fontFamily: "'Inter', sans-serif" }}>
 
       {/* Top bar */}
-      <header className="flex items-center gap-3 px-6 h-14 shrink-0"
-        style={{ borderBottom: "1px solid var(--border)", background: "var(--card)" }}>
+      <header className="flex items-center gap-3 px-6 h-14 shrink-0">
         <div className="flex flex-col leading-none">
           <span className="text-md" style={{ color: primary, fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.05em", lineHeight: 1 }}>
             SQL Playground
@@ -143,14 +119,14 @@ export default function DatabaseSelector({ onConnect, theme, onToggleTheme }: Pr
                 Choose a saved connection to open the playground.
               </p>
             </div>
-              <div className="grid gap-4"
+          </div>
+          <div className="grid gap-4"
                 style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
                 {SEED_CONNECTIONS.map(conn  => (
                   <ConnectionCard key={conn.id} conn={conn}
-                    onConnect={handleConnect} connecting={connecting} theme={theme} />
+                    onConnect={handleConnect} connecting={connecting} />
                 ))}
               </div>
-          </div>
         </div>
       </div>
     </div>

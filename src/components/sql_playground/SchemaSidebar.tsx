@@ -74,10 +74,10 @@ export default function SchemaSidebar({ onInsert, template }: Props) {
 
           return acc;
         },
-        {}
+        {} as Record<string, Column[]>
       );
 
-      const parsedTables = Object.entries(grouped).map(([name, columns]) => ({
+      const parsedTables = (Object.entries(grouped) as [string, Column[]][]).map(([name, columns]): Table => ({
         name,
         columns,
       }));
@@ -98,6 +98,9 @@ export default function SchemaSidebar({ onInsert, template }: Props) {
   useEffect(() => {
     loadSchema();
   }, []);
+  useEffect(()=>{
+    loadSchema();
+  },[template]);
 
   const filteredTables = useMemo(() => {
     if (!search) return tables;
