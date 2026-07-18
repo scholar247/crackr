@@ -224,6 +224,28 @@ export class MongoBlogRepository {
     await col.updateOne({ id }, { $inc: { viewCount: 1 } });
   }
 
+  /** Atomically claim a SEEDING blog for the AI Content Factory's Blog Generator stage. */
+  async claimNextSeeding(staleMs = 10 * 60 * 1000): Promise<BlogClient | null> {
+    const col = await this.col();
+    const staleBefore = new Date(Date.now() - staleMs).toISOString();
+    const now = nowIso();
+    const result = await col.findOneAndUpdate(
+      {
+        status: 'SEEDING',
+        $or: [{ 'aiMeta.lockedAt': { $exists: false } }, { 'aiMeta.lockedAt': { $lt: staleBefore } }],
+      },
+      { $set: { 'aiMeta.lockedAt': now, updatedAt: now } },
+      { returnDocument: 'after' }
+    );
+    return result ? (fromMongo(result) as BlogClient) : null;
+  }
+
+  /** Release a claim without changing status — used when generation fails and should be retried. */
+  async releaseSeedingLock(id: string): Promise<void> {
+    const col = await this.col();
+    await col.updateOne({ id }, { $unset: { 'aiMeta.lockedAt': '' }, $set: { updatedAt: nowIso() } });
+  }
+
   async findRelated(blogId: string, relatedBlogIds: string[]): Promise<BlogClient[]> {
     if (relatedBlogIds.length === 0) return [];
     const col = await this.col();

@@ -27,6 +27,20 @@ export function requireApiKey(req: Request): Response | null {
   return apiError('Invalid API key', 401);
 }
 
+/**
+ * Guards the /api/cron/ai/* job routes. Accepts either the CRON_SECRET bearer token (for an
+ * external scheduler / Vercel Cron) OR an authenticated EDITOR+ session (for the admin
+ * "Run now" button) — same route, two legitimate callers.
+ */
+export async function requireCronSecretOrAuth(req: Request): Promise<Response | null> {
+  const secret = process.env.CRON_SECRET;
+  const auth = req.headers.get('authorization') ?? '';
+  if (secret && auth === `Bearer ${secret}`) return null;
+
+  const { error } = await requireAuth('EDITOR');
+  return error;
+}
+
 const ROLE_HIERARCHY: Record<UserRole, number> = {
   STUDENT: 0,
   REVIEWER: 1,

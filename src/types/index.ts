@@ -238,6 +238,9 @@ export interface MCQ {
   correctCount: number;
   accuracyRate: number;
   avgTimeTakenSeconds: number;
+
+  // AI Content Factory (optional — absent for human-authored MCQs)
+  aiMeta?: AIGenerationMeta;
 }
 
 // ─── Group ───────────────────────────────────────────────────────────────────
@@ -417,8 +420,93 @@ export type MockSessionClient = Omit<MockSession, 'createdAt'> & {
 
 // ─── Blog ─────────────────────────────────────────────────────────────────────
 
-export type BlogStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-export type BlogType = 'THEORY' | 'QUICK_LEARN';
+// SEEDING = AI-created stub (title/slug/summary only, no body yet) — never publicly visible
+export type BlogStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'SEEDING';
+export type BlogType =
+  | 'THEORY'
+  | 'QUICK_LEARN'
+  | 'SHORT_NOTE'
+  | 'FORMULA_SHEET'
+  | 'REVISION_NOTE'
+  | 'FAQ'
+  | 'TRICKS'
+  | 'CHEAT_SHEET';
+
+// ─── AI Content Factory ───────────────────────────────────────────────────────
+
+/** Traceability block attached to any AI-generated Blog/MCQ — purely additive, never required by existing forms. */
+export interface AIGenerationMeta {
+  seedId: string;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  generatedAt: Timestamp;
+  lockedAt?: Timestamp;                                 // atomic claim guard for in-progress generation
+  qaReport?: Record<string, number | string[] | string>; // editorial polish-pass scores (Blog only)
+}
+
+export type SeedKind = 'BLOG' | 'MCQ';
+export type SeedStatus = 'PENDING' | 'GENERATING' | 'DONE' | 'FAILED';
+
+export interface ContentSeed {
+  id: string;
+  kind: SeedKind;
+  status: SeedStatus;
+
+  examId: string;
+  subjectId: string;
+  topicId: string;
+
+  // BLOG-kind payload
+  articleType?: BlogType;
+  angleHint?: string;              // planner-supplied differentiator to avoid near-duplicate angles
+
+  // MCQ-kind payload
+  targetCount?: number;            // MCQs to generate for this seed ("one set")
+  difficultyMix?: Partial<Record<Difficulty, number>>;
+  includePYQ?: boolean;
+  autoCreateSubtopics?: boolean;
+  resolvedTopicId?: string;        // set by MCQ Seeder once scope is resolved; absent = not yet scoped
+
+  attempts: number;
+  maxAttempts: number;
+  lastError?: string;
+  lockedAt?: Timestamp;
+  resultBlogId?: string;
+  resultMcqIds?: string[];
+
+  planRunId: string;               // groups seeds created by one "Create Seeds" click
+  createdBy: string;
+  creatorEmail: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  startedAt?: Timestamp;
+  completedAt?: Timestamp;
+}
+
+export type ContentSeedClient = Omit<ContentSeed, 'createdAt' | 'updatedAt'> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AILogPhase = 'PLAN' | 'BLOG_SEED' | 'BLOG_GENERATE' | 'MCQ_SEED' | 'MCQ_GENERATE';
+export type AILogLevel = 'INFO' | 'WARN' | 'ERROR';
+
+export interface AIFactoryLogEntry {
+  id: string;
+  runId: string;                   // planRunId (PLAN phase) or a per-invocation job run id
+  phase: AILogPhase;
+  seedId?: string;
+  examId?: string;
+  subjectId?: string;
+  topicId?: string;
+  level: AILogLevel;
+  message: string;
+  meta?: Record<string, unknown>;
+  createdAt: Timestamp;
+}
+
+export type AIFactoryLogEntryClient = Omit<AIFactoryLogEntry, 'createdAt'> & { createdAt: string };
 
 export interface BlogSEO {
   metaTitle?: string;
@@ -485,6 +573,9 @@ export interface Blog {
 
   createdAt: Timestamp;
   updatedAt: Timestamp;
+
+  // AI Content Factory (optional — absent for human-authored blogs)
+  aiMeta?: AIGenerationMeta;
 }
 
 export type BlogClient = Omit<Blog, 'createdAt' | 'updatedAt'> & {

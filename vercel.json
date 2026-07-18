@@ -1,0 +1,8 @@
+{
+  "crons": [
+    { "path": "/api/cron/ai/blog-seeder", "schedule": "0 * * * *" },
+    { "path": "/api/cron/ai/blog-generator", "schedule": "15 * * * *" },
+    { "path": "/api/cron/ai/mcq-seeder", "schedule": "30 * * * *" },
+    { "path": "/api/cron/ai/mcq-generator", "schedule": "45 * * * *" }
+  ]
+}

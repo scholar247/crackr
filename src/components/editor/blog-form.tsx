@@ -323,6 +323,15 @@ export function BlogForm({ initialData, mode }: BlogFormProps) {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
+      {/* AI Content Factory: this blog is only a stub — Blog Generator hasn't filled in content yet */}
+      {mode === 'edit' && initialData?.status === 'SEEDING' && (
+        <div className="rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 px-4 py-2.5 text-sm text-blue-800 dark:text-blue-300">
+          This blog was created by the AI Content Factory&apos;s <strong>Blog Seeder</strong> — title, slug, and
+          summary only, content is intentionally empty at this stage. Run <strong>Blog Generator</strong>{' '}
+          (Admin → AI Content Factory → Seed Monitor) to fill in the full article, or write it manually below.
+        </div>
+      )}
+
       {/* Cached draft restore banner */}
       {hasCachedDraft && (
         <div className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-2.5 text-sm">

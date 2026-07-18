@@ -20,6 +20,8 @@ import {
   UserCheck,
   ScrollText,
   Newspaper,
+  Sparkles,
+  ListChecks,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,6 +46,13 @@ const NAV_GROUPS = [
       { label: 'Exams', href: '/admin/exams', icon: GraduationCap },
       { label: 'PYP', href: '/admin/pyp', icon: ScrollText },
       { label: 'Tags', href: '/admin/tags', icon: Tag },
+    ],
+  },
+  {
+    label: 'AI Content Factory',
+    items: [
+      { label: 'Create Seeds', href: '/admin/ai-factory', icon: Sparkles },
+      { label: 'Seed Monitor', href: '/admin/ai-factory/seeds', icon: ListChecks },
     ],
   },
   {

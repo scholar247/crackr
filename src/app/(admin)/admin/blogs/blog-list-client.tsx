@@ -28,11 +28,18 @@ const STATUS_VARIANTS: Record<BlogStatus, 'secondary' | 'outline' | 'success' | 
   DRAFT: 'secondary',
   PUBLISHED: 'success',
   ARCHIVED: 'destructive',
+  SEEDING: 'outline',
 };
 
 const TYPE_LABELS: Record<string, string> = {
   THEORY: 'Theory',
   QUICK_LEARN: 'Quick Learn',
+  SHORT_NOTE: 'Short Note',
+  FORMULA_SHEET: 'Formula Sheet',
+  REVISION_NOTE: 'Revision Note',
+  FAQ: 'FAQ',
+  TRICKS: 'Tricks',
+  CHEAT_SHEET: 'Cheat Sheet',
 };
 
 async function fetchBlogs(params: URLSearchParams) {
@@ -138,6 +145,12 @@ export function BlogListClient() {
             <SelectItem value="all">All types</SelectItem>
             <SelectItem value="THEORY">Theory</SelectItem>
             <SelectItem value="QUICK_LEARN">Quick Learn</SelectItem>
+            <SelectItem value="SHORT_NOTE">Short Note</SelectItem>
+            <SelectItem value="FORMULA_SHEET">Formula Sheet</SelectItem>
+            <SelectItem value="REVISION_NOTE">Revision Note</SelectItem>
+            <SelectItem value="FAQ">FAQ</SelectItem>
+            <SelectItem value="TRICKS">Tricks</SelectItem>
+            <SelectItem value="CHEAT_SHEET">Cheat Sheet</SelectItem>
           </SelectContent>
         </Select>
 
@@ -148,6 +161,7 @@ export function BlogListClient() {
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="DRAFT">Draft</SelectItem>
+            <SelectItem value="SEEDING">Seeding</SelectItem>
             <SelectItem value="PUBLISHED">Published</SelectItem>
             <SelectItem value="ARCHIVED">Archived</SelectItem>
           </SelectContent>

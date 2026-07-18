@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AIGenerationMetaSchema } from './blog.schema';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ const MCQBaseSchema = z.object({
   isPreviousYear: z.boolean().default(false),
   previousYearExam: z.string().optional(),
   status: MCQStatusSchema.optional(),
+  aiMeta: AIGenerationMetaSchema.optional(),
 });
 
 export const CreateMCQSchema = MCQBaseSchema.refine(

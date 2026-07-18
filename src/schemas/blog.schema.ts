@@ -2,8 +2,17 @@ import { z } from 'zod';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export const BlogStatusSchema = z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']);
-export const BlogTypeSchema = z.enum(['THEORY', 'QUICK_LEARN']);
+export const BlogStatusSchema = z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED', 'SEEDING']);
+export const BlogTypeSchema = z.enum([
+  'THEORY',
+  'QUICK_LEARN',
+  'SHORT_NOTE',
+  'FORMULA_SHEET',
+  'REVISION_NOTE',
+  'FAQ',
+  'TRICKS',
+  'CHEAT_SHEET',
+]);
 
 // ─── SEO ──────────────────────────────────────────────────────────────────────
 
@@ -20,6 +29,18 @@ export const BlogSEOSchema = z.object({
   twitterImage: z.string().url().optional().or(z.literal('')),
   robots: z.string().max(100).optional(),
   schemaType: z.string().max(50).optional(),
+});
+
+// ─── AI Content Factory traceability ─────────────────────────────────────────
+
+export const AIGenerationMetaSchema = z.object({
+  seedId: z.string(),
+  provider: z.string(),
+  model: z.string(),
+  promptVersion: z.string(),
+  generatedAt: z.string(),
+  lockedAt: z.string().optional(),
+  qaReport: z.record(z.string(), z.union([z.number(), z.array(z.string()), z.string()])).optional(),
 });
 
 // ─── Create / Update ──────────────────────────────────────────────────────────
@@ -39,6 +60,7 @@ export const CreateBlogSchema = z.object({
   thumbnail: z.string().url().optional().or(z.literal('')),
   seo: BlogSEOSchema.default({}),
   status: BlogStatusSchema.default('DRAFT'),
+  aiMeta: AIGenerationMetaSchema.optional(),
 });
 
 export const UpdateBlogSchema = CreateBlogSchema.partial();
