@@ -44,3 +44,4 @@ next-env.d.ts
 ship_script.sh
 *.zip
 ../builds/
+.claude
