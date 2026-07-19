@@ -169,6 +169,28 @@ async function setup() {
   await db.collection('notifications').createIndex({ userId: 1, isRead: 1, createdAt: -1 });
   console.log('  notifications ✓');
 
+  // ── diagrams ───────────────────────────────────────────────────────────────
+  await db.collection('diagrams').createIndex({ id: 1 }, { unique: true });
+  await db.collection('diagrams').createIndex({ ownerId: 1, updatedAt: -1 });
+  await db.collection('diagrams').createIndex({ visibility: 1 });
+  console.log('  diagrams ✓');
+
+  // ── diagramVersions ────────────────────────────────────────────────────────
+  await db.collection('diagramVersions').createIndex({ id: 1 }, { unique: true });
+  await db.collection('diagramVersions').createIndex({ diagramId: 1, createdAt: -1 });
+  console.log('  diagramVersions ✓');
+
+  // ── diagramShares ──────────────────────────────────────────────────────────
+  await db.collection('diagramShares').createIndex({ id: 1 }, { unique: true });
+  await db.collection('diagramShares').createIndex({ diagramId: 1, userId: 1 }, { unique: true });
+  await db.collection('diagramShares').createIndex({ userId: 1 });
+  console.log('  diagramShares ✓');
+
+  // ── diagramComments ────────────────────────────────────────────────────────
+  await db.collection('diagramComments').createIndex({ id: 1 }, { unique: true });
+  await db.collection('diagramComments').createIndex({ diagramId: 1, createdAt: 1 });
+  console.log('  diagramComments ✓');
+
   await client.close();
   console.log('\n✓ All indexes created.');
 }

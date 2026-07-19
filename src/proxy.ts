@@ -25,6 +25,9 @@ export default auth((req) => {
     pathname.startsWith('/blogs') ||
     pathname.startsWith('/pyp') ||
     pathname.startsWith('/courses') ||
+    // Interview diagram rooms — shareable by link, no login required.
+    // See the TODO(auth) notes in interview.service.ts if this changes.
+    pathname.startsWith('/interview') ||
     // Static info pages
     pathname.startsWith('/about') ||
     pathname.startsWith('/contact') ||
