@@ -4,7 +4,7 @@ import {
   Trash2, Clock, Table2, HardDrive, X, Eye, EyeOff,
   Zap, Shield, Globe,
 } from "lucide-react";
-import type { DbConnection, DbEngine, Theme } from  "../../types/sql_play";
+import type { DbConnection, DbEngine, Theme } from  "@/types/sql_play";
 import { SEED_CONNECTIONS } from "./mockData";
 
 // ─── Engine metadata ──────────────────────────────────────────────────────────

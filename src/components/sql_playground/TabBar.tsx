@@ -1,5 +1,5 @@
 import { Plus, X, FileText, Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import type { Tab } from "../../types/sql_play";
+import type { Tab } from "@/types/sql_play";
 
 interface Props {
   tabs: Tab[];

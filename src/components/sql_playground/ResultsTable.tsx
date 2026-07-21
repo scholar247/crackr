@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlertCircle,ArrowUp,ArrowDown, CheckCircle, Copy, Download, Filter, X } from "lucide-react";
-import type { QueryResult } from "../../types/sql_play";
+import type { QueryResult } from "@/types/sql_play";
 import RuntimeBar from "./RuntimeBar";
 
 interface Props {

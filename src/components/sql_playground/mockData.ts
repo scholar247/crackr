@@ -1,4 +1,4 @@
-import type { HistoryItem,DbSchema, DbConnection } from "../../types/sql_play";
+import type { HistoryItem, DbConnection } from "@/types/sql_play";
 export const SEED_CONNECTIONS: DbConnection[] = [
     {
     id: "blank",

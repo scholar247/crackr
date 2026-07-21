@@ -1,5 +1,5 @@
 import { CheckCircle, AlertCircle, Clock } from "lucide-react";
-import type { HistoryItem } from "../../types/sql_play";
+import type { HistoryItem } from "@/types/sql_play";
 
 interface Props {
   history: HistoryItem[];

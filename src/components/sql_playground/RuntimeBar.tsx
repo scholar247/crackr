@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle, Timer, Zap, TrendingUp, Rows3, Database } from "lucide-react";
-import type { QueryResult } from "../../types/sql_play";
+import type { QueryResult } from "@/types/sql_play";
 
 interface Props {
   result: QueryResult;

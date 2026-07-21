@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { executeSQL } from "../../../../lib/sql/sqlExecutor";
+import { executeSQL } from "@/lib/sql/sqlExecutor";
 
 interface ExecuteBody {
     template: string;

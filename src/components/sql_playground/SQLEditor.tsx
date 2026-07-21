@@ -1,5 +1,5 @@
 import { useRef, useMemo, useCallback } from "react";
-import { highlightSQL } from "../../lib/sqlHighlight";
+import { highlightSQL } from "@/lib/sqlHighlight";
 
 interface Props {
   value: string;
