@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useState, isValidElement, type ComponentPropsWithoutRef, type ReactNode, type ComponentType } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkDirective from 'remark-directive';
+import { visit } from 'unist-util-visit';
+import { Info, AlertTriangle, Lightbulb, OctagonAlert, Check } from 'lucide-react';
+import type { CalloutVariant } from '@/components/editor/extensions/callout';
 
 const LANG_DISPLAY: Record<string, string> = {
   js: 'JavaScript',
@@ -31,80 +37,114 @@ const LANG_DISPLAY: Record<string, string> = {
   r: 'R',
 };
 
-function wrapTables(container: HTMLElement) {
-  container.querySelectorAll('table').forEach((table) => {
-    if (table.parentElement?.classList.contains('table-wrapper')) return;
-    const wrapper = document.createElement('div');
-    wrapper.className = 'table-wrapper';
-    table.parentNode?.insertBefore(wrapper, table);
-    wrapper.appendChild(table);
-  });
-}
+const CALLOUT_META: Record<CalloutVariant, { icon: ComponentType<{ className?: string }>; label: string }> = {
+  info: { icon: Info, label: 'Info' },
+  warning: { icon: AlertTriangle, label: 'Warning' },
+  tip: { icon: Lightbulb, label: 'Tip' },
+  danger: { icon: OctagonAlert, label: 'Danger' },
+};
 
-function enhanceCodeBlocks(container: HTMLElement) {
-  container.querySelectorAll('pre').forEach((pre) => {
-    if (pre.dataset.enhanced) return;
-    pre.dataset.enhanced = '1';
-
-    const code = pre.querySelector('code');
-    if (!code) return;
-
-    const langClass = Array.from(code.classList).find((c) => c.startsWith('language-'));
-    const langKey = langClass?.replace('language-', '') ?? '';
-    const langLabel = LANG_DISPLAY[langKey] ?? (langKey ? langKey.toUpperCase() : '');
-
-    // Wrapper so we can position the toolbar absolutely over the pre
-    const wrapper = document.createElement('div');
-    wrapper.className = 'code-block-wrapper';
-    pre.parentNode?.insertBefore(wrapper, pre);
-    wrapper.appendChild(pre);
-
-    // Toolbar
-    const toolbar = document.createElement('div');
-    toolbar.className = 'code-toolbar';
-
-    if (langLabel) {
-      const label = document.createElement('span');
-      label.className = 'code-lang';
-      label.textContent = langLabel;
-      toolbar.appendChild(label);
-    }
-
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'copy-btn';
-    copyBtn.textContent = 'Copy';
-    copyBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(code.textContent ?? '');
-        copyBtn.textContent = 'Copied!';
-        copyBtn.classList.add('copied');
-        setTimeout(() => {
-          copyBtn.textContent = 'Copy';
-          copyBtn.classList.remove('copied');
-        }, 2000);
-      } catch {
-        copyBtn.textContent = 'Failed';
-        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
-      }
+/** Converts remark-directive's `:::info ... :::` containers into styled callout divs. */
+function remarkCallouts() {
+  return (tree: Parameters<typeof visit>[0]) => {
+    visit(tree, (node) => {
+      const directive = node as { type: string; name?: string; data?: Record<string, unknown> };
+      if (directive.type !== 'containerDirective') return;
+      const variant = directive.name as CalloutVariant;
+      if (!(variant in CALLOUT_META)) return;
+      directive.data = {
+        ...directive.data,
+        hName: 'div',
+        hProperties: { className: ['callout', `callout-${variant}`], 'data-callout': variant },
+      };
     });
-    toolbar.appendChild(copyBtn);
-
-    wrapper.insertBefore(toolbar, pre);
-  });
+  };
 }
 
-export function BlogContent({ html }: { html: string }) {
-  const ref = useRef<HTMLDivElement>(null);
+function textFromChildren(children: ReactNode): string {
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return String(children);
+  if (Array.isArray(children)) return children.map(textFromChildren).join('');
+  if (isValidElement<{ children?: ReactNode }>(children)) return textFromChildren(children.props.children);
+  return '';
+}
 
-  useEffect(() => {
-    if (!ref.current) return;
-    wrapTables(ref.current);
-    enhanceCodeBlocks(ref.current);
-  }, [html]);
+function CodeBlock({ children, ...props }: ComponentPropsWithoutRef<'pre'>) {
+  const [copied, setCopied] = useState(false);
+  const codeEl = Array.isArray(children) ? children[0] : children;
+  const codeClassName = isValidElement<{ className?: string }>(codeEl) ? codeEl.props.className : undefined;
+  const langKey = codeClassName?.match(/language-(\S+)/)?.[1] ?? '';
+  const langLabel = LANG_DISPLAY[langKey] ?? (langKey ? langKey.toUpperCase() : '');
+  const codeText = textFromChildren(children);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(codeText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable — button silently stays as-is */
+    }
+  };
 
   return (
+    <div className="code-block-wrapper">
+      <div className="code-toolbar">
+        {langLabel && <span className="code-lang">{langLabel}</span>}
+        <button type="button" className={copied ? 'copy-btn copied' : 'copy-btn'} onClick={handleCopy}>
+          {copied ? (
+            <>
+              <Check className="inline h-3 w-3 -mt-0.5 mr-1" />
+              Copied!
+            </>
+          ) : (
+            'Copy'
+          )}
+        </button>
+      </div>
+      <pre {...props}>{children}</pre>
+    </div>
+  );
+}
+
+function TableWrapper({ children, ...props }: ComponentPropsWithoutRef<'table'>) {
+  return (
+    <div className="table-wrapper">
+      <table {...props}>{children}</table>
+    </div>
+  );
+}
+
+function CalloutBlock({ children, ...props }: ComponentPropsWithoutRef<'div'> & { 'data-callout'?: string }) {
+  const variant = (props['data-callout'] as CalloutVariant | undefined) ?? 'info';
+  const meta = CALLOUT_META[variant] ?? CALLOUT_META.info;
+  const Icon = meta.icon;
+  return (
+    <div className={`callout callout-${variant}`} data-callout={variant}>
+      <Icon className="callout-icon" aria-hidden="true" />
+      <div className="callout-body">{children}</div>
+    </div>
+  );
+}
+
+function Img({ alt, ...props }: ComponentPropsWithoutRef<'img'>) {
+  // eslint-disable-next-line @next/next/no-img-element -- arbitrary pasted URLs, not project-local assets
+  return <img loading="lazy" alt={alt ?? ''} {...props} />;
+}
+
+const components: Components = {
+  pre: CodeBlock,
+  table: TableWrapper,
+  div: CalloutBlock,
+  img: Img,
+};
+
+export function BlogContent({ content }: { content: string }) {
+  return (
     <article className="blog-content">
-      <div ref={ref} dangerouslySetInnerHTML={{ __html: html }} />
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkDirective, remarkCallouts]} components={components}>
+        {content}
+      </ReactMarkdown>
     </article>
   );
 }

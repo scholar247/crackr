@@ -171,7 +171,7 @@ export function BlogPreviewClient({ initialBlog, cacheKey }: Props) {
 
         {/* Body */}
         {blog.content ? (
-          <BlogContent html={blog.content} />
+          <BlogContent content={blog.content} />
         ) : (
           <p className="text-muted-foreground italic">No content yet.</p>
         )}

@@ -452,7 +452,7 @@ export interface Blog {
   subjectIds: string[];
   topicIds: string[];
 
-  // Content (HTML string from Tiptap rich editor)
+  // Content (Markdown string from the Tiptap editor, incl. GFM tables and ::: callout blocks)
   summary: string;         // plain-text excerpt for cards/SEO fallback
   content: string;
 

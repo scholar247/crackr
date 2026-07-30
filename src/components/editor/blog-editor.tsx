@@ -6,11 +6,19 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Superscript from '@tiptap/extension-superscript';
 import Subscript from '@tiptap/extension-subscript';
+import TiptapImage from '@tiptap/extension-image';
+import { Markdown } from '@tiptap/markdown';
+import { Table } from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableHeader from '@tiptap/extension-table-header';
+import TableCell from '@tiptap/extension-table-cell';
 import { useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { Callout, type CalloutVariant } from './extensions/callout';
+import { SlashCommand } from './extensions/slash-command';
 import {
   Bold,
   Italic,
@@ -30,11 +38,20 @@ import {
   Heading4,
   Pilcrow,
   FileCode2,
+  Table2,
+  Rows3,
+  Columns3,
+  Trash2,
+  Image as ImageIcon,
+  Info,
+  AlertTriangle,
+  Lightbulb,
+  OctagonAlert,
 } from 'lucide-react';
 
 interface BlogEditorProps {
   value?: string;
-  onChange?: (html: string) => void;
+  onChange?: (markdown: string) => void;
   placeholder?: string;
   className?: string;
 }
@@ -73,6 +90,13 @@ function ToolbarBtn({
   );
 }
 
+const CALLOUT_VARIANTS: { variant: CalloutVariant; label: string; icon: typeof Info }[] = [
+  { variant: 'info', label: 'Info callout', icon: Info },
+  { variant: 'warning', label: 'Warning callout', icon: AlertTriangle },
+  { variant: 'tip', label: 'Tip callout', icon: Lightbulb },
+  { variant: 'danger', label: 'Danger callout', icon: OctagonAlert },
+];
+
 export function BlogEditor({ value, onChange, placeholder, className }: BlogEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -87,23 +111,32 @@ export function BlogEditor({ value, onChange, placeholder, className }: BlogEdit
         autolink: true,
         HTMLAttributes: { class: 'text-primary underline underline-offset-2 hover:opacity-80' },
       }),
-      Placeholder.configure({ placeholder: placeholder ?? 'Write your blog content here…' }),
+      Placeholder.configure({ placeholder: placeholder ?? 'Write your blog content here… (type “/” for blocks)' }),
       Superscript,
       Subscript,
+      TiptapImage.configure({ HTMLAttributes: { class: 'rounded-lg border border-border' } }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Callout,
+      SlashCommand,
+      Markdown,
     ],
     content: value ?? '',
+    contentType: 'markdown',
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      const html = editor.isEmpty ? '' : editor.getHTML();
-      onChange?.(html);
+      const markdown = editor.isEmpty ? '' : editor.getMarkdown();
+      onChange?.(markdown);
     },
   });
 
   // Sync external value without triggering onChange loop
   useEffect(() => {
     if (!editor) return;
-    if (editor.getHTML() === (value ?? '')) return;
-    editor.commands.setContent(value ?? '', { emitUpdate: false });
+    if (editor.getMarkdown() === (value ?? '')) return;
+    editor.commands.setContent(value ?? '', { emitUpdate: false, contentType: 'markdown' });
   }, [value, editor]);
 
   const setLink = useCallback(() => {
@@ -117,9 +150,28 @@ export function BlogEditor({ value, onChange, placeholder, className }: BlogEdit
     editor?.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
   }, [editor]);
 
+  const insertImage = useCallback(() => {
+    const src = prompt('Image URL:');
+    if (!src) return;
+    const alt = prompt('Alt text (optional):') ?? '';
+    editor?.chain().focus().setImage({ src, alt }).run();
+  }, [editor]);
+
+  const toggleCallout = useCallback(
+    (variant: CalloutVariant) => {
+      if (editor?.isActive('callout', { variant })) {
+        editor.chain().focus().unsetCallout().run();
+      } else {
+        editor?.chain().focus().setCallout({ variant }).run();
+      }
+    },
+    [editor],
+  );
+
   if (!editor) return null;
 
   const isLinkActive = editor.isActive('link');
+  const isInTable = editor.isActive('table');
 
   return (
     <div className={cn('rounded-lg border border-border overflow-hidden flex flex-col blog-tiptap', className)}>
@@ -242,7 +294,21 @@ export function BlogEditor({ value, onChange, placeholder, className }: BlogEdit
 
         <Separator orientation="vertical" className="mx-1 h-5" />
 
-        {/* Link */}
+        {/* Callouts */}
+        {CALLOUT_VARIANTS.map(({ variant, label, icon: Icon }) => (
+          <ToolbarBtn
+            key={variant}
+            onClick={() => toggleCallout(variant)}
+            active={editor.isActive('callout', { variant })}
+            label={label}
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </ToolbarBtn>
+        ))}
+
+        <Separator orientation="vertical" className="mx-1 h-5" />
+
+        {/* Link / Image */}
         <ToolbarBtn onClick={setLink} active={isLinkActive} label={isLinkActive ? 'Edit link' : 'Insert link'}>
           <LinkIcon className="h-3.5 w-3.5" />
         </ToolbarBtn>
@@ -253,6 +319,33 @@ export function BlogEditor({ value, onChange, placeholder, className }: BlogEdit
           >
             <LinkOff className="h-3.5 w-3.5" />
           </ToolbarBtn>
+        )}
+        <ToolbarBtn onClick={insertImage} label="Insert image">
+          <ImageIcon className="h-3.5 w-3.5" />
+        </ToolbarBtn>
+
+        <Separator orientation="vertical" className="mx-1 h-5" />
+
+        {/* Table */}
+        <ToolbarBtn
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          active={isInTable}
+          label="Insert table"
+        >
+          <Table2 className="h-3.5 w-3.5" />
+        </ToolbarBtn>
+        {isInTable && (
+          <>
+            <ToolbarBtn onClick={() => editor.chain().focus().addRowAfter().run()} label="Add row">
+              <Rows3 className="h-3.5 w-3.5" />
+            </ToolbarBtn>
+            <ToolbarBtn onClick={() => editor.chain().focus().addColumnAfter().run()} label="Add column">
+              <Columns3 className="h-3.5 w-3.5" />
+            </ToolbarBtn>
+            <ToolbarBtn onClick={() => editor.chain().focus().deleteTable().run()} label="Delete table">
+              <Trash2 className="h-3.5 w-3.5" />
+            </ToolbarBtn>
+          </>
         )}
 
         <Separator orientation="vertical" className="mx-1 h-5" />

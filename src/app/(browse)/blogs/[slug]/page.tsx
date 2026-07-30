@@ -149,7 +149,7 @@ export default async function BlogDetailPage({ params }: Props) {
 
         {/* Body */}
         {blog.content ? (
-          <BlogContent html={blog.content} />
+          <BlogContent content={blog.content} />
         ) : (
           <p className="text-muted-foreground italic">No content yet.</p>
         )}

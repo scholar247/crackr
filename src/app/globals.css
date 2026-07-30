@@ -461,6 +461,54 @@ body {
   margin-right: 0.25rem;
 }
 
+/* ── Callouts ───────────────────────────────────────────────────────────────── */
+.blog-content .callout {
+  display: flex;
+  gap: 0.75rem;
+  margin: 1.75rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  background: var(--muted);
+}
+.blog-content .callout-icon {
+  flex-shrink: 0;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.15rem;
+}
+.blog-content .callout-body > *:first-child { margin-top: 0; }
+.blog-content .callout-body > *:last-child { margin-bottom: 0; }
+
+.blog-content .callout-info {
+  background: oklch(0.95 0.02 235);
+  border-color: oklch(0.80 0.06 235);
+  border-left-color: oklch(0.55 0.14 235);
+}
+.blog-content .callout-info .callout-icon { color: oklch(0.50 0.16 235); }
+
+.blog-content .callout-warning {
+  background: oklch(0.96 0.03 85);
+  border-color: oklch(0.82 0.09 85);
+  border-left-color: oklch(0.62 0.15 75);
+}
+.blog-content .callout-warning .callout-icon { color: oklch(0.55 0.15 70); }
+
+.blog-content .callout-tip {
+  background: oklch(0.95 0.03 155);
+  border-color: oklch(0.78 0.09 155);
+  border-left-color: oklch(0.55 0.13 155);
+}
+.blog-content .callout-tip .callout-icon { color: oklch(0.50 0.14 155); }
+
+.blog-content .callout-danger {
+  background: oklch(0.95 0.03 25);
+  border-color: oklch(0.78 0.10 25);
+  border-left-color: oklch(0.55 0.17 25);
+}
+.blog-content .callout-danger .callout-icon { color: oklch(0.50 0.18 25); }
+
 /* ── Lists ──────────────────────────────────────────────────────────────────── */
 .blog-content ul,
 .blog-content ol {
@@ -587,6 +635,152 @@ body {
 /* HR — barely visible at --border dark value */
 .dark .blog-content hr {
   border-top-color: oklch(0.24 0.020 196);
+}
+
+/* Callouts — light-mode tints are too bright against a dark page */
+.dark .blog-content .callout {
+  border-color: oklch(0.26 0.020 196);
+  background: oklch(0.155 0.022 196);
+}
+.dark .blog-content .callout-info {
+  background: oklch(0.20 0.035 235);
+  border-color: oklch(0.32 0.06 235);
+  border-left-color: oklch(0.62 0.13 235);
+}
+.dark .blog-content .callout-info .callout-icon { color: oklch(0.72 0.12 235); }
+
+.dark .blog-content .callout-warning {
+  background: oklch(0.22 0.035 80);
+  border-color: oklch(0.35 0.08 80);
+  border-left-color: oklch(0.68 0.14 75);
+}
+.dark .blog-content .callout-warning .callout-icon { color: oklch(0.75 0.13 75); }
+
+.dark .blog-content .callout-tip {
+  background: oklch(0.20 0.03 155);
+  border-color: oklch(0.32 0.07 155);
+  border-left-color: oklch(0.62 0.12 155);
+}
+.dark .blog-content .callout-tip .callout-icon { color: oklch(0.70 0.13 155); }
+
+.dark .blog-content .callout-danger {
+  background: oklch(0.22 0.035 25);
+  border-color: oklch(0.35 0.08 25);
+  border-left-color: oklch(0.62 0.15 25);
+}
+.dark .blog-content .callout-danger .callout-icon { color: oklch(0.72 0.15 25); }
+
+/* ─── Blog editor (Tiptap) ──────────────────────────────────────────────────────
+ *  Tables, callouts, and the slash-command menu inside admin/blogs/new & edit.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.blog-tiptap .tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  table-layout: fixed;
+}
+.blog-tiptap .tiptap th,
+.blog-tiptap .tiptap td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+  position: relative;
+}
+.blog-tiptap .tiptap th {
+  background: var(--muted);
+  font-weight: 600;
+}
+.blog-tiptap .tiptap .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklch, var(--primary) 15%, transparent);
+  pointer-events: none;
+}
+.blog-tiptap .tiptap .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background: var(--primary);
+  pointer-events: none;
+}
+.blog-tiptap .tiptap.resize-cursor {
+  cursor: col-resize;
+}
+
+.blog-tiptap .tiptap [data-callout] {
+  margin: 0.75rem 0;
+  padding: 0.65rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  background: var(--muted);
+}
+.blog-tiptap .tiptap [data-callout="info"] { border-left-color: oklch(0.55 0.14 235); }
+.blog-tiptap .tiptap [data-callout="warning"] { border-left-color: oklch(0.62 0.15 75); }
+.blog-tiptap .tiptap [data-callout="tip"] { border-left-color: oklch(0.55 0.13 155); }
+.blog-tiptap .tiptap [data-callout="danger"] { border-left-color: oklch(0.55 0.17 25); }
+
+/* Slash-command popup — mounted into document.body, not scoped under .blog-tiptap */
+.slash-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 15rem;
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 12px 32px -8px oklch(0 0 0 / 0.25), 0 2px 8px -2px oklch(0 0 0 / 0.15);
+}
+.slash-menu-empty {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+.slash-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: calc(var(--radius-md) - 2px);
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.slash-menu-item.is-selected,
+.slash-menu-item:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.slash-menu-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.slash-menu-item-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.slash-menu-item-desc {
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  line-height: 1.3;
+}
+.slash-menu-item.is-selected .slash-menu-item-desc,
+.slash-menu-item:hover .slash-menu-item-desc {
+  color: inherit;
+  opacity: 0.75;
 }
 
 /* Answer selection transition */
