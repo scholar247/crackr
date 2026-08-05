@@ -1,14 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { defaultDashboardPath } from '@/lib/roles';
 
 export function OnboardingClient({ name }: { name: string }) {
-  const router = useRouter();
   const { update } = useSession();
   const [submitting, setSubmitting] = useState(false);
 
@@ -19,7 +17,12 @@ export function OnboardingClient({ name }: { name: string }) {
       if (!res.ok) throw new Error('Failed to complete onboarding');
 
       const session = await update();
-      router.replace(defaultDashboardPath(session?.user?.role ?? 'STUDENT'));
+      // Hard navigation, not router.replace(): the (app) layout's onboarding gate reads
+      // the session cookie server-side, and a client-side navigation right after
+      // useSession().update() isn't guaranteed to carry the freshly-set cookie on the
+      // very next request — it was landing back on /onboarding, looking like the button
+      // did nothing. A full page load always sees the cookie the browser just stored.
+      window.location.href = defaultDashboardPath(session?.user?.role ?? 'STUDENT');
     } catch {
       toast.error('Something went wrong — please try again.');
       setSubmitting(false);
