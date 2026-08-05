@@ -9,7 +9,7 @@ import { TableOfContentsDesktop, TableOfContentsMobile } from '@/components/blog
 import { extractHeadings } from '@/lib/toc';
 import { calcReadingTime } from '@/lib/reading-time';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 async function getArticle(slug: string) {
   const row = await articleRepository.findPublishedBySlugWithAuthor(slug);

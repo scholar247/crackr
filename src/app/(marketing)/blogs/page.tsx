@@ -4,7 +4,7 @@ import { articleRepository } from '@/server/repositories/article.repository';
 import { calcReadingTime } from '@/lib/reading-time';
 
 export const metadata: Metadata = { title: 'Blog' };
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export default async function BlogsPage() {
   const articles = await articleRepository.findPublished();
