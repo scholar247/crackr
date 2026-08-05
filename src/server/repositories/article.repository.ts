@@ -1,4 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
 import { articles, users } from '@/server/db/schema';
 import { slugify } from '@/lib/utils';
@@ -58,23 +59,24 @@ async function ensureUniqueSlug(base: string, excludeId?: string) {
   }
 }
 
+// MySQL has no RETURNING clause — insert/update with a known id, then read the row back.
 async function create(input: CreateArticleInput, authorId: string) {
   const baseSlug = slugify(input.slug || input.title);
   const slug = await ensureUniqueSlug(baseSlug);
+  const id = randomUUID();
 
-  const [row] = await db
-    .insert(articles)
-    .values({
-      title: input.title,
-      slug,
-      summary: input.summary,
-      body: input.body,
-      status: input.status,
-      visibility: input.visibility,
-      authorId,
-    })
-    .returning();
-  return row;
+  await db.insert(articles).values({
+    id,
+    title: input.title,
+    slug,
+    summary: input.summary,
+    body: input.body,
+    status: input.status,
+    visibility: input.visibility,
+    authorId,
+  });
+
+  return findById(id);
 }
 
 async function update(id: string, input: UpdateArticleInput) {
@@ -91,8 +93,8 @@ async function update(id: string, input: UpdateArticleInput) {
     }
   }
 
-  const [row] = await db.update(articles).set(patch).where(eq(articles.id, id)).returning();
-  return row ?? null;
+  await db.update(articles).set(patch).where(eq(articles.id, id));
+  return findById(id);
 }
 
 export const articleRepository = {

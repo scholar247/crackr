@@ -1,82 +1,81 @@
-import { pgTable, pgEnum, uuid, text, integer, timestamp, primaryKey, uniqueIndex } from 'drizzle-orm/pg-core';
+import { mysqlTable, mysqlEnum, varchar, text, int, timestamp, primaryKey, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { randomUUID } from 'crypto';
 
-export const curriculumNodeTypeEnum = pgEnum('curriculum_node_type', [
-  'SUBJECT',
-  'CHAPTER',
-  'TOPIC',
-  'SUBTOPIC',
-]);
-export const taxonomyStatusEnum = pgEnum('taxonomy_status', ['ACTIVE', 'ARCHIVED']);
-
-export const programs = pgTable(
+export const programs = mysqlTable(
   'programs',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    name: text('name').notNull(),
-    slug: text('slug').notNull(),
+    id: varchar('id', { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    name: varchar('name', { length: 160 }).notNull(),
+    slug: varchar('slug', { length: 160 }).notNull(),
     description: text('description'),
-    status: taxonomyStatusEnum('status').notNull().default('ACTIVE'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    status: mysqlEnum('status', ['ACTIVE', 'ARCHIVED']).notNull().default('ACTIVE'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [uniqueIndex('programs_slug_idx').on(table.slug)],
 );
 
-export const exams = pgTable(
+export const exams = mysqlTable(
   'exams',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    programId: uuid('program_id')
+    id: varchar('id', { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    programId: varchar('program_id', { length: 36 })
       .notNull()
       .references(() => programs.id, { onDelete: 'restrict' }),
-    name: text('name').notNull(),
-    slug: text('slug').notNull(),
+    name: varchar('name', { length: 160 }).notNull(),
+    slug: varchar('slug', { length: 160 }).notNull(),
     description: text('description'),
-    status: taxonomyStatusEnum('status').notNull().default('ACTIVE'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    status: mysqlEnum('status', ['ACTIVE', 'ARCHIVED']).notNull().default('ACTIVE'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [uniqueIndex('exams_slug_idx').on(table.slug)],
 );
 
 // Generic node for Subject/Chapter/Topic/Subtopic — reusable across exams (per the ERD's
 // core insight: one "Mathematics" row, mapped to many exams via exam_node_map).
-export const curriculumNodes = pgTable('curriculum_nodes', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  nodeType: curriculumNodeTypeEnum('node_type').notNull(),
-  name: text('name').notNull(),
-  slug: text('slug').notNull(),
+export const curriculumNodes = mysqlTable('curriculum_nodes', {
+  id: varchar('id', { length: 36 })
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  nodeType: mysqlEnum('node_type', ['SUBJECT', 'CHAPTER', 'TOPIC', 'SUBTOPIC']).notNull(),
+  name: varchar('name', { length: 160 }).notNull(),
+  slug: varchar('slug', { length: 160 }).notNull(),
   description: text('description'),
-  status: taxonomyStatusEnum('status').notNull().default('ACTIVE'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  status: mysqlEnum('status', ['ACTIVE', 'ARCHIVED']).notNull().default('ACTIVE'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 // Parent-child hierarchy — walked with a recursive CTE (see src/server/repositories),
 // not a materialized path, per the ERD's "consider a closure table later if slow" note.
-export const curriculumEdges = pgTable(
+export const curriculumEdges = mysqlTable(
   'curriculum_edges',
   {
-    parentNodeId: uuid('parent_node_id')
+    parentNodeId: varchar('parent_node_id', { length: 36 })
       .notNull()
       .references(() => curriculumNodes.id, { onDelete: 'cascade' }),
-    childNodeId: uuid('child_node_id')
+    childNodeId: varchar('child_node_id', { length: 36 })
       .notNull()
       .references(() => curriculumNodes.id, { onDelete: 'cascade' }),
-    sortOrder: integer('sort_order').notNull().default(0),
+    sortOrder: int('sort_order').notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.parentNodeId, table.childNodeId] })],
 );
 
 // Which curriculum nodes are syllabus for which exam — the many-to-many that lets the
 // same node (e.g. "Algebra") be shared between JEE Advanced and NIMCET.
-export const examNodeMap = pgTable(
+export const examNodeMap = mysqlTable(
   'exam_node_map',
   {
-    examId: uuid('exam_id')
+    examId: varchar('exam_id', { length: 36 })
       .notNull()
       .references(() => exams.id, { onDelete: 'cascade' }),
-    nodeId: uuid('node_id')
+    nodeId: varchar('node_id', { length: 36 })
       .notNull()
       .references(() => curriculumNodes.id, { onDelete: 'cascade' }),
   },

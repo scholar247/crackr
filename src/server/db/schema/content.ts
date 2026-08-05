@@ -1,16 +1,14 @@
-import { pgTable, pgEnum, uuid, text, jsonb, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { mysqlTable, mysqlEnum, varchar, text, json, timestamp, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { randomUUID } from 'crypto';
 import { users } from './identity';
 import { curriculumNodes, exams } from './taxonomy';
 
 // Shared across every content-bearing entity — this is the mechanism for "public vs
 // private content": public routes only ever query status=PUBLISHED AND visibility=PUBLIC.
-export const contentTypeEnum = pgEnum('content_type', ['QUESTION', 'ARTICLE']);
-export const contentStatusEnum = pgEnum('content_status', ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED']);
-export const contentVisibilityEnum = pgEnum('content_visibility', ['PUBLIC', 'PRIVATE', 'AUDIENCE_RESTRICTED']);
-export const contentRelationTypeEnum = pgEnum('content_relation_type', ['PRIMARY', 'SUPPLEMENTARY', 'PRACTICE']);
-
-export const questionTypeEnum = pgEnum('question_type', ['MCQ']);
-export const difficultyEnum = pgEnum('difficulty', ['EASY', 'MEDIUM', 'HARD', 'EXPERT']);
+export const CONTENT_TYPES = ['QUESTION', 'ARTICLE'] as const;
+const CONTENT_STATUSES = ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED'] as const;
+const CONTENT_VISIBILITIES = ['PUBLIC', 'PRIVATE', 'AUDIENCE_RESTRICTED'] as const;
+const CONTENT_RELATION_TYPES = ['PRIMARY', 'SUPPLEMENTARY', 'PRACTICE'] as const;
 
 export interface QuestionOption {
   key: string;
@@ -18,38 +16,42 @@ export interface QuestionOption {
   isCorrect: boolean;
 }
 
-// MCQ-first per the ERD: options travel with the question as a JSONB array rather than a
+// MCQ-first per the ERD: options travel with the question as a JSON array rather than a
 // separate question_option table, so stem/options/answer are always fetched together.
-export const questions = pgTable('questions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  questionType: questionTypeEnum('question_type').notNull().default('MCQ'),
+export const questions = mysqlTable('questions', {
+  id: varchar('id', { length: 36 })
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
+  questionType: mysqlEnum('question_type', ['MCQ']).notNull().default('MCQ'),
   stem: text('stem').notNull(),
-  optionsJson: jsonb('options_json').$type<QuestionOption[]>().notNull(),
+  optionsJson: json('options_json').$type<QuestionOption[]>().notNull(),
   explanation: text('explanation'),
-  difficulty: difficultyEnum('difficulty').notNull().default('MEDIUM'),
-  language: text('language').notNull().default('en'),
-  status: contentStatusEnum('status').notNull().default('DRAFT'),
-  visibility: contentVisibilityEnum('visibility').notNull().default('PRIVATE'),
-  authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  difficulty: mysqlEnum('difficulty', ['EASY', 'MEDIUM', 'HARD', 'EXPERT']).notNull().default('MEDIUM'),
+  language: varchar('language', { length: 10 }).notNull().default('en'),
+  status: mysqlEnum('status', CONTENT_STATUSES).notNull().default('DRAFT'),
+  visibility: mysqlEnum('visibility', CONTENT_VISIBILITIES).notNull().default('PRIVATE'),
+  authorId: varchar('author_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 // Standalone article — this is the table backing the kept blog editor/renderer.
-export const articles = pgTable(
+export const articles = mysqlTable(
   'articles',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    title: text('title').notNull(),
-    slug: text('slug').notNull(),
+    id: varchar('id', { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    title: varchar('title', { length: 160 }).notNull(),
+    slug: varchar('slug', { length: 200 }).notNull(),
     summary: text('summary'),
     body: text('body').notNull(), // markdown, rendered by src/components/blog/blog-content.tsx
-    language: text('language').notNull().default('en'),
-    status: contentStatusEnum('status').notNull().default('DRAFT'),
-    visibility: contentVisibilityEnum('visibility').notNull().default('PRIVATE'),
-    authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    language: varchar('language', { length: 10 }).notNull().default('en'),
+    status: mysqlEnum('status', CONTENT_STATUSES).notNull().default('DRAFT'),
+    visibility: mysqlEnum('visibility', CONTENT_VISIBILITIES).notNull().default('PRIVATE'),
+    authorId: varchar('author_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [uniqueIndex('articles_slug_idx').on(table.slug)],
 );
@@ -57,17 +59,19 @@ export const articles = pgTable(
 // Polymorphic: contentId points at questions.id or articles.id depending on contentType.
 // No cross-table FK constraint is possible for that (standard tradeoff of the ERD's
 // "one unified mapping table" design over a table-per-combination scheme).
-export const contentNodeMap = pgTable(
+export const contentNodeMap = mysqlTable(
   'content_node_map',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    contentType: contentTypeEnum('content_type').notNull(),
-    contentId: uuid('content_id').notNull(),
-    nodeId: uuid('node_id')
+    id: varchar('id', { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    contentType: mysqlEnum('content_type', CONTENT_TYPES).notNull(),
+    contentId: varchar('content_id', { length: 36 }).notNull(),
+    nodeId: varchar('node_id', { length: 36 })
       .notNull()
       .references(() => curriculumNodes.id, { onDelete: 'cascade' }),
-    relationType: contentRelationTypeEnum('relation_type').notNull().default('PRIMARY'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    relationType: mysqlEnum('relation_type', CONTENT_RELATION_TYPES).notNull().default('PRIMARY'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex('content_node_map_unique_idx').on(
@@ -80,17 +84,19 @@ export const contentNodeMap = pgTable(
 );
 
 // Direct content <-> exam shortcut for content that's exam-level rather than topic-level.
-export const contentExamMap = pgTable(
+export const contentExamMap = mysqlTable(
   'content_exam_map',
   {
-    id: uuid('id').primaryKey().defaultRandom(),
-    contentType: contentTypeEnum('content_type').notNull(),
-    contentId: uuid('content_id').notNull(),
-    examId: uuid('exam_id')
+    id: varchar('id', { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    contentType: mysqlEnum('content_type', CONTENT_TYPES).notNull(),
+    contentId: varchar('content_id', { length: 36 }).notNull(),
+    examId: varchar('exam_id', { length: 36 })
       .notNull()
       .references(() => exams.id, { onDelete: 'cascade' }),
-    relationType: contentRelationTypeEnum('relation_type').notNull().default('PRIMARY'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    relationType: mysqlEnum('relation_type', CONTENT_RELATION_TYPES).notNull().default('PRIMARY'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex('content_exam_map_unique_idx').on(table.contentType, table.contentId, table.examId, table.relationType),

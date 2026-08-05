@@ -1,6 +1,8 @@
 import { asc, eq, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
 import { programs, exams, curriculumNodes, curriculumEdges, examNodeMap } from '@/server/db/schema';
+import { isDuplicateKeyError } from '@/server/db/helpers';
 import { slugify } from '@/lib/utils';
 
 export interface SyllabusNode {
@@ -37,8 +39,9 @@ async function findProgramBySlug(slug: string) {
 
 async function createProgram(input: { name: string; description?: string }) {
   const slug = await ensureUniqueSlug(slugify(input.name), findProgramBySlug);
-  const [row] = await db.insert(programs).values({ name: input.name, slug, description: input.description }).returning();
-  return row;
+  const id = randomUUID();
+  await db.insert(programs).values({ id, name: input.name, slug, description: input.description });
+  return findProgramBySlug(slug);
 }
 
 // ── Exams ───────────────────────────────────────────────────────────────────
@@ -67,11 +70,9 @@ async function findExamBySlug(slug: string) {
 
 async function createExam(input: { programId: string; name: string; description?: string }) {
   const slug = await ensureUniqueSlug(slugify(input.name), findExamBySlug);
-  const [row] = await db
-    .insert(exams)
-    .values({ programId: input.programId, name: input.name, slug, description: input.description })
-    .returning();
-  return row;
+  const id = randomUUID();
+  await db.insert(exams).values({ id, programId: input.programId, name: input.name, slug, description: input.description });
+  return findExamBySlug(slug);
 }
 
 // ── Curriculum nodes ────────────────────────────────────────────────────────
@@ -85,6 +86,16 @@ async function findNodeBySlug(slug: string) {
   return row ?? null;
 }
 
+async function attachNodeToExam(examId: string, nodeId: string) {
+  try {
+    await db.insert(examNodeMap).values({ examId, nodeId });
+  } catch (err) {
+    // Emulates ON CONFLICT DO NOTHING — examNodeMap's (examId, nodeId) composite primary
+    // key already prevents duplicates; a re-attach attempt is a harmless no-op.
+    if (!isDuplicateKeyError(err)) throw err;
+  }
+}
+
 async function createNode(input: {
   nodeType: 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SUBTOPIC';
   name: string;
@@ -92,20 +103,17 @@ async function createNode(input: {
   examId?: string;
 }) {
   const slug = await ensureUniqueSlug(slugify(input.name), findNodeBySlug);
-  const [node] = await db.insert(curriculumNodes).values({ nodeType: input.nodeType, name: input.name, slug }).returning();
+  const id = randomUUID();
+  await db.insert(curriculumNodes).values({ id, nodeType: input.nodeType, name: input.name, slug });
 
   if (input.parentNodeId) {
-    await db.insert(curriculumEdges).values({ parentNodeId: input.parentNodeId, childNodeId: node.id, sortOrder: 0 });
+    await db.insert(curriculumEdges).values({ parentNodeId: input.parentNodeId, childNodeId: id, sortOrder: 0 });
   }
   if (input.examId) {
-    await db.insert(examNodeMap).values({ examId: input.examId, nodeId: node.id }).onConflictDoNothing();
+    await attachNodeToExam(input.examId, id);
   }
 
-  return node;
-}
-
-async function attachNodeToExam(examId: string, nodeId: string) {
-  await db.insert(examNodeMap).values({ examId, nodeId }).onConflictDoNothing();
+  return findNodeBySlug(slug);
 }
 
 // ── Syllabus tree (recursive descendants of an exam's mapped root nodes) ─────
@@ -125,7 +133,10 @@ async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
   // parent is then resolved separately via curriculum_edges, so a node that's both
   // directly mapped and reachable through an ancestor still nests exactly once, in its
   // real tree position — not as a duplicate phantom root.
-  const rows = await db.execute<DescendantRow>(sql`
+  // db.execute()'s return type is a union across all possible query kinds (SELECT vs
+  // INSERT/UPDATE) since it can't statically know this raw SQL is a SELECT — cast the
+  // destructured rows accordingly.
+  const [rows] = (await db.execute<DescendantRow>(sql`
     WITH RECURSIVE reachable AS (
       SELECT node_id AS id FROM ${examNodeMap} WHERE exam_id = ${examId}
 
@@ -139,7 +150,7 @@ async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
     FROM reachable r
     INNER JOIN ${curriculumNodes} cn ON cn.id = r.id
     LEFT JOIN ${curriculumEdges} edge ON edge.child_node_id = cn.id
-  `);
+  `)) as unknown as [DescendantRow[], unknown];
 
   const byId = new Map<string, SyllabusNode>();
   const roots: SyllabusNode[] = [];

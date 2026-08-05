@@ -7,16 +7,31 @@
  */
 import { db } from '@/server/db/client';
 import { programs, exams, curriculumNodes, curriculumEdges, examNodeMap, questions, articles, contentNodeMap, contentExamMap } from '@/server/db/schema';
+import { isDuplicateKeyError } from '@/server/db/helpers';
 import { slugify } from '@/lib/utils';
 import { eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 type NodeType = 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SUBTOPIC';
+
+// MySQL has no RETURNING clause — every upsert here inserts with a known id (when
+// needed) and reads the row back, and every mapping-table insert swallows the duplicate-
+// key error from a composite/unique-index conflict instead of relying on ON CONFLICT.
+
+async function insertIgnore(fn: () => Promise<unknown>) {
+  try {
+    await fn();
+  } catch (err) {
+    if (!isDuplicateKeyError(err)) throw err;
+  }
+}
 
 async function upsertProgram(name: string, description: string) {
   const slug = slugify(name);
   const [existing] = await db.select().from(programs).where(eq(programs.slug, slug)).limit(1);
   if (existing) return existing;
-  const [row] = await db.insert(programs).values({ name, slug, description }).returning();
+  await db.insert(programs).values({ id: randomUUID(), name, slug, description });
+  const [row] = await db.select().from(programs).where(eq(programs.slug, slug)).limit(1);
   return row;
 }
 
@@ -24,7 +39,8 @@ async function upsertExam(programId: string, name: string, description: string) 
   const slug = slugify(name);
   const [existing] = await db.select().from(exams).where(eq(exams.slug, slug)).limit(1);
   if (existing) return existing;
-  const [row] = await db.insert(exams).values({ programId, name, slug, description }).returning();
+  await db.insert(exams).values({ id: randomUUID(), programId, name, slug, description });
+  const [row] = await db.select().from(exams).where(eq(exams.slug, slug)).limit(1);
   return row;
 }
 
@@ -32,7 +48,8 @@ async function upsertNode(nodeType: NodeType, name: string, parentSlug?: string,
   const slug = slugify(name);
   let node = (await db.select().from(curriculumNodes).where(eq(curriculumNodes.slug, slug)).limit(1))[0];
   if (!node) {
-    [node] = await db.insert(curriculumNodes).values({ nodeType, name, slug }).returning();
+    await db.insert(curriculumNodes).values({ id: randomUUID(), nodeType, name, slug });
+    [node] = await db.select().from(curriculumNodes).where(eq(curriculumNodes.slug, slug)).limit(1);
   }
   if (parentSlug && nodesBySlug) {
     const parentId = nodesBySlug.get(parentSlug)!;
@@ -50,7 +67,7 @@ async function upsertNode(nodeType: NodeType, name: string, parentSlug?: string,
 }
 
 async function mapExamNode(examId: string, nodeId: string) {
-  await db.insert(examNodeMap).values({ examId, nodeId }).onConflictDoNothing();
+  await insertIgnore(() => db.insert(examNodeMap).values({ examId, nodeId }));
 }
 
 async function main() {
@@ -176,33 +193,31 @@ async function main() {
   ];
 
   for (const q of questionSeeds) {
-    const [existing] = await db.select().from(questions).where(eq(questions.stem, q.stem)).limit(1);
-    const question =
-      existing ??
-      (
-        await db
-          .insert(questions)
-          .values({
-            questionType: 'MCQ',
-            stem: q.stem,
-            optionsJson: q.options,
-            explanation: q.explanation,
-            difficulty: q.difficulty,
-            status: 'PUBLISHED',
-            visibility: 'PUBLIC',
-          })
-          .returning()
-      )[0];
+    let [question] = await db.select().from(questions).where(eq(questions.stem, q.stem)).limit(1);
+    if (!question) {
+      const id = randomUUID();
+      await db.insert(questions).values({
+        id,
+        questionType: 'MCQ',
+        stem: q.stem,
+        optionsJson: q.options,
+        explanation: q.explanation,
+        difficulty: q.difficulty,
+        status: 'PUBLISHED',
+        visibility: 'PUBLIC',
+      });
+      [question] = await db.select().from(questions).where(eq(questions.id, id)).limit(1);
+    }
 
-    await db
-      .insert(contentNodeMap)
-      .values({ contentType: 'QUESTION', contentId: question.id, nodeId: bySlug.get(q.nodeSlug)!, relationType: 'PRIMARY' })
-      .onConflictDoNothing();
+    await insertIgnore(() =>
+      db
+        .insert(contentNodeMap)
+        .values({ contentType: 'QUESTION', contentId: question.id, nodeId: bySlug.get(q.nodeSlug)!, relationType: 'PRIMARY' }),
+    );
     for (const examId of q.examIds) {
-      await db
-        .insert(contentExamMap)
-        .values({ contentType: 'QUESTION', contentId: question.id, examId, relationType: 'PRIMARY' })
-        .onConflictDoNothing();
+      await insertIgnore(() =>
+        db.insert(contentExamMap).values({ contentType: 'QUESTION', contentId: question.id, examId, relationType: 'PRIMARY' }),
+      );
     }
   }
 
@@ -233,25 +248,24 @@ async function main() {
 
   for (const a of articleSeeds) {
     const slug = slugify(a.title);
-    const [existing] = await db.select().from(articles).where(eq(articles.slug, slug)).limit(1);
-    const article =
-      existing ??
-      (
-        await db
-          .insert(articles)
-          .values({ title: a.title, slug, summary: a.summary, body: a.body, status: 'PUBLISHED', visibility: 'PUBLIC' })
-          .returning()
-      )[0];
-
-    await db
-      .insert(contentNodeMap)
-      .values({ contentType: 'ARTICLE', contentId: article.id, nodeId: bySlug.get(a.nodeSlug)!, relationType: 'PRIMARY' })
-      .onConflictDoNothing();
-    for (const examId of a.examIds) {
+    let [article] = await db.select().from(articles).where(eq(articles.slug, slug)).limit(1);
+    if (!article) {
+      const id = randomUUID();
       await db
-        .insert(contentExamMap)
-        .values({ contentType: 'ARTICLE', contentId: article.id, examId, relationType: 'PRIMARY' })
-        .onConflictDoNothing();
+        .insert(articles)
+        .values({ id, title: a.title, slug, summary: a.summary, body: a.body, status: 'PUBLISHED', visibility: 'PUBLIC' });
+      [article] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
+    }
+
+    await insertIgnore(() =>
+      db
+        .insert(contentNodeMap)
+        .values({ contentType: 'ARTICLE', contentId: article.id, nodeId: bySlug.get(a.nodeSlug)!, relationType: 'PRIMARY' }),
+    );
+    for (const examId of a.examIds) {
+      await insertIgnore(() =>
+        db.insert(contentExamMap).values({ contentType: 'ARTICLE', contentId: article.id, examId, relationType: 'PRIMARY' }),
+      );
     }
   }
 

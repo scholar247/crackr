@@ -1,23 +1,20 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/mysql2';
+import { migrate } from 'drizzle-orm/mysql2/migrator';
+import mysql from 'mysql2/promise';
 
-async function main() {
+// Pure function — safe to import from both the CLI runner (scripts/run-migrations.ts)
+// and src/instrumentation.ts (runs on server startup so tables get created automatically
+// if they don't exist yet; migration SQL files under drizzle/ remain the source of truth
+// for future schema changes — this just applies whatever hasn't been applied yet).
+export async function runMigrations() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error('DATABASE_URL is not set');
   }
 
-  const migrationClient = postgres(connectionString, { max: 1 });
-  const db = drizzle(migrationClient);
+  const connection = await mysql.createConnection(connectionString);
+  const db = drizzle(connection, { mode: 'default' });
 
   await migrate(db, { migrationsFolder: './drizzle' });
-  await migrationClient.end();
-
-  console.log('Migrations applied.');
+  await connection.end();
 }
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
