@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, isValidElement, type ComponentPropsWithoutRef, type ReactNode, type ComponentType } from 'react';
+import { useState, isValidElement, type ComponentPropsWithoutRef, type ReactNode, type ComponentType } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkDirective from 'remark-directive';
@@ -9,7 +9,7 @@ import rehypeKatex from 'rehype-katex';
 import { visit } from 'unist-util-visit';
 import { Info, AlertTriangle, Lightbulb, OctagonAlert, Check } from 'lucide-react';
 import type { CalloutVariant } from '@/components/editor/extensions/callout';
-import { slugify } from '@/lib/utils';
+import { extractHeadings } from '@/lib/toc';
 
 const LANG_DISPLAY: Record<string, string> = {
   js: 'JavaScript',
@@ -142,20 +142,22 @@ const staticComponents: Components = {
   img: Img,
 };
 
+type HeadingProps = ComponentPropsWithoutRef<'h2'> & { node?: { position?: { start?: { line?: number } } } };
+
 /**
- * `seenIds` is shared across all three heading levels for one render pass
- * so ids agree on document order — matches `src/lib/toc.ts`'s
- * `extractHeadings` slug+dedup algorithm exactly, so the table of contents
- * (parsed from raw Markdown) and these anchors (from rendered nodes) land
- * on identical ids for the same document.
+ * Looks up this heading's id from `headingIdByLine` — precomputed once, purely, from the
+ * raw Markdown (`extractHeadings` in `src/lib/toc.ts`), keyed by source line number so it
+ * lines up with remark's `node.position.start.line`. This used to compute+dedupe ids with
+ * a `Map` mutated during render, which broke under React's extra dev-mode render pass
+ * (Strict Mode double-invokes every component's render, including this one — the mutation
+ * ran twice for the same heading, so the client committed a different id than the server
+ * and React flagged a hydration mismatch). A pure lookup returns the same id no matter how
+ * many times React calls this function for the same node.
  */
-function makeHeadingComponent(Tag: 'h2' | 'h3' | 'h4', seenIds: Map<string, number>) {
-  return function Heading({ children, ...props }: ComponentPropsWithoutRef<'h2'>) {
-    const text = textFromChildren(children);
-    let id = slugify(text) || 'section';
-    const count = seenIds.get(id) ?? 0;
-    seenIds.set(id, count + 1);
-    if (count > 0) id = `${id}-${count + 1}`;
+function makeHeadingComponent(Tag: 'h2' | 'h3' | 'h4', headingIdByLine: Map<number, string>) {
+  return function Heading({ children, node, ...props }: HeadingProps) {
+    const line = node?.position?.start?.line;
+    const id = (line !== undefined && headingIdByLine.get(line)) || 'section';
     return (
       <Tag id={id} {...props}>
         {children}
@@ -165,16 +167,13 @@ function makeHeadingComponent(Tag: 'h2' | 'h3' | 'h4', seenIds: Map<string, numb
 }
 
 export function BlogContent({ content }: { content: string }) {
-  const components = useMemo<Components>(() => {
-    const seenIds = new Map<string, number>();
-    return {
-      ...staticComponents,
-      h2: makeHeadingComponent('h2', seenIds),
-      h3: makeHeadingComponent('h3', seenIds),
-      h4: makeHeadingComponent('h4', seenIds),
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fresh seenIds map must be recreated per content change
-  }, [content]);
+  const headingIdByLine = new Map(extractHeadings(content).map((h) => [h.line, h.id]));
+  const components: Components = {
+    ...staticComponents,
+    h2: makeHeadingComponent('h2', headingIdByLine),
+    h3: makeHeadingComponent('h3', headingIdByLine),
+    h4: makeHeadingComponent('h4', headingIdByLine),
+  };
 
   return (
     <article className="blog-content">

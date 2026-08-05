@@ -9,6 +9,7 @@ import {
   boolean,
   timestamp,
   primaryKey,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { users } from './identity';
 import { exams } from './taxonomy';
@@ -124,7 +125,7 @@ export const attemptResponses = pgTable(
     timeSpentSeconds: integer('time_spent_seconds'),
     answeredAt: timestamp('answered_at', { withTimezone: true }),
   },
-  (table) => [primaryKey({ columns: [table.attemptId, table.questionId] })],
+  (table) => [uniqueIndex('attempt_responses_attempt_question_idx').on(table.attemptId, table.questionId)],
 );
 
 // Ordered collection of assessments — a container, not a new content/question type.

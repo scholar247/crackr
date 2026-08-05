@@ -226,8 +226,7 @@ CREATE TABLE "attempt_responses" (
 	"is_correct" boolean,
 	"marks_awarded" numeric,
 	"time_spent_seconds" integer,
-	"answered_at" timestamp with time zone,
-	CONSTRAINT "attempt_responses_attempt_id_question_id_pk" PRIMARY KEY("attempt_id","question_id")
+	"answered_at" timestamp with time zone
 );
 --> statement-breakpoint
 CREATE TABLE "test_series" (
@@ -286,4 +285,5 @@ CREATE UNIQUE INDEX "programs_slug_idx" ON "programs" USING btree ("slug");--> s
 CREATE UNIQUE INDEX "articles_slug_idx" ON "articles" USING btree ("slug");--> statement-breakpoint
 CREATE UNIQUE INDEX "content_exam_map_unique_idx" ON "content_exam_map" USING btree ("content_type","content_id","exam_id","relation_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "content_node_map_unique_idx" ON "content_node_map" USING btree ("content_type","content_id","node_id","relation_type");--> statement-breakpoint
-CREATE UNIQUE INDEX "audiences_code_idx" ON "audiences" USING btree ("code");
+CREATE UNIQUE INDEX "audiences_code_idx" ON "audiences" USING btree ("code");--> statement-breakpoint
+CREATE UNIQUE INDEX "attempt_responses_attempt_question_idx" ON "attempt_responses" USING btree ("attempt_id","question_id");

@@ -119,21 +119,26 @@ interface DescendantRow extends Record<string, unknown> {
 }
 
 async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
+  // The ERD's own sample data maps both a subject AND its deep descendants directly into
+  // exam_node_map (not just top-level roots — see "root or relevant nodes" in the ERD).
+  // So `reachable` dedupes by node id via UNION (not UNION ALL) first; each node's actual
+  // parent is then resolved separately via curriculum_edges, so a node that's both
+  // directly mapped and reachable through an ancestor still nests exactly once, in its
+  // real tree position — not as a duplicate phantom root.
   const rows = await db.execute<DescendantRow>(sql`
-    WITH RECURSIVE descendants AS (
-      SELECT cn.id, cn.node_type, cn.name, cn.slug, NULL::uuid AS parent_id
-      FROM ${curriculumNodes} cn
-      INNER JOIN ${examNodeMap} enm ON enm.node_id = cn.id
-      WHERE enm.exam_id = ${examId}
+    WITH RECURSIVE reachable AS (
+      SELECT node_id AS id FROM ${examNodeMap} WHERE exam_id = ${examId}
 
-      UNION ALL
+      UNION
 
-      SELECT child.id, child.node_type, child.name, child.slug, edge.parent_node_id AS parent_id
+      SELECT edge.child_node_id AS id
       FROM ${curriculumEdges} edge
-      INNER JOIN ${curriculumNodes} child ON child.id = edge.child_node_id
-      INNER JOIN descendants d ON d.id = edge.parent_node_id
+      INNER JOIN reachable r ON r.id = edge.parent_node_id
     )
-    SELECT id, node_type AS "nodeType", name, slug, parent_id AS "parentId" FROM descendants
+    SELECT cn.id, cn.node_type AS "nodeType", cn.name, cn.slug, edge.parent_node_id AS "parentId"
+    FROM reachable r
+    INNER JOIN ${curriculumNodes} cn ON cn.id = r.id
+    LEFT JOIN ${curriculumEdges} edge ON edge.child_node_id = cn.id
   `);
 
   const byId = new Map<string, SyllabusNode>();

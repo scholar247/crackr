@@ -1,5 +1,5 @@
 {
-  "id": "e49e1a93-8e75-46f8-82c7-1d15c43321c3",
+  "id": "3284b225-06de-4ad4-8dd7-0fd7e85c5839",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1783,7 +1783,29 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "attempt_responses_attempt_question_idx": {
+          "name": "attempt_responses_attempt_question_idx",
+          "columns": [
+            {
+              "expression": "attempt_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "question_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "attempt_responses_attempt_id_assessment_attempts_id_fk": {
           "name": "attempt_responses_attempt_id_assessment_attempts_id_fk",
@@ -1812,15 +1834,7 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "attempt_responses_attempt_id_question_id_pk": {
-          "name": "attempt_responses_attempt_id_question_id_pk",
-          "columns": [
-            "attempt_id",
-            "question_id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
