@@ -22,21 +22,22 @@ export function MarketingNavbar() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (!isLanding) {
-      setScrolled(true);
-      return;
-    }
+    if (!isLanding) return;
     const handler = () => setScrolled(window.scrollY > 10);
     handler();
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
   }, [isLanding]);
 
+  // The transparent-over-hero treatment only applies on the landing page while
+  // unscrolled; every other route always shows the solid header.
+  const showSolidHeader = !isLanding || scrolled;
+
   return (
     <header
       className={cn(
         'sticky top-0 z-40 flex h-16 items-center border-b transition-all duration-200',
-        isLanding && !scrolled ? 'border-transparent bg-transparent' : 'border-border bg-background/95 backdrop-blur',
+        showSolidHeader ? 'border-border bg-background/95 backdrop-blur' : 'border-transparent bg-transparent',
       )}
     >
       <div className="mx-auto grid w-full max-w-7xl grid-cols-3 items-center px-4 sm:px-6 lg:px-8">
