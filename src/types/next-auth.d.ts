@@ -1,4 +1,4 @@
-import type { UserRole } from './index';
+import type { UserRole } from '@/lib/roles';
 
 declare module 'next-auth' {
   interface Session {

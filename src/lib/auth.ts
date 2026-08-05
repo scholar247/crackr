@@ -1,7 +1,6 @@
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import type { UserRole } from '@/types';
-import { DEFAULT_PROFILE } from '@/types';
+import type { UserRole } from '@/lib/roles';
 import { userRepository } from '@/server/repositories/user.repository';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -14,64 +13,66 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: {
     strategy: 'jwt',
+    // 30-day session, refreshed whenever the JWT is re-issued (default Auth.js
+    // behaviour) — matches the length of a typical exam-prep study cycle
+    // without forcing frequent re-auth.
+    maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
-    async signIn({ user }) {
-      if (!user.email) return false;
+    // Resolves/creates the application user and rejects sign-in outright for
+    // disabled accounts or malformed OAuth responses. All DB access here goes
+    // through the repository — never inline queries in this file.
+    async signIn({ user, account }) {
+      if (!user.email || !account?.providerAccountId) return false;
 
       try {
-        const existing = await userRepository.findByEmail(user.email);
+        const dbUser = await userRepository.provisionGoogleUser({
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          providerAccountId: account.providerAccountId,
+        });
 
-        if (!existing) {
-          const { randomUUID } = await import('crypto');
-          const { getMongoDb } = await import('@/lib/mongodb');
-          const { nowIso } = await import('@/server/repositories/mongo/helpers');
-          const db = await getMongoDb();
-          const now = nowIso();
-          await db.collection('users').insertOne({
-            id: randomUUID(),
-            email: user.email,
-            name: user.name ?? '',
-            photoURL: user.image ?? '',
-            role: 'STUDENT' as UserRole,
-            groupIds: [],
-            profile: DEFAULT_PROFILE,
-            createdAt: now,
-            updatedAt: now,
-          });
-        } else if (!existing.profile) {
-          // Backfill profile for users who signed up before profile was added
-          await userRepository.ensureProfile(existing.id);
-        }
+        if (dbUser.status === 'DISABLED') return false;
+
+        await userRepository.recordGoogleLogin({
+          userId: dbUser.id,
+          name: user.name,
+          image: user.image,
+        });
+
+        return true;
       } catch (err) {
-        console.error('[auth] signIn error:', err);
+        console.error('[auth] signIn provisioning failed:', err instanceof Error ? err.message : err);
         return false;
       }
-
-      return true;
     },
 
-    async jwt({ token, user, trigger }) {
-      if (user) {
-        // First sign-in: look up MongoDB user by email (user.id may be OAuth sub, not our UUID)
+    async jwt({ token, user, account, trigger }) {
+      if (user && account?.providerAccountId) {
+        // First sign-in this session: resolve the definitive internal user via
+        // provider identity (already provisioned/validated in signIn above) —
+        // not email, which is only a legacy-migration fallback at the repo layer.
         try {
-          const dbUser = await userRepository.findByEmail(user.email!);
+          const dbUser = await userRepository.findByProviderIdentity('google', account.providerAccountId);
           if (dbUser) {
             token.id = dbUser.id;
-            token.role = dbUser.role as UserRole;
-            token.onboardingCompleted = dbUser.profile?.onboardingCompleted ?? false;
+            token.role = dbUser.role;
+            token.onboardingCompleted = dbUser.onboardingCompletedAt !== null;
           }
         } catch {
           token.role = 'STUDENT';
           token.onboardingCompleted = false;
         }
-      } else if (trigger === 'update') {
-        // Manual session refresh: re-read from DB using stored MongoDB ID
+      } else if (trigger === 'update' && token.id) {
+        // Manual session refresh — re-read authorization state so a role
+        // change or account disable takes effect without waiting for the
+        // session to naturally expire.
         try {
-          const dbUser = await userRepository.findById(token.id as string);
-          if (dbUser) {
-            token.role = dbUser.role as UserRole;
-            token.onboardingCompleted = dbUser.profile?.onboardingCompleted ?? false;
+          const snapshot = await userRepository.getAuthorizationSnapshot(token.id as string);
+          if (snapshot) {
+            token.role = snapshot.role;
+            token.onboardingCompleted = snapshot.onboardingCompleted;
           }
         } catch {
           // keep existing token values
