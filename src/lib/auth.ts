@@ -43,7 +43,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return true;
       } catch (err) {
-        console.error('[auth] signIn provisioning failed:', err instanceof Error ? err.message : err);
+        // Drizzle wraps the real driver error in `.cause` (a DrizzleQueryError's own
+        // `.message` is just "Failed query: ..." — the actual reason, e.g. a connection
+        // failure or auth error, is on `.cause`) — log both or this fails silently.
+        const cause = err instanceof Error ? err.cause : undefined;
+        console.error('[auth] signIn provisioning failed:', err instanceof Error ? err.message : err, cause ? { cause } : '');
         return false;
       }
     },
