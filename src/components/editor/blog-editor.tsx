@@ -139,21 +139,40 @@ export function BlogEditor({ value, onChange, placeholder, className }: BlogEdit
     editor.commands.setContent(value ?? '', { emitUpdate: false, contentType: 'markdown' });
   }, [value, editor]);
 
+  // Client-side UX nicety only — the real enforcement is server-side
+  // (findUnsafeMarkdownContent / HttpsUrlSchema in blog.schema.ts), since a
+  // direct API call bypasses the editor entirely.
+  const isSafeHttpsUrl = (value: string) => {
+    try {
+      return new URL(value).protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   const setLink = useCallback(() => {
     const prev = editor?.getAttributes('link').href as string | undefined;
-    const url = prompt('Enter URL:', prev ?? 'https://');
+    const url = prompt('Enter URL (must start with https://):', prev ?? 'https://');
     if (url === null) return;
     if (url === '') {
       editor?.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    if (!isSafeHttpsUrl(url)) {
+      alert('Links must be a valid https:// URL.');
       return;
     }
     editor?.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
   }, [editor]);
 
   const insertImage = useCallback(() => {
-    const src = prompt('Image URL:');
+    const src = prompt('Image URL (must start with https://):');
     if (!src) return;
-    const alt = prompt('Alt text (optional):') ?? '';
+    if (!isSafeHttpsUrl(src)) {
+      alert('Images must be a valid https:// URL.');
+      return;
+    }
+    const alt = prompt('Alt text (required to publish this article):') ?? '';
     editor?.chain().focus().setImage({ src, alt }).run();
   }, [editor]);
 
