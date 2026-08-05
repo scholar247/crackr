@@ -79,9 +79,14 @@ async function getAuthorizationSnapshot(userId: string): Promise<AuthorizationSn
   };
 }
 
+async function completeOnboarding(userId: string) {
+  await db.update(users).set({ onboardingCompletedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
 export const userRepository = {
   findByProviderIdentity,
   provisionGoogleUser,
   recordGoogleLogin,
   getAuthorizationSnapshot,
+  completeOnboarding,
 };

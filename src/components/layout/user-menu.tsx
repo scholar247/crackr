@@ -18,7 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ROLE_COLORS } from '@/lib/utils';
 import Link from 'next/link';
-import type { UserRole } from '@/types';
+import { defaultDashboardPath, type UserRole } from '@/lib/roles';
 
 interface UserMenuProps {
   /** Show a Dashboard link at the top of the menu (useful on the landing page) */
@@ -36,9 +36,7 @@ export function UserMenu({ showDashboard = false }: UserMenuProps) {
     ? name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : email?.[0]?.toUpperCase() ?? 'U';
 
-  const dashboardHref = ['SUPER_ADMIN', 'ADMIN', 'TEACHER'].includes(role)
-    ? '/admin/dashboard'
-    : '/dashboard';
+  const dashboardHref = defaultDashboardPath(role);
 
   return (
     <DropdownMenu>

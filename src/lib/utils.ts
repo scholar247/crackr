@@ -76,14 +76,13 @@ export const ROLE_COLORS: Record<string, string> = {
   SUPER_ADMIN: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
   ADMIN: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
   TEACHER: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400',
-  EDITOR: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  REVIEWER: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
   STUDENT: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
 };
 
 /** Status badge colors */
 export const STATUS_COLORS: Record<string, string> = {
   DRAFT: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+  IN_REVIEW: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
   PUBLISHED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
   ARCHIVED: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500',
 };
