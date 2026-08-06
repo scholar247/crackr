@@ -6,6 +6,7 @@ import { apiError, apiSuccess } from '@/lib/utils';
 const CreateNodeSchema = z.object({
   nodeType: z.enum(['SUBJECT', 'CHAPTER', 'TOPIC', 'SUBTOPIC']),
   name: z.string().min(2).max(160),
+  description: z.string().max(1000).optional(),
   parentNodeId: z.uuid().optional(),
   examId: z.uuid().optional(),
 });
@@ -14,7 +15,7 @@ export async function GET() {
   const { error } = await requireAuth('ADMIN');
   if (error) return error;
 
-  return apiSuccess(await taxonomyRepository.listNodes());
+  return apiSuccess(await taxonomyRepository.listNodesWithParent());
 }
 
 export async function POST(req: Request) {
