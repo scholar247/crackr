@@ -19,6 +19,17 @@ async function findBySlug(slug: string) {
   return row ?? null;
 }
 
+// For the admin preview page — any status/visibility, unlike findPublishedBySlugWithAuthor.
+async function findByIdWithAuthor(id: string) {
+  const [row] = await db
+    .select({ article: articles, author: { name: users.name, image: users.image } })
+    .from(articles)
+    .leftJoin(users, eq(articles.authorId, users.id))
+    .where(eq(articles.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
 // Public site only ever sees PUBLISHED + PUBLIC — enforced here, once, rather than
 // re-implemented in every route handler that touches articles.
 async function findPublished() {
@@ -101,6 +112,7 @@ export const articleRepository = {
   findAll,
   findById,
   findBySlug,
+  findByIdWithAuthor,
   findPublished,
   findPublishedBySlug,
   findPublishedBySlugWithAuthor,

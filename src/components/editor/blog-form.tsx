@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
-import { Save } from 'lucide-react';
+import { Save, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -53,6 +53,7 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
   const router = useRouter();
   const [slugManual, setSlugManual] = useState(false);
   const [slugValue, setSlugValue] = useState(initial?.slug ?? '');
+  const [editorView, setEditorView] = useState<'rich' | 'markdown'>('rich');
 
   const form = useForm<CreateArticleInput>({
     // z.default() makes the schema's own inferred type disagree with zodResolver's
@@ -95,6 +96,13 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
           <Button type="button" variant="ghost" size="sm" onClick={() => router.push('/admin/blog')}>
             Back to list
           </Button>
+          {initial && (
+            <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+              <a href={`/admin/blog/${initial.id}/preview`} target="_blank" rel="noopener noreferrer">
+                <Eye className="h-4 w-4" /> Preview
+              </a>
+            </Button>
+          )}
           <Button type="submit" size="sm" disabled={mutation.isPending} className="gap-1.5">
             <Save className="h-4 w-4" />
             {mutation.isPending ? 'Saving…' : mode === 'create' ? 'Create draft' : 'Save'}
@@ -189,14 +197,50 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label>Content</Label>
+        <div className="flex items-center justify-between">
+          <Label>Content</Label>
+          <div className="flex gap-1 rounded-md border border-border p-0.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={editorView === 'rich' ? 'secondary' : 'ghost'}
+              className="h-7 px-2.5 text-xs"
+              onClick={() => setEditorView('rich')}
+            >
+              Rich text
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={editorView === 'markdown' ? 'secondary' : 'ghost'}
+              className="h-7 px-2.5 text-xs"
+              onClick={() => setEditorView('markdown')}
+            >
+              Markdown
+            </Button>
+          </div>
+        </div>
         <Controller
           control={form.control}
           name="body"
-          render={({ field }) => (
-            <BlogEditor value={field.value} onChange={field.onChange} placeholder="Start writing…" className="min-h-[420px]" />
-          )}
+          render={({ field }) =>
+            editorView === 'markdown' ? (
+              <Textarea
+                value={field.value}
+                onChange={(e) => field.onChange(e.target.value)}
+                placeholder="Paste or write raw Markdown…"
+                className="min-h-[420px] font-mono text-sm"
+              />
+            ) : (
+              <BlogEditor value={field.value} onChange={field.onChange} placeholder="Start writing…" className="min-h-[420px]" />
+            )
+          }
         />
+        {editorView === 'markdown' && (
+          <p className="text-xs text-muted-foreground">
+            Editing raw Markdown directly — switch back to Rich text to see it rendered and keep editing visually.
+          </p>
+        )}
       </div>
     </form>
   );
