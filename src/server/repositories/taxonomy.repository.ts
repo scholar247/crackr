@@ -192,59 +192,93 @@ async function updateNode(id: string, input: { name?: string; description?: stri
   return findNodeById(id);
 }
 
-// ── curriculum_node <-> curriculum_node (parent/child via curriculum_edges) ──
+// ── curriculum_node <-> curriculum_node (genuine many-to-many parent/child via
+// curriculum_edges — a node CAN have more than one parent, e.g. "Thermodynamics" mapped
+// under both Physics and Chemistry) ──────────────────────────────────────────
 
-async function getNodeParentId(nodeId: string): Promise<string | null> {
-  const [row] = await db
+async function getNodeParentIds(nodeId: string): Promise<string[]> {
+  const rows = await db
     .select({ parentNodeId: curriculumEdges.parentNodeId })
     .from(curriculumEdges)
-    .where(eq(curriculumEdges.childNodeId, nodeId))
-    .limit(1);
-  return row?.parentNodeId ?? null;
+    .where(eq(curriculumEdges.childNodeId, nodeId));
+  return rows.map((r) => r.parentNodeId);
 }
 
-// Replaces this node's parent edge — this is "add chapter to subject" / "add topic to
-// chapter" for a node that already exists, not just at creation time. A node has at most
-// one parent in this admin UI's model (matching how the ERD's own worked examples use the
-// hierarchy), even though curriculum_edges' schema would technically allow more.
-async function setNodeParent(nodeId: string, parentNodeId: string | null) {
-  if (parentNodeId === nodeId) {
+// All descendants of nodeId (children, grandchildren, ...) — used only to guard against
+// cycles: attaching one of nodeId's own descendants as a new parent would make nodeId an
+// ancestor of its own ancestor.
+async function getDescendantIds(nodeId: string): Promise<Set<string>> {
+  const [rows] = (await db.execute<{ id: string }>(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT child_node_id AS id FROM ${curriculumEdges} WHERE parent_node_id = ${nodeId}
+      UNION
+      SELECT edge.child_node_id AS id
+      FROM ${curriculumEdges} edge
+      INNER JOIN descendants d ON d.id = edge.parent_node_id
+    )
+    SELECT id FROM descendants
+  `)) as unknown as [{ id: string }[], unknown];
+  return new Set(rows.map((r) => r.id));
+}
+
+// Reconciles this node's parent edges to exactly `parentNodeIds` — attaches what's
+// missing, detaches what's no longer wanted. This is "add chapter to subject" / "add
+// topic to chapter" for nodes that already exist, and also how Thermodynamics ends up
+// under both Physics and Chemistry: call this with both subject ids.
+async function setNodeParents(nodeId: string, parentNodeIds: string[]) {
+  const desired = new Set(parentNodeIds);
+  if (desired.has(nodeId)) {
     throw new Error('A node cannot be its own parent');
   }
-  await db.delete(curriculumEdges).where(eq(curriculumEdges.childNodeId, nodeId));
-  if (parentNodeId) {
-    await db.insert(curriculumEdges).values({ parentNodeId, childNodeId: nodeId, sortOrder: 0 });
+
+  const descendants = await getDescendantIds(nodeId);
+  for (const parentId of desired) {
+    if (descendants.has(parentId)) {
+      throw new Error('That would create a cycle — the selected parent is a descendant of this node');
+    }
+  }
+
+  const current = new Set(await getNodeParentIds(nodeId));
+  for (const parentId of desired) {
+    if (!current.has(parentId)) {
+      await db.insert(curriculumEdges).values({ parentNodeId: parentId, childNodeId: nodeId, sortOrder: 0 });
+    }
+  }
+  for (const parentId of current) {
+    if (!desired.has(parentId)) {
+      await db.delete(curriculumEdges).where(and(eq(curriculumEdges.parentNodeId, parentId), eq(curriculumEdges.childNodeId, nodeId)));
+    }
   }
 }
 
-interface NodeWithParent {
+interface NodeWithParents {
   id: string;
   nodeType: string;
   name: string;
   slug: string;
   description: string | null;
   status: string;
-  parentId: string | null;
-  parentName: string | null;
+  parents: { id: string; name: string }[];
 }
 
-async function listNodesWithParent(): Promise<NodeWithParent[]> {
+async function listNodesWithParents(): Promise<NodeWithParents[]> {
   const parentNode = alias(curriculumNodes, 'parent_node');
-  return db
-    .select({
-      id: curriculumNodes.id,
-      nodeType: curriculumNodes.nodeType,
-      name: curriculumNodes.name,
-      slug: curriculumNodes.slug,
-      description: curriculumNodes.description,
-      status: curriculumNodes.status,
-      parentId: curriculumEdges.parentNodeId,
-      parentName: parentNode.name,
-    })
-    .from(curriculumNodes)
-    .leftJoin(curriculumEdges, eq(curriculumEdges.childNodeId, curriculumNodes.id))
-    .leftJoin(parentNode, eq(parentNode.id, curriculumEdges.parentNodeId))
-    .orderBy(asc(curriculumNodes.name));
+  const [nodes, edgeRows] = await Promise.all([
+    db.select().from(curriculumNodes).orderBy(asc(curriculumNodes.name)),
+    db
+      .select({ childId: curriculumEdges.childNodeId, parentId: curriculumEdges.parentNodeId, parentName: parentNode.name })
+      .from(curriculumEdges)
+      .innerJoin(parentNode, eq(parentNode.id, curriculumEdges.parentNodeId)),
+  ]);
+
+  const parentsByChild = new Map<string, { id: string; name: string }[]>();
+  for (const edge of edgeRows) {
+    const list = parentsByChild.get(edge.childId) ?? [];
+    list.push({ id: edge.parentId, name: edge.parentName });
+    parentsByChild.set(edge.childId, list);
+  }
+
+  return nodes.map((n) => ({ ...n, parents: parentsByChild.get(n.id) ?? [] }));
 }
 
 // ── Syllabus tree (recursive descendants of an exam's mapped root nodes) ─────
@@ -261,9 +295,21 @@ async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
   // The ERD's own sample data maps both a subject AND its deep descendants directly into
   // exam_node_map (not just top-level roots — see "root or relevant nodes" in the ERD).
   // So `reachable` dedupes by node id via UNION (not UNION ALL) first; each node's actual
-  // parent is then resolved separately via curriculum_edges, so a node that's both
-  // directly mapped and reachable through an ancestor still nests exactly once, in its
-  // real tree position — not as a duplicate phantom root.
+  // parent(s) are then resolved separately via curriculum_edges, so a node that's both
+  // directly mapped and reachable through an ancestor still nests exactly once per real
+  // parent — not as a duplicate phantom root.
+  //
+  // The join to curriculum_edges is constrained to `edge.parent_node_id IN (reachable)`
+  // — without that, a node with a parent OUTSIDE this exam's relevant subtree (e.g.
+  // Thermodynamics under Chemistry, when only Physics is reachable for this exam) would
+  // produce a row whose parentId isn't in `byId`, and the loop below would push it as a
+  // second, spurious root in addition to its legitimate position under Physics. A node
+  // can validly have more than one parent now (Thermodynamics under both Physics and
+  // Chemistry) — when that happens for a node reachable via multiple relevant parents,
+  // it correctly nests under each of them (same shared object pushed into multiple
+  // children arrays), which is why `byId` uses one node object per id rather than one per
+  // row.
+  //
   // db.execute()'s return type is a union across all possible query kinds (SELECT vs
   // INSERT/UPDATE) since it can't statically know this raw SQL is a SELECT — cast the
   // destructured rows accordingly.
@@ -280,20 +326,22 @@ async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
     SELECT cn.id, cn.node_type AS "nodeType", cn.name, cn.slug, edge.parent_node_id AS "parentId"
     FROM reachable r
     INNER JOIN ${curriculumNodes} cn ON cn.id = r.id
-    LEFT JOIN ${curriculumEdges} edge ON edge.child_node_id = cn.id
+    LEFT JOIN ${curriculumEdges} edge ON edge.child_node_id = cn.id AND edge.parent_node_id IN (SELECT id FROM reachable)
   `)) as unknown as [DescendantRow[], unknown];
 
   const byId = new Map<string, SyllabusNode>();
   const roots: SyllabusNode[] = [];
 
   for (const row of rows) {
-    byId.set(row.id, { id: row.id, nodeType: row.nodeType, name: row.name, slug: row.slug, children: [] });
+    if (!byId.has(row.id)) {
+      byId.set(row.id, { id: row.id, nodeType: row.nodeType, name: row.name, slug: row.slug, children: [] });
+    }
   }
   for (const row of rows) {
     const node = byId.get(row.id)!;
     if (row.parentId && byId.has(row.parentId)) {
       byId.get(row.parentId)!.children.push(node);
-    } else {
+    } else if (!row.parentId) {
       roots.push(node);
     }
   }
@@ -314,7 +362,7 @@ export const taxonomyRepository = {
   createExam,
   updateExam,
   listNodes,
-  listNodesWithParent,
+  listNodesWithParents,
   findNodeBySlug,
   findNodeById,
   createNode,
@@ -323,7 +371,7 @@ export const taxonomyRepository = {
   detachNodeFromExam,
   listNodeIdsForExam,
   setExamNodes,
-  getNodeParentId,
-  setNodeParent,
+  getNodeParentIds,
+  setNodeParents,
   getSyllabusTree,
 };

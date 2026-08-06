@@ -40,8 +40,7 @@ interface NodeItem {
   nodeType: string;
   description: string | null;
   status: TaxonomyStatus;
-  parentId: string | null;
-  parentName: string | null;
+  parents: { id: string; name: string }[];
 }
 
 const NODE_TYPES = ['SUBJECT', 'CHAPTER', 'TOPIC', 'SUBTOPIC'] as const;
@@ -491,7 +490,7 @@ function NodeDialog({ node, nodes, onClose }: { node: NodeItem; nodes: NodeItem[
   const [name, setName] = useState(node.name);
   const [description, setDescription] = useState(node.description ?? '');
   const [status, setStatus] = useState<TaxonomyStatus>(node.status);
-  const [parentNodeId, setParentNodeId] = useState(node.parentId ?? '');
+  const [parentIds, setParentIds] = useState<Set<string>>(new Set(node.parents.map((p) => p.id)));
 
   const parentOptions = nodes.filter((n) => n.id !== node.id);
 
@@ -501,7 +500,7 @@ function NodeDialog({ node, nodes, onClose }: { node: NodeItem; nodes: NodeItem[
         name,
         description,
         status,
-        parentNodeId: parentNodeId || null,
+        parentNodeIds: Array.from(parentIds),
       }),
     onSuccess: () => {
       toast.success('Node saved');
@@ -510,9 +509,18 @@ function NodeDialog({ node, nodes, onClose }: { node: NodeItem; nodes: NodeItem[
     onError: (err: Error) => toast.error(err.message),
   });
 
+  function toggleParent(parentId: string, checked: boolean) {
+    setParentIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(parentId);
+      else next.delete(parentId);
+      return next;
+    });
+  }
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             Edit {node.nodeType.toLowerCase()}: {node.name}
@@ -528,34 +536,36 @@ function NodeDialog({ node, nodes, onClose }: { node: NodeItem; nodes: NodeItem[
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What this covers…" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Parent node</Label>
-              <Select value={parentNodeId} onValueChange={setParentNodeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="None (root)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {parentOptions.map((n) => (
-                    <SelectItem key={n.id} value={n.id}>
-                      {n.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <button type="button" className="text-xs text-primary hover:underline" onClick={() => setParentNodeId('')}>
-                Clear parent
-              </button>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Status</Label>
-              <StatusSelect value={status} onChange={setStatus} />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Status</Label>
+            <StatusSelect value={status} onChange={setStatus} />
           </div>
-          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending || name.trim().length < 2} className="gap-1.5">
-            {save.isPending ? 'Saving…' : 'Save'}
-          </Button>
         </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <Label>
+            Parent nodes {parentIds.size === 0 && <span className="font-normal text-muted-foreground">(none — this is a root node)</span>}
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            A node can have more than one parent — e.g. Thermodynamics can sit under both Physics and Chemistry.
+          </p>
+          <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border border-border p-2">
+            {parentOptions.length === 0 && <p className="p-2 text-sm text-muted-foreground">No other nodes yet.</p>}
+            {parentOptions.map((n) => (
+              <label key={n.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+                <Checkbox checked={parentIds.has(n.id)} onCheckedChange={(checked) => toggleParent(n.id, checked === true)} />
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">{n.nodeType}</span>
+                <span className="text-foreground">{n.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending || name.trim().length < 2} className="gap-1.5">
+          {save.isPending ? 'Saving…' : 'Save'}
+        </Button>
       </DialogContent>
     </Dialog>
   );
@@ -666,7 +676,9 @@ function NodesTab() {
             <div className="flex min-w-0 items-center gap-2">
               <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{n.nodeType}</span>
               <span className="font-medium text-foreground">{n.name}</span>
-              {n.parentName && <span className="text-xs text-muted-foreground">under {n.parentName}</span>}
+              {n.parents.length > 0 && (
+                <span className="text-xs text-muted-foreground">under {n.parents.map((p) => p.name).join(', ')}</span>
+              )}
               {n.description && <span className="truncate text-xs text-muted-foreground">— {n.description}</span>}
             </div>
             <div className="flex shrink-0 items-center gap-2">

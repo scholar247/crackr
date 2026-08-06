@@ -7,9 +7,10 @@ const UpdateNodeSchema = z.object({
   name: z.string().min(2).max(160).optional(),
   description: z.string().max(1000).optional(),
   status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
-  // Present + a uuid: set that parent. Present + null: clear (make it a root node).
-  // Omitted entirely: leave the parent edge untouched.
-  parentNodeId: z.uuid().nullable().optional(),
+  // Full desired set of parents — a node can have more than one (e.g. Thermodynamics
+  // under both Physics and Chemistry). Reconciled (attach/detach), not replaced wholesale
+  // the way a single value would be. Omit entirely to leave parent edges untouched.
+  parentNodeIds: z.array(z.uuid()).optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -17,20 +18,19 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (error) return error;
 
   const { id } = await params;
-  const body = await req.json();
-  const parsed = UpdateNodeSchema.safeParse(body);
+  const parsed = UpdateNodeSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
 
-  const { parentNodeId, ...fields } = parsed.data;
+  const { parentNodeIds, ...fields } = parsed.data;
   if (Object.keys(fields).length > 0) {
     const updated = await taxonomyRepository.updateNode(id, fields);
     if (!updated) return apiError('Not found', 404);
   }
-  if ('parentNodeId' in body) {
+  if (parentNodeIds) {
     try {
-      await taxonomyRepository.setNodeParent(id, parentNodeId ?? null);
+      await taxonomyRepository.setNodeParents(id, parentNodeIds);
     } catch (err) {
-      return apiError(err instanceof Error ? err.message : 'Failed to update parent', 400);
+      return apiError(err instanceof Error ? err.message : 'Failed to update parents', 400);
     }
   }
 

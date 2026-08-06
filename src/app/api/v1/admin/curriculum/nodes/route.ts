@@ -15,7 +15,7 @@ export async function GET() {
   const { error } = await requireAuth('ADMIN');
   if (error) return error;
 
-  return apiSuccess(await taxonomyRepository.listNodesWithParent());
+  return apiSuccess(await taxonomyRepository.listNodesWithParents());
 }
 
 export async function POST(req: Request) {
