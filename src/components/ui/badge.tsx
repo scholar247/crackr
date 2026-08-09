@@ -3,18 +3,21 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20',
   {
     variants: {
       variant: {
         default: 'border-transparent bg-primary text-primary-foreground',
         secondary: 'border-transparent bg-secondary text-secondary-foreground',
         destructive: 'border-transparent bg-destructive text-destructive-foreground',
-        outline: 'text-foreground',
-        success: 'border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-        warning: 'border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-        danger: 'border-transparent bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400',
-        info: 'border-transparent bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400',
+        outline: 'border-border text-foreground',
+        // "Active" status-chip treatment from the spec: tinted background,
+        // solid-color border, solid-color text — not a solid fill.
+        success: 'border-secondary bg-secondary/10 text-secondary',
+        warning: 'border-warning bg-warning/10 text-warning',
+        danger: 'border-destructive bg-destructive/10 text-destructive',
+        info: 'border-primary bg-primary/10 text-primary',
+        neutral: 'border-tertiary bg-tertiary/10 text-tertiary',
       },
     },
     defaultVariants: {

@@ -38,130 +38,250 @@
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
 
-  /* Border radius */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Tertiary — the spec's third M3 accent (muted slate-blue), used for
+   * "Neutral" status chips and any third-tier accent that isn't primary/secondary. */
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-foreground: var(--tertiary-foreground);
+
+  /* Raw M3 surface-tier and outline tokens, alongside (not replacing) the
+   * semantic background/card/popover/border set above — for pages that need
+   * exact M3 fidelity (surface-container-lowest as a distinct section bg,
+   * outline-variant for hairlines, etc.) rather than the shadcn-style aliases. */
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+
+  /* Border radius — named scale straight from the design spec, not derived
+   * from a single base value (the steps aren't uniform: 2/4/6/8/12px). */
+  --radius: 0.25rem;
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
 
   /* Font */
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* Spacing — deliberately NOT overriding xs/sm/md/lg/xl: Tailwind v4 shares
+   * one spacing namespace across padding/gap/width/height/max-width, so
+   * naming custom keys "sm"/"md"/"lg"/"xl" silently clobbers the built-in
+   * max-w-lg/max-w-xl/etc size scale used throughout the app (confirmed —
+   * this broke max-w-xl to 48px and max-w-lg to 24px sitewide). Tailwind's
+   * default numeric scale already gives 4/8/16/24/32px via p-1/p-2/p-4/p-6/p-8,
+   * which is what the design spec's xs/sm/md/lg/xl actually need. Only
+   * "gutter" is added here since it doesn't collide with any existing key. */
+  --spacing-gutter: 24px;
+
+  /* Typography scale — one utility class per named style bundles font-family,
+   * size, weight, line-height and tracking together (matches the spec's own
+   * shape: each named style IS a bundle, not independent per-property utilities).
+   * headline-lg is responsive by default (swaps to the mobile size <640px) so
+   * callers don't need to think about the breakpoint themselves. */
+  --text-display-lg: 3rem;                    /* 48px */
+  --text-display-lg--line-height: 3.5rem;     /* 56px */
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 700;
+
+  /* headline-xl is the same style under the name the generated design tokens
+   * actually use — kept as a separate alias rather than renaming display-lg
+   * everywhere it's already in use. */
+  --text-headline-xl: 3rem;
+  --text-headline-xl--line-height: 3.5rem;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-headline-xl--font-weight: 700;
+
+  --text-headline-lg: 2rem;                   /* 32px */
+  --text-headline-lg--line-height: 2.5rem;    /* 40px */
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 600;
+
+  --text-headline-md: 1.5rem;                 /* 24px */
+  --text-headline-md--line-height: 2rem;      /* 32px */
+  --text-headline-md--font-weight: 600;
+
+  --text-body-lg: 1.125rem;                   /* 18px */
+  --text-body-lg--line-height: 1.75rem;       /* 28px */
+
+  --text-body-md: 1rem;                       /* 16px */
+  --text-body-md--line-height: 1.5rem;        /* 24px */
+
+  --text-body-sm: 0.875rem;                   /* 14px */
+  --text-body-sm--line-height: 1.25rem;       /* 20px */
+
+  --text-code-md: 0.875rem;                   /* 14px */
+  --text-code-md--line-height: 1.25rem;       /* 20px */
+
+  --text-label-caps: 0.75rem;                 /* 12px */
+  --text-label-caps--line-height: 1rem;       /* 16px */
+  --text-label-caps--letter-spacing: 0.05em;
+  --text-label-caps--font-weight: 500;
+}
+
+/* headline-lg-mobile from the spec — same class, smaller size below the sm
+ * breakpoint, so callers just use `text-headline-lg` everywhere. */
+@media (max-width: 639px) {
+  :root {
+    --text-headline-lg: 1.5rem;                 /* 24px */
+    --text-headline-lg--line-height: 2rem;      /* 32px */
+  }
 }
 
 :root {
-  --radius: 0.625rem;
-
-  /* ── Light theme — Lattice-inspired purple × teal ──────────────────────────
+  /* ── Light theme — Synthetic Intelligence ──────────────────────────────────
    *
-   *  Background : sand-50 #faf9f7  — barely-warm off-white
-   *  Foreground : grey-1000 #001f1f — deep teal-black (Lattice signature)
-   *  Primary    : purple-400 #7070ff
-   *  Secondary  : teal-400 #33b88c
-   *  Muted bg   : sand-100 #f7f6f2
-   *  Accent bg  : purple-50 #f0f0ff
-   *  Border     : grey-200 equivalent (teal-tinted)
+   *  Derived from the dark scheme below using Material 3's own "inverse" and
+   *  "fixed" roles rather than picked freehand: M3 defines inverse-primary
+   *  (dark) as *the primary tone the light scheme should use*, and
+   *  inverse-surface/inverse-on-surface (dark) as the light scheme's
+   *  surface/on-surface pair — so those tokens are reused directly instead of
+   *  re-guessing a whole second palette. Roles without a direct M3 counterpart
+   *  (secondary/error mains) are called out below as "derived" instead of
+   *  quoted from a given token.
+   *
+   *  Background : inverse-surface        #d4e4fa — pale, cool powder blue
+   *  Foreground : inverse-on-surface     #233143 — dark navy-slate
+   *  Primary    : inverse-primary        #0053db — Electric Cobalt
+   *  Secondary  : derived from secondary-container hue — #006e7c teal-cyan
    *
    * ────────────────────────────────────────────────────────────────────────── */
 
-  --background: oklch(0.984 0.004 92);          /* sand-50  #faf9f7           */
-  --foreground: oklch(0.095 0.025 196);          /* grey-1000 #001f1f          */
-  --card: oklch(1 0 0);                          /* pure white                 */
-  --card-foreground: oklch(0.095 0.025 196);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.095 0.025 196);
+  --background: #d4e4fa;
+  --foreground: #233143;
+  --card: #ffffff;                    /* lifted above the tinted page bg, not a copy of it */
+  --card-foreground: #233143;
+  --popover: #ffffff;
+  --popover-foreground: #233143;
 
-  /* Primary: purple-400 #7070ff */
-  --primary: oklch(0.45 0.08 196);
-  --primary-foreground: oklch(0.99 0 0);
+  /* Primary: inverse-primary (given directly) */
+  --primary: #0053db;
+  --primary-foreground: #ffffff;
 
-  /* Secondary: teal-400 #33b88c */
-  --secondary: oklch(0.962 0.044 156);
-  --secondary-foreground: oklch(0.095 0.025 196);
+  /* Secondary: derived — same cyan hue as the dark scheme's secondary-container,
+   * darkened enough to hold white text at solid fill. */
+  --secondary: #006e7c;
+  --secondary-foreground: #ffffff;
 
-  /* Muted: sand-100 #f7f6f2 */
-  --muted: oklch(0.974 0.007 92);
-  --muted-foreground: oklch(0.516 0.019 196);    /* grey-600 #6a7878           */
+  /* Tertiary — muted slate-blue, used for "Neutral" status chips */
+  --tertiary: #565e70;
+  --tertiary-foreground: #ffffff;
 
-  /* Accent: purple-50 #f0f0ff — hover / highlight surface */
-  --accent: oklch(0.979 0.021 166);    /* emerald-50 */
-  --accent-foreground: oklch(0.645 0.147 160); /* emerald-500 */   /* purple-600 #624ee5         */
+  --muted: #eef2f9;
+  --muted-foreground: #5b6472;
 
-  /* Destructive: red-400 #f55861 */
-  --destructive: oklch(0.613 0.202 20);
-  --destructive-foreground: oklch(0.99 0 0);
+  --accent: #e4ebf5;                  /* hover/highlight surface */
+  --accent-foreground: #233143;
 
-  --border: oklch(0.870 0.010 196);              /* grey-200 teal-tinted       */
-  --input: oklch(0.870 0.010 196);
-  --ring: oklch(0.657 0.195 264);                /* purple-400                 */
+  /* Destructive: standard M3 light "error" tone for this red family */
+  --destructive: #ba1a1a;
+  --destructive-foreground: #ffffff;
+
+  --border: #c7d2e2;
+  --input: #c7d2e2;
+  --ring: #0053db;                    /* matches primary */
 
   /* Semantic */
-  --success: oklch(0.679 0.122 165);             /* teal-400                   */
-  --success-foreground: oklch(0.095 0.025 196);
+  --success: #006e7c;                 /* same teal-cyan as secondary */
+  --success-foreground: #ffffff;
 
-  --warning: oklch(0.836 0.170 77);              /* yellow-400 #ffc247         */
-  --warning-foreground: oklch(0.095 0.025 196);
+  --warning: #f2b400;
+  --warning-foreground: #241a00;
 
-  --danger: oklch(0.613 0.202 20);
-  --danger-foreground: oklch(0.99 0 0);
+  --danger: #ba1a1a;
+  --danger-foreground: #ffffff;
 
-  --gold: oklch(0.836 0.170 77);
-  --gold-foreground: oklch(0.095 0.025 196);
+  --gold: #f2b400;
+  --gold-foreground: #241a00;
+
+  /* Raw M3 surface tiers / outline (light) — approximate light-mode surface
+   * ladder, lightest at "highest" per M3's usual light-scheme convention. */
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f7f9fd;
+  --surface-container: #eef2f9;
+  --surface-container-high: #e4ebf5;
+  --surface-container-highest: #dbe4f2;
+  --outline: #75798a;
+  --outline-variant: #c7d2e2;
+  --on-surface-variant: #454954;
+  --error: #ba1a1a;
+  --on-error: #ffffff;
 }
 
 .dark {
-  /* ── Dark theme — deep teal-black shell with purple × teal ───────────────
-   *
-   *  Background : grey-1000 #001f1f — Lattice's own darkest colour
-   *  Card       : slightly lifted teal-black
-   *  Primary    : purple-200 #b8b8ff — bright enough to read on dark bg
-   *  Secondary  : teal-400 unchanged — pops on dark
-   *  Border     : teal-tinted dark grey
-   *
+  /* ── Dark theme — Synthetic Intelligence ───────────────────────────────────
+   *  Values quoted directly from the Stitch-generated Material 3 dark scheme
+   *  (its own tailwind.config color block) — deep obsidian surfaces, a pale
+   *  lavender primary used directly as button fill (not primary-container —
+   *  confirmed by the generated markup: `bg-primary text-on-primary` on solid
+   *  CTAs), Neon Cyan secondary for data-viz/success accents.
    * ────────────────────────────────────────────────────────────────────────── */
 
-  --background: oklch(0.095 0.025 196);          /* grey-1000 #001f1f          */
-  --foreground: oklch(0.950 0.008 185);          /* near-white, teal warmth    */
-  --card: oklch(0.145 0.022 196);                /* one step lighter           */
-  --card-foreground: oklch(0.950 0.008 185);
-  --popover: oklch(0.145 0.022 196);
-  --popover-foreground: oklch(0.950 0.008 185);
+  --background: #0f131c;              /* surface / background */
+  --foreground: #dfe2ef;              /* on-surface / on-background */
+  --card: #1c1f29;                    /* surface-container */
+  --card-foreground: #dfe2ef;
+  --popover: #262a34;                 /* surface-container-high — elevated above cards */
+  --popover-foreground: #dfe2ef;
 
-  /* Primary: purple-200 #b8b8ff */
-  --primary: oklch(0.788 0.099 272);
-  --primary-foreground: oklch(0.095 0.025 196);
+  /* Primary — used directly (not primary-container) per the generated markup */
+  --primary: #adc6ff;
+  --primary-foreground: #002e6a;      /* on-primary */
 
-  /* Secondary: teal-400 #33b88c — vivid on dark */
-  --secondary: oklch(0.679 0.122 165);
-  --secondary-foreground: oklch(0.095 0.025 196);
+  /* Secondary */
+  --secondary: #5de6ff;
+  --secondary-foreground: #00363e;    /* on-secondary */
 
-  /* Muted */
-  --muted: oklch(0.170 0.020 196);
-  --muted-foreground: oklch(0.516 0.019 196);    /* grey-600                   */
-/* Emerald */
-  --accent: oklch(0.979 0.021 166);    /* emerald-50 */
-  --accent-foreground: oklch(0.645 0.147 160); /* emerald-500 */   /* purple-600 #624ee5         */
+  /* Tertiary */
+  --tertiary: #c0c6db;
+  --tertiary-foreground: #293040;     /* on-tertiary */
 
+  --muted: #181b25;                   /* surface-container-low */
+  --muted-foreground: #c2c6d6;        /* on-surface-variant */
 
-  /* Destructive */
-  --destructive: oklch(0.613 0.202 20);
-  --destructive-foreground: oklch(0.96 0 0);
+  --accent: #262a34;                  /* surface-container-high — hover surface */
+  --accent-foreground: #dfe2ef;       /* on-surface */
 
-  --border: oklch(0.195 0.018 196);              /* whisper of teal-black      */
-  --input: oklch(0.195 0.018 196);
-  --ring: oklch(0.788 0.099 272);                /* purple-200                 */
+  /* Destructive: error-container */
+  --destructive: #93000a;
+  --destructive-foreground: #ffdad6;  /* on-error-container */
+
+  --border: #424754;                  /* outline-variant */
+  --input: #424754;
+  --ring: #adc6ff;                    /* matches primary */
 
   /* Semantic */
-  --success: oklch(0.679 0.122 165);             /* teal-400 vivid on dark     */
-  --success-foreground: oklch(0.095 0.025 196);
+  --success: #5de6ff;                 /* secondary — cyan reserved for success per brief */
+  --success-foreground: #00363e;
 
-  --warning: oklch(0.836 0.170 77);
-  --warning-foreground: oklch(0.095 0.025 196);
+  --warning: #f2b400;
+  --warning-foreground: #241a00;
 
-  --danger: oklch(0.613 0.202 20);
-  --danger-foreground: oklch(0.96 0 0);
+  --danger: #93000a;
+  --danger-foreground: #ffdad6;
 
-  --gold: oklch(0.836 0.170 77);
-  --gold-foreground: oklch(0.095 0.025 196);
+  --gold: #f2b400;
+  --gold-foreground: #241a00;
+
+  /* Raw M3 surface tiers / outline (dark) — quoted directly from the spec. */
+  --surface-container-lowest: #0a0e17;
+  --surface-container-low: #181b25;
+  --surface-container: #1c1f29;
+  --surface-container-high: #262a34;
+  --surface-container-highest: #31353f;
+  --outline: #8c909f;
+  --outline-variant: #424754;
+  --on-surface-variant: #c2c6d6;
+  --error: #ffb4ab;
+  --on-error: #690005;
 }
 
 * {
@@ -352,23 +472,27 @@ body {
 
 /* ── Inline code ────────────────────────────────────────────────────────────── */
 .blog-content :not(pre) > code {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  font-family: var(--font-mono), 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
   font-size: 0.85em;
   background: var(--muted);
-  color: oklch(0.55 0.15 196);
+  color: #006e7c;                     /* light-theme secondary teal-cyan */
   padding: 0.15em 0.45em;
   border-radius: 0.3rem;
   border: 1px solid var(--border);
 }
 
-/* ── Code blocks ────────────────────────────────────────────────────────────── */
+/* ── Code blocks ──────────────────────────────────────────────────────────────
+ * Always dark chrome regardless of site theme (terminal/editor convention) —
+ * reuses the dark scheme's own navy/cobalt/cyan hex stops directly rather than
+ * a separate hardcoded palette, so it stays in sync with the brand refresh.
+ * ─────────────────────────────────────────────────────────────────────────── */
 .code-block-wrapper {
   position: relative;
   margin: 1.5rem 0;
   border-radius: 0.75rem;
   overflow: hidden;
-  border: 1px solid oklch(0.22 0.018 196);
-  background: oklch(0.12 0.020 196);
+  border: 1px solid #434655;          /* outline-variant */
+  background: #051424;                /* background */
 }
 
 .code-toolbar {
@@ -376,15 +500,15 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0.45rem 1rem;
-  background: oklch(0.16 0.020 196);
-  border-bottom: 1px solid oklch(0.22 0.018 196);
+  background: #0d1c2d;                /* surface-container-low */
+  border-bottom: 1px solid #434655;
   min-height: 2.1rem;
 }
 
 .code-lang {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.7rem;
-  color: oklch(0.55 0.06 196);
+  color: #8d90a0;                     /* outline */
   text-transform: uppercase;
   letter-spacing: 0.08em;
   user-select: none;
@@ -395,25 +519,25 @@ body {
   font-size: 0.7rem;
   padding: 0.2rem 0.65rem;
   border-radius: 0.3rem;
-  border: 1px solid oklch(0.28 0.018 196);
-  background: oklch(0.20 0.018 196);
-  color: oklch(0.65 0.01 185);
+  border: 1px solid #434655;
+  background: #122131;                /* surface-container */
+  color: #c3c6d7;                     /* on-surface-variant */
   cursor: pointer;
   transition: background 150ms, color 150ms;
   user-select: none;
   line-height: 1.4;
 }
-.copy-btn:hover { background: oklch(0.26 0.018 196); color: oklch(0.88 0.008 185); }
-.copy-btn.copied { background: oklch(0.35 0.08 165); color: oklch(0.88 0.008 185); border-color: oklch(0.45 0.10 165); }
+.copy-btn:hover { background: #1c2b3c; color: #d4e4fa; }
+.copy-btn.copied { background: #00515d; color: #d4e4fa; border-color: #00cbe6; }
 
 .blog-content pre {
   margin: 0;
   padding: 1rem 1.25rem 1.25rem;
   overflow-x: auto;
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  font-family: var(--font-mono), 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
   font-size: 0.855rem;
   line-height: 1.7;
-  color: oklch(0.88 0.008 185);
+  color: #d4e4fa;                     /* on-surface */
   background: transparent;
   border: none;
   border-radius: 0;
@@ -423,10 +547,10 @@ body {
 
 /* Pre blocks not yet enhanced by JS (SSR / no-JS fallback) */
 .blog-content pre:not(.code-block-wrapper pre) {
-  background: oklch(0.12 0.020 196);
+  background: #051424;
   border-radius: 0.75rem;
   padding: 1.1rem 1.25rem;
-  border: 1px solid oklch(0.22 0.018 196);
+  border: 1px solid #434655;
   margin: 1.5rem 0;
 }
 
@@ -585,62 +709,52 @@ body {
  *  for light mode and need explicit dark equivalents here.
  * ─────────────────────────────────────────────────────────────────────────── */
 
-/* Inline code — was medium teal, near-invisible on dark bg */
+/* Inline code — secondary cyan, readable on dark bg */
 .dark .blog-content :not(pre) > code {
-  background: oklch(0.18 0.022 196);
-  color: oklch(0.72 0.10 196);
-  border-color: oklch(0.26 0.020 196);
+  background: #0d1c2d;                /* surface-container-low */
+  color: #5de6ff;                     /* secondary */
+  border-color: #434655;              /* outline-variant */
 }
 
 /* H2 bottom border — --border is barely a whisper in dark */
 .dark .blog-content h2 {
-  border-bottom-color: oklch(0.26 0.020 196);
+  border-bottom-color: #434655;
 }
 
-/* Blockquote — --muted in dark (0.170) is too close to page bg (0.095) */
+/* Blockquote — --muted in dark is too close to page bg */
 .dark .blog-content blockquote {
-  background: oklch(0.155 0.022 196);
-  border-left-color: var(--primary);   /* purple-200 in dark — distinct */
-  color: oklch(0.64 0.015 185);
+  background: #0d1c2d;
+  border-left-color: var(--primary);
+  color: #c3c6d7;                     /* on-surface-variant */
 }
 
 /* Tables — borders nearly invisible at --border dark value */
 .dark .blog-content .table-wrapper {
-  border-color: oklch(0.26 0.020 196);
+  border-color: #434655;
 }
 .dark .blog-content thead {
-  background: oklch(0.165 0.022 196);
+  background: #0d1c2d;
 }
 .dark .blog-content th {
-  border-bottom-color: oklch(0.28 0.020 196);
+  border-bottom-color: #434655;
   color: var(--foreground);
 }
 .dark .blog-content td {
-  border-bottom-color: oklch(0.22 0.020 196);
+  border-bottom-color: #273647;       /* surface-container-highest */
 }
 .dark .blog-content tbody tr:hover {
-  background: oklch(0.155 0.022 196);
-}
-
-/* code-lang label — was medium teal, hard to read on dark toolbar */
-.dark .code-lang {
-  color: oklch(0.60 0.06 196);
-}
-
-/* copy-btn — already dark-themed, just raise text contrast slightly */
-.dark .copy-btn {
-  color: oklch(0.70 0.01 185);
+  background: #122131;                /* surface-container */
 }
 
 /* HR — barely visible at --border dark value */
 .dark .blog-content hr {
-  border-top-color: oklch(0.24 0.020 196);
+  border-top-color: #434655;
 }
 
 /* Callouts — light-mode tints are too bright against a dark page */
 .dark .blog-content .callout {
-  border-color: oklch(0.26 0.020 196);
-  background: oklch(0.155 0.022 196);
+  border-color: #434655;
+  background: #0d1c2d;
 }
 .dark .blog-content .callout-info {
   background: oklch(0.20 0.035 235);
@@ -793,3 +907,30 @@ body {
 .answer-option.selected {
   transform: scale(1.01);
 }
+
+/* ─── Marketing hero pieces (Stitch-referenced design) ───────────────────────
+ *  Gradient headline word + the live-challenge card's glowing top border and
+ *  "live" pulse dot — used on the homepage hero and exam landing pages.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.text-gradient-brand {
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-top-border {
+  position: relative;
+}
+.glow-top-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 9999px 9999px 0 0;
+}
+

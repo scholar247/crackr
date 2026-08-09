@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Geist, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { cn } from '@/lib/utils';
@@ -10,9 +10,14 @@ const isProd = process.env.NODE_ENV === 'production';
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
 const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
-const inter = Inter({
+const geist = Geist({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-geist',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
 });
 
 const BASE_URL = 'https://scholar247.org';
@@ -62,7 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {adsenseClientId && <meta name="google-adsense-account" content={adsenseClientId} />}
       </head>
-      <body className={cn(inter.variable, 'font-sans antialiased bg-background text-foreground')}>
+      <body className={cn(geist.variable, jetbrainsMono.variable, 'font-sans antialiased bg-background text-foreground')}>
         <Providers>{children}</Providers>
         {isProd && adsenseClientId && (
           <Script

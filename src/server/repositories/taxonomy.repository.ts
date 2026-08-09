@@ -33,6 +33,10 @@ async function listPrograms() {
   return db.select().from(programs).orderBy(asc(programs.name));
 }
 
+async function listPublicPrograms() {
+  return db.select().from(programs).where(eq(programs.status, 'ACTIVE')).orderBy(asc(programs.name));
+}
+
 async function findProgramBySlug(slug: string) {
   const [row] = await db.select().from(programs).where(eq(programs.slug, slug)).limit(1);
   return row ?? null;
@@ -351,6 +355,7 @@ async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
 
 export const taxonomyRepository = {
   listPrograms,
+  listPublicPrograms,
   findProgramBySlug,
   findProgramById,
   createProgram,

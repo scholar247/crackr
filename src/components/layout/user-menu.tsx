@@ -41,7 +41,7 @@ export function UserMenu({ showDashboard = false }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <button className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20">
           <Avatar className="h-8 w-8">
             <AvatarImage src={image ?? ''} alt={name ?? ''} />
             <AvatarFallback className="text-xs font-semibold">{initials}</AvatarFallback>
