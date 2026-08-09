@@ -1,9 +1,17 @@
 import { and, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
-import { users, authAccounts } from '@/server/db/schema';
+import { users, authAccounts, userExamTargets } from '@/server/db/schema';
 import { isDuplicateKeyError } from '@/server/db/helpers';
 import type { UserRole } from '@/lib/roles';
+import type { PrepLevel } from '@/lib/prep-level';
+
+interface CompleteOnboardingInput {
+  targetYear: number;
+  level: PrepLevel;
+  primaryExamId: string;
+  additionalExamIds: string[];
+}
 
 interface ProvisionGoogleUserInput {
   email: string;
@@ -84,8 +92,26 @@ async function getAuthorizationSnapshot(userId: string): Promise<AuthorizationSn
   };
 }
 
-async function completeOnboarding(userId: string) {
-  await db.update(users).set({ onboardingCompletedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, userId));
+/**
+ * Records the learner's exam targets alongside marking onboarding done — one exam
+ * flagged primary, the rest as additional. Replaces any existing targets wholesale
+ * rather than diffing (onboarding only ever runs once per user; the page redirects
+ * away once onboardingCompletedAt is set, so there's no concurrent-edit case to
+ * reconcile here). Wrapped in a transaction so a partial write never leaves the user
+ * marked onboarded without their exam targets actually saved, or vice versa.
+ */
+async function completeOnboarding(userId: string, input: CompleteOnboardingInput) {
+  const examIds = Array.from(new Set([input.primaryExamId, ...input.additionalExamIds]));
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({ onboardingCompletedAt: new Date(), targetYear: input.targetYear, level: input.level, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+
+    await tx.delete(userExamTargets).where(eq(userExamTargets.userId, userId));
+    await tx.insert(userExamTargets).values(examIds.map((examId) => ({ userId, examId, isPrimary: examId === input.primaryExamId })));
+  });
 }
 
 export const userRepository = {

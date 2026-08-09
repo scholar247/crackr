@@ -4,3 +4,4 @@ export * from './taxonomy';
 export * from './content';
 export * from './audience';
 export * from './assessment';
+export * from './preparation';

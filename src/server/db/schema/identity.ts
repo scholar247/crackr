@@ -1,6 +1,7 @@
-import { mysqlTable, mysqlEnum, varchar, timestamp, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { mysqlTable, mysqlEnum, varchar, int, timestamp, uniqueIndex } from 'drizzle-orm/mysql-core';
 import { randomUUID } from 'crypto';
 import { USER_ROLES } from '@/lib/roles';
+import { PREP_LEVELS } from '@/lib/prep-level';
 
 export const users = mysqlTable(
   'users',
@@ -14,6 +15,10 @@ export const users = mysqlTable(
     role: mysqlEnum('role', USER_ROLES).notNull().default('STUDENT'),
     status: mysqlEnum('status', ['ACTIVE', 'DISABLED']).notNull().default('ACTIVE'),
     onboardingCompletedAt: timestamp('onboarding_completed_at'),
+    // Set during onboarding alongside user_exam_targets (see preparation.ts) — the
+    // year/level are single attributes of the learner, not per-exam.
+    targetYear: int('target_year'),
+    level: mysqlEnum('level', PREP_LEVELS),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
