@@ -1,10 +1,18 @@
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 import { auth } from '@/lib/auth';
+import { userRepository } from '@/server/repositories/user.repository';
 import { Button } from '@/components/ui/button';
 
 export default async function DashboardPage() {
   const session = await auth();
+
+  // Deliberately not session.user.onboardingCompleted — that's cached in the JWT and
+  // only refreshes on next full sign-in or a successful client-side session.update()
+  // call. The latter can silently fail (seen in practice as a ClientFetchError), which
+  // left this nudge showing indefinitely after a user had actually completed onboarding.
+  // A direct DB read is cheap and always correct, same reasoning as requireAuth().
+  const snapshot = session?.user ? await userRepository.getAuthorizationSnapshot(session.user.id) : null;
 
   return (
     <div>
@@ -13,7 +21,7 @@ export default async function DashboardPage() {
         Your practice, mocks, and progress will show up here as those modules come online.
       </p>
 
-      {!session?.user?.onboardingCompleted && (
+      {!snapshot?.onboardingCompleted && (
         <div className="mt-6 flex items-start justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />

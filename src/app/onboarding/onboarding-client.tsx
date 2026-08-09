@@ -7,7 +7,7 @@ import { Search, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { defaultDashboardPath } from '@/lib/roles';
+import { defaultDashboardPath, type UserRole } from '@/lib/roles';
 import { PREP_LEVELS, PREP_LEVEL_LABELS, type PrepLevel } from '@/lib/prep-level';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +20,7 @@ interface ExamOption {
 const CURRENT_YEAR = new Date().getFullYear();
 const TARGET_YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR + i);
 
-export function OnboardingClient({ name, exams }: { name: string; exams: ExamOption[] }) {
+export function OnboardingClient({ name, role, exams }: { name: string; role: UserRole; exams: ExamOption[] }) {
   const { update } = useSession();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -69,13 +69,17 @@ export function OnboardingClient({ name, exams }: { name: string; exams: ExamOpt
       });
       if (!res.ok) throw new Error('Failed to complete onboarding');
 
-      const session = await update();
-      // Hard navigation, not router.replace(): the (app) layout's onboarding gate reads
-      // the session cookie server-side, and a client-side navigation right after
-      // useSession().update() isn't guaranteed to carry the freshly-set cookie on the
-      // very next request — it was landing back on /onboarding, looking like the button
-      // did nothing. A full page load always sees the cookie the browser just stored.
-      window.location.href = defaultDashboardPath(session?.user?.role ?? 'STUDENT');
+      // Best-effort only — the JWT's cached onboardingCompleted flag only refreshes via
+      // this call or a full re-login, and it can fail silently (seen in practice as a
+      // ClientFetchError from next-auth). Its result is never used for the redirect below,
+      // and its failure must not surface as an error: the onboarding data is already saved
+      // by this point. The dashboard/onboarding-page gates re-check the DB directly instead
+      // of trusting this cached value, so a failed refresh here has no effect on correctness.
+      update().catch(() => {});
+
+      // Hard navigation, not router.replace(): forces a full reload so every server
+      // component (including the dashboard's own fresh DB check) re-runs from scratch.
+      window.location.href = defaultDashboardPath(role);
     } catch {
       toast.error('Something went wrong — please try again.');
       setSubmitting(false);
