@@ -1,4 +1,4 @@
-nly/**
+/**
  * Runs every exam's curriculum seed in one process. Order doesn't matter for
  * correctness — seedExamCurriculum() is idempotent and shared subjects (Physics,
  * Mathematics, Engineering Mathematics, ...) are looked up by slug regardless of which
