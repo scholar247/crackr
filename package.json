@@ -24,7 +24,8 @@
     "seed:jipmer-ug": "tsx --env-file=.env.development scripts/seed/exams/jipmer-ug.ts",
     "seed:cuet-ug": "tsx --env-file=.env.development scripts/seed/exams/cuet-ug.ts",
     "seed:cbse-12": "tsx --env-file=.env.development scripts/seed/exams/cbse-class-12.ts",
-    "seed:cbse-10": "tsx --env-file=.env.development scripts/seed/exams/cbse-class-10.ts"
+    "seed:cbse-10": "tsx --env-file=.env.development scripts/seed/exams/cbse-class-10.ts",
+    "seed:questions-demo": "tsx --env-file=.env.development scripts/seed/questions/nimcet-set-theory.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

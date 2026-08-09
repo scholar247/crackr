@@ -8,7 +8,7 @@ import { TableOfContentsDesktop, TableOfContentsMobile } from '@/components/blog
 import { extractHeadings } from '@/lib/toc';
 import { calcReadingTime } from '@/lib/reading-time';
 import { Badge } from '@/components/ui/badge';
-import { STATUS_COLORS } from '@/lib/utils';
+import { STATUS_COLORS, parseContentId } from '@/lib/utils';
 
 export default async function BlogPreviewPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -17,7 +17,10 @@ export default async function BlogPreviewPage({ params }: { params: Promise<{ id
   }
 
   const { id } = await params;
-  const row = await articleRepository.findByIdWithAuthor(id);
+  const articleId = parseContentId(id);
+  if (articleId === null) notFound();
+
+  const row = await articleRepository.findByIdWithAuthor(articleId);
   if (!row) notFound();
 
   const { article, author } = row;

@@ -1,5 +1,4 @@
 import { and, desc, eq } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
 import { articles, users } from '@/server/db/schema';
 import { slugify } from '@/lib/utils';
@@ -9,7 +8,7 @@ async function findAll() {
   return db.select().from(articles).orderBy(desc(articles.updatedAt));
 }
 
-async function findById(id: string) {
+async function findById(id: number) {
   const [row] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
   return row ?? null;
 }
@@ -20,7 +19,7 @@ async function findBySlug(slug: string) {
 }
 
 // For the admin preview page — any status/visibility, unlike findPublishedBySlugWithAuthor.
-async function findByIdWithAuthor(id: string) {
+async function findByIdWithAuthor(id: number) {
   const [row] = await db
     .select({ article: articles, author: { name: users.name, image: users.image } })
     .from(articles)
@@ -59,7 +58,7 @@ async function findPublishedBySlugWithAuthor(slug: string) {
   return row ?? null;
 }
 
-async function ensureUniqueSlug(base: string, excludeId?: string) {
+async function ensureUniqueSlug(base: string, excludeId?: number) {
   let candidate = base;
   let suffix = 1;
   while (true) {
@@ -70,14 +69,11 @@ async function ensureUniqueSlug(base: string, excludeId?: string) {
   }
 }
 
-// MySQL has no RETURNING clause — insert/update with a known id, then read the row back.
 async function create(input: CreateArticleInput, authorId: string | null) {
   const baseSlug = slugify(input.slug || input.title);
   const slug = await ensureUniqueSlug(baseSlug);
-  const id = randomUUID();
 
-  await db.insert(articles).values({
-    id,
+  const [result] = await db.insert(articles).values({
     title: input.title,
     slug,
     summary: input.summary,
@@ -87,10 +83,10 @@ async function create(input: CreateArticleInput, authorId: string | null) {
     authorId,
   });
 
-  return findById(id);
+  return findById(result.insertId);
 }
 
-async function update(id: string, input: UpdateArticleInput) {
+async function update(id: number, input: UpdateArticleInput) {
   const patch: Partial<typeof articles.$inferInsert> = { ...input, updatedAt: new Date() };
 
   if (input.slug || input.title) {

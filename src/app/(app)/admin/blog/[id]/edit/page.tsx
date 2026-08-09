@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { meetsMinRole, isAdmin } from '@/lib/roles';
 import { articleRepository } from '@/server/repositories/article.repository';
 import { BlogForm } from '@/components/editor/blog-form';
+import { parseContentId } from '@/lib/utils';
 
 export default async function EditBlogPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -11,7 +12,10 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
   }
 
   const { id } = await params;
-  const article = await articleRepository.findById(id);
+  const articleId = parseContentId(id);
+  if (articleId === null) notFound();
+
+  const article = await articleRepository.findById(articleId);
   if (!article) notFound();
   if (!isAdmin(session.user.role) && article.authorId !== session.user.id) {
     redirect('/admin/blog');

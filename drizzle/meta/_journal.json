@@ -15,6 +15,20 @@
       "when": 1786296899023,
       "tag": "0001_awesome_micromax",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786301802658,
+      "tag": "0002_messy_alex_wilder",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1786304624271,
+      "tag": "0003_nifty_iron_fist",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import {
   varchar,
   text,
   int,
+  bigint,
   decimal,
   json,
   boolean,
@@ -57,7 +58,7 @@ export const assessmentQuestions = mysqlTable(
     assessmentId: varchar('assessment_id', { length: 36 })
       .notNull()
       .references(() => assessments.id, { onDelete: 'cascade' }),
-    questionId: varchar('question_id', { length: 36 })
+    questionId: bigint('question_id', { mode: 'number', unsigned: true })
       .notNull()
       .references(() => questions.id, { onDelete: 'restrict' }),
     position: int('position').notNull(),
@@ -112,7 +113,7 @@ export const attemptResponses = mysqlTable(
     attemptId: varchar('attempt_id', { length: 36 })
       .notNull()
       .references(() => assessmentAttempts.id, { onDelete: 'cascade' }),
-    questionId: varchar('question_id', { length: 36 })
+    questionId: bigint('question_id', { mode: 'number', unsigned: true })
       .notNull()
       .references(() => questions.id, { onDelete: 'restrict' }),
     selectedOptionKeys: json('selected_option_keys').$type<string[]>(),

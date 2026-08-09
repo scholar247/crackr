@@ -1,6 +1,6 @@
 import { requireAuth } from '@/server/auth/require-auth';
-import { articleRepository } from '@/server/repositories/article.repository';
-import { UpdateArticleSchema } from '@/schemas/article.schema';
+import { questionRepository } from '@/server/repositories/question.repository';
+import { UpdateQuestionSchema } from '@/schemas/question.schema';
 import { isAdmin } from '@/lib/roles';
 import { apiError, apiSuccess, parseContentId } from '@/lib/utils';
 
@@ -9,13 +9,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (error) return error;
 
   const { id } = await params;
-  const articleId = parseContentId(id);
-  if (articleId === null) return apiError('Not found', 404);
+  const questionId = parseContentId(id);
+  if (questionId === null) return apiError('Not found', 404);
 
-  const article = await articleRepository.findById(articleId);
-  if (!article) return apiError('Not found', 404);
+  const question = await questionRepository.findById(questionId);
+  if (!question) return apiError('Not found', 404);
 
-  return apiSuccess(article);
+  return apiSuccess(question);
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,20 +23,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (error) return error;
 
   const { id } = await params;
-  const articleId = parseContentId(id);
-  if (articleId === null) return apiError('Not found', 404);
+  const questionId = parseContentId(id);
+  if (questionId === null) return apiError('Not found', 404);
 
-  const existing = await articleRepository.findById(articleId);
+  const existing = await questionRepository.findById(questionId);
   if (!existing) return apiError('Not found', 404);
 
-  // Teachers can only edit their own articles; admins can edit any.
+  // Teachers can only edit their own questions; admins (and the seed/API-key identity,
+  // which is always ADMIN-level) can edit any — same rule as articles.
   if (!isAdmin(session!.user.role) && existing.authorId !== session!.user.id) {
     return apiError('Forbidden', 403);
   }
 
-  const parsed = UpdateArticleSchema.safeParse(await req.json());
+  const parsed = UpdateQuestionSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
 
-  const updated = await articleRepository.update(articleId, parsed.data);
+  const updated = await questionRepository.update(questionId, parsed.data);
   return apiSuccess(updated);
 }

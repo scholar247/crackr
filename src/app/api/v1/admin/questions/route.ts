@@ -1,0 +1,35 @@
+import { requireAuth } from '@/server/auth/require-auth';
+import { questionRepository } from '@/server/repositories/question.repository';
+import { CreateQuestionSchema } from '@/schemas/question.schema';
+import { apiError, apiSuccess } from '@/lib/utils';
+
+export async function GET(req: Request) {
+  const { error } = await requireAuth('TEACHER');
+  if (error) return error;
+
+  const { searchParams } = new URL(req.url);
+  const examId = searchParams.get('examId') ?? undefined;
+  const status = searchParams.get('status') as 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED' | null;
+  const difficulty = searchParams.get('difficulty') as 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT' | null;
+  const search = searchParams.get('search') ?? undefined;
+
+  const rows = await questionRepository.list({
+    examId,
+    status: status ?? undefined,
+    difficulty: difficulty ?? undefined,
+    search,
+  });
+  return apiSuccess(rows);
+}
+
+export async function POST(req: Request) {
+  const { session, error, isServiceKey } = await requireAuth('TEACHER');
+  if (error) return error;
+
+  const parsed = CreateQuestionSchema.safeParse(await req.json());
+  if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
+
+  const authorId = isServiceKey ? null : session!.user.id;
+  const question = await questionRepository.create(parsed.data, authorId);
+  return apiSuccess(question, undefined, 201);
+}

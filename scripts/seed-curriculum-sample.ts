@@ -195,9 +195,7 @@ async function main() {
   for (const q of questionSeeds) {
     let [question] = await db.select().from(questions).where(eq(questions.stem, q.stem)).limit(1);
     if (!question) {
-      const id = randomUUID();
-      await db.insert(questions).values({
-        id,
+      const [result] = await db.insert(questions).values({
         questionType: 'MCQ',
         stem: q.stem,
         optionsJson: q.options,
@@ -206,7 +204,7 @@ async function main() {
         status: 'PUBLISHED',
         visibility: 'PUBLIC',
       });
-      [question] = await db.select().from(questions).where(eq(questions.id, id)).limit(1);
+      [question] = await db.select().from(questions).where(eq(questions.id, result.insertId)).limit(1);
     }
 
     await insertIgnore(() =>
@@ -250,11 +248,10 @@ async function main() {
     const slug = slugify(a.title);
     let [article] = await db.select().from(articles).where(eq(articles.slug, slug)).limit(1);
     if (!article) {
-      const id = randomUUID();
-      await db
+      const [result] = await db
         .insert(articles)
-        .values({ id, title: a.title, slug, summary: a.summary, body: a.body, status: 'PUBLISHED', visibility: 'PUBLIC' });
-      [article] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
+        .values({ title: a.title, slug, summary: a.summary, body: a.body, status: 'PUBLISHED', visibility: 'PUBLIC' });
+      [article] = await db.select().from(articles).where(eq(articles.id, result.insertId)).limit(1);
     }
 
     await insertIgnore(() =>

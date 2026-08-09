@@ -225,6 +225,25 @@ async function getDescendantIds(nodeId: string): Promise<Set<string>> {
   return new Set(rows.map((r) => r.id));
 }
 
+// All ancestors of nodeId (parent, grandparent, ...) — mirrors getDescendantIds but walks
+// curriculum_edges upward instead of downward. This is what makes tagging a question at a
+// Topic also tag it at that Topic's Chapter and Subject: a node can have more than one
+// parent (Thermodynamics under both Physics and Chemistry), so this naturally returns
+// ancestors from every parent branch, not just one path to the root.
+async function getAncestorIds(nodeId: string): Promise<Set<string>> {
+  const [rows] = (await db.execute<{ id: string }>(sql`
+    WITH RECURSIVE ancestors AS (
+      SELECT parent_node_id AS id FROM ${curriculumEdges} WHERE child_node_id = ${nodeId}
+      UNION
+      SELECT edge.parent_node_id AS id
+      FROM ${curriculumEdges} edge
+      INNER JOIN ancestors a ON a.id = edge.child_node_id
+    )
+    SELECT id FROM ancestors
+  `)) as unknown as [{ id: string }[], unknown];
+  return new Set(rows.map((r) => r.id));
+}
+
 // Reconciles this node's parent edges to exactly `parentNodeIds` — attaches what's
 // missing, detaches what's no longer wanted. This is "add chapter to subject" / "add
 // topic to chapter" for nodes that already exist, and also how Thermodynamics ends up
@@ -377,6 +396,7 @@ export const taxonomyRepository = {
   listNodeIdsForExam,
   setExamNodes,
   getNodeParentIds,
+  getAncestorIds,
   setNodeParents,
   getSyllabusTree,
 };

@@ -1,4 +1,4 @@
-import { mysqlTable, mysqlEnum, varchar, timestamp, primaryKey, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { mysqlTable, mysqlEnum, varchar, bigint, timestamp, primaryKey, uniqueIndex } from 'drizzle-orm/mysql-core';
 import { randomUUID } from 'crypto';
 import { users } from './identity';
 import { CONTENT_TYPES } from './content';
@@ -38,7 +38,7 @@ export const contentAudienceMap = mysqlTable(
   'content_audience_map',
   {
     contentType: mysqlEnum('content_type', CONTENT_TYPES).notNull(),
-    contentId: varchar('content_id', { length: 36 }).notNull(),
+    contentId: bigint('content_id', { mode: 'number', unsigned: true }).notNull(),
     audienceId: varchar('audience_id', { length: 36 })
       .notNull()
       .references(() => audiences.id, { onDelete: 'cascade' }),

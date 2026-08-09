@@ -25,7 +25,7 @@ import { cn, slugify, STATUS_COLORS } from '@/lib/utils';
 const BlogEditor = dynamic(() => import('@/components/editor/blog-editor').then((m) => m.BlogEditor), { ssr: false });
 
 interface ArticleRecord {
-  id: string;
+  id: number;
   title: string;
   slug: string;
   summary: string | null;

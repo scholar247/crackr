@@ -49,6 +49,13 @@ export function apiError(message: string, status = 400) {
   return Response.json({ error: message }, { status });
 }
 
+/** Parses a route param expected to be a positive integer content id (questions,
+ * articles); null if it isn't one, e.g. a stray non-numeric value in the URL. */
+export function parseContentId(raw: string): number | null {
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 /** Build a consistent API success response */
 export function apiSuccess<T>(data: T, meta?: object, status = 200) {
   return Response.json({ data, meta }, { status });

@@ -1,4 +1,4 @@
-import { mysqlTable, mysqlEnum, varchar, text, json, timestamp, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { mysqlTable, mysqlEnum, varchar, text, json, bigint, timestamp, uniqueIndex } from 'drizzle-orm/mysql-core';
 import { randomUUID } from 'crypto';
 import { users } from './identity';
 import { curriculumNodes, exams } from './taxonomy';
@@ -18,16 +18,20 @@ export interface QuestionOption {
 
 // MCQ-first per the ERD: options travel with the question as a JSON array rather than a
 // separate question_option table, so stem/options/answer are always fetched together.
+// id is a numeric auto-increment (not UUID) — content rows are internal, never used as an
+// opaque public identifier the way a program/exam/user id might be, so a short numeric id
+// is both simpler to work with and enough.
 export const questions = mysqlTable('questions', {
-  id: varchar('id', { length: 36 })
-    .primaryKey()
-    .$defaultFn(() => randomUUID()),
+  id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
   questionType: mysqlEnum('question_type', ['MCQ']).notNull().default('MCQ'),
   stem: text('stem').notNull(),
   optionsJson: json('options_json').$type<QuestionOption[]>().notNull(),
   explanation: text('explanation'),
   difficulty: mysqlEnum('difficulty', ['EASY', 'MEDIUM', 'HARD', 'EXPERT']).notNull().default('MEDIUM'),
   language: varchar('language', { length: 10 }).notNull().default('en'),
+  // Freeform labels (e.g. "2024 Pattern") — separate from the structured curriculum
+  // node tagging in content_node_map, which is what drives syllabus-scoped queries.
+  tags: json('tags').$type<string[]>(),
   status: mysqlEnum('status', CONTENT_STATUSES).notNull().default('DRAFT'),
   visibility: mysqlEnum('visibility', CONTENT_VISIBILITIES).notNull().default('PRIVATE'),
   authorId: varchar('author_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
@@ -35,13 +39,12 @@ export const questions = mysqlTable('questions', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// Standalone article — this is the table backing the kept blog editor/renderer.
+// Standalone article — this is the table backing the kept blog editor/renderer. Same
+// numeric-id reasoning as questions above.
 export const articles = mysqlTable(
   'articles',
   {
-    id: varchar('id', { length: 36 })
-      .primaryKey()
-      .$defaultFn(() => randomUUID()),
+    id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
     title: varchar('title', { length: 160 }).notNull(),
     slug: varchar('slug', { length: 200 }).notNull(),
     summary: text('summary'),
@@ -58,7 +61,9 @@ export const articles = mysqlTable(
 
 // Polymorphic: contentId points at questions.id or articles.id depending on contentType.
 // No cross-table FK constraint is possible for that (standard tradeoff of the ERD's
-// "one unified mapping table" design over a table-per-combination scheme).
+// "one unified mapping table" design over a table-per-combination scheme) — contentId is
+// bigint unsigned to match both content tables' id type, even though nothing enforces
+// which one at the DB level.
 export const contentNodeMap = mysqlTable(
   'content_node_map',
   {
@@ -66,7 +71,7 @@ export const contentNodeMap = mysqlTable(
       .primaryKey()
       .$defaultFn(() => randomUUID()),
     contentType: mysqlEnum('content_type', CONTENT_TYPES).notNull(),
-    contentId: varchar('content_id', { length: 36 }).notNull(),
+    contentId: bigint('content_id', { mode: 'number', unsigned: true }).notNull(),
     nodeId: varchar('node_id', { length: 36 })
       .notNull()
       .references(() => curriculumNodes.id, { onDelete: 'cascade' }),
@@ -91,7 +96,7 @@ export const contentExamMap = mysqlTable(
       .primaryKey()
       .$defaultFn(() => randomUUID()),
     contentType: mysqlEnum('content_type', CONTENT_TYPES).notNull(),
-    contentId: varchar('content_id', { length: 36 }).notNull(),
+    contentId: bigint('content_id', { mode: 'number', unsigned: true }).notNull(),
     examId: varchar('exam_id', { length: 36 })
       .notNull()
       .references(() => exams.id, { onDelete: 'cascade' }),
