@@ -1,20 +1,41 @@
+import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { apiError } from '@/lib/utils';
 import { meetsMinRole, type UserRole } from '@/lib/roles';
 import { userRepository } from '@/server/repositories/user.repository';
 
+// No backing `users` row — write paths that need a real FK (e.g. article.authorId) must
+// treat this id as "no author" rather than persist it, hence `isServiceKey` on the return.
+const SEED_USER = {
+  id: 'seed-script',
+  role: 'ADMIN' as UserRole,
+  onboardingCompleted: true,
+  name: 'Seed script',
+  email: null,
+};
+
 /**
- * The single place an API route resolves "who is making this request." Today that's a
- * next-auth session cookie (web only). A future mobile client would plug a bearer-token
- * strategy in here — behind this same function, without touching any route handler,
- * because every route already goes through this chokepoint instead of reading the
- * session directly.
+ * The single place an API route resolves "who is making this request." That's either a
+ * next-auth session cookie (web), or an `x-api-key` header matching `SEED_API_KEY` for
+ * server-to-server bulk ingestion (seed scripts) — both funnel through this one chokepoint
+ * instead of routes reading the session or the header directly.
  *
- * Re-checks role/status against the DB on every call rather than trusting the JWT, so a
- * role change or account disable takes effect immediately instead of waiting for token
- * refresh.
+ * Re-checks role/status against the DB on every session-cookie call rather than trusting
+ * the JWT, so a role change or account disable takes effect immediately instead of waiting
+ * for token refresh.
  */
 export async function requireAuth(minRole?: UserRole) {
+  const apiKey = (await headers()).get('x-api-key');
+  if (apiKey !== null) {
+    if (!process.env.SEED_API_KEY || apiKey !== process.env.SEED_API_KEY) {
+      return { session: null, error: apiError('Unauthorized', 401) };
+    }
+    if (minRole && !meetsMinRole(SEED_USER.role, minRole)) {
+      return { session: null, error: apiError('Forbidden', 403) };
+    }
+    return { session: { user: SEED_USER }, error: null, isServiceKey: true as const };
+  }
+
   const session = await auth();
 
   if (!session?.user) {
@@ -36,5 +57,6 @@ export async function requireAuth(minRole?: UserRole) {
       user: { ...session.user, role: snapshot.role, onboardingCompleted: snapshot.onboardingCompleted },
     },
     error: null,
+    isServiceKey: false as const,
   };
 }

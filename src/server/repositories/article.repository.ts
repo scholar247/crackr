@@ -71,7 +71,7 @@ async function ensureUniqueSlug(base: string, excludeId?: string) {
 }
 
 // MySQL has no RETURNING clause — insert/update with a known id, then read the row back.
-async function create(input: CreateArticleInput, authorId: string) {
+async function create(input: CreateArticleInput, authorId: string | null) {
   const baseSlug = slugify(input.slug || input.title);
   const slug = await ensureUniqueSlug(baseSlug);
   const id = randomUUID();

@@ -12,12 +12,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { session, error } = await requireAuth('TEACHER');
+  const { session, error, isServiceKey } = await requireAuth('TEACHER');
   if (error) return error;
 
   const parsed = CreateArticleSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
 
-  const article = await articleRepository.create(parsed.data, session!.user.id);
+  const authorId = isServiceKey ? null : session!.user.id;
+  const article = await articleRepository.create(parsed.data, authorId);
   return apiSuccess(article, undefined, 201);
 }
