@@ -8,6 +8,7 @@ import { ShareControls } from '@/components/blog/share-controls';
 import { TableOfContentsDesktop, TableOfContentsMobile } from '@/components/blog/table-of-contents';
 import { extractHeadings } from '@/lib/toc';
 import { calcReadingTime } from '@/lib/reading-time';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,9 +22,26 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const row = await getArticle(slug);
   if (!row) return {};
 
+  const { article } = row;
+  const title = article.metaTitle || article.title;
+  const description = article.metaDescription || article.summary || undefined;
+
   return {
-    title: row.article.title,
-    description: row.article.summary ?? undefined,
+    title,
+    description,
+    keywords: article.keywords ?? undefined,
+    alternates: { canonical: `/blogs/${article.slug}` },
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      images: article.ogImage ? [{ url: article.ogImage }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      images: article.ogImage ? [article.ogImage] : undefined,
+    },
   };
 }
 
@@ -40,13 +58,24 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
     <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <ReadingProgressBar />
 
+      {article.ogImage && (
+        // eslint-disable-next-line @next/next/no-img-element -- arbitrary external URL, matches author-avatar/blog-content precedent of skipping next/image for untrusted hosts
+        <img
+          src={article.ogImage}
+          alt=""
+          className="mx-auto aspect-[2/1] w-full max-w-3xl rounded-xl object-cover"
+        />
+      )}
+
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{article.title}</h1>
+        <h1 className={cn('font-bold tracking-tight text-foreground text-3xl sm:text-4xl', article.ogImage && 'mt-8')}>
+          {article.title}
+        </h1>
         {article.summary && <p className="mt-3 text-lg text-muted-foreground">{article.summary}</p>}
 
         <div className="mt-6 flex items-center justify-between gap-4">
           <AuthorByline
-            name={author?.name ?? 'scholar247'}
+            name={author?.name ?? 'Scholar'}
             imageUrl={author?.image ?? undefined}
             updatedAt={article.updatedAt.toISOString()}
           />

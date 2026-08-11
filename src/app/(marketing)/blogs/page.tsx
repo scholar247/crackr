@@ -22,11 +22,22 @@ export default async function BlogsPage() {
             <Link
               key={article.id}
               href={`/blogs/${article.slug}`}
-              className="rounded-xl border border-border p-5 transition-colors hover:border-primary/40 hover:bg-muted/30"
+              className="overflow-hidden rounded-xl border border-border transition-colors hover:border-primary/40 hover:bg-muted/30"
             >
-              <h2 className="font-semibold text-foreground">{article.title}</h2>
-              {article.summary && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{article.summary}</p>}
-              <p className="mt-3 text-xs text-muted-foreground">{calcReadingTime(article.body)} min read</p>
+              {article.ogImage && (
+                // eslint-disable-next-line @next/next/no-img-element -- arbitrary external URL, matches author-avatar/blog-content precedent of skipping next/image for untrusted hosts
+                <img
+                  src={article.ogImage}
+                  alt=""
+                  loading="lazy"
+                  className="aspect-video w-full object-cover"
+                />
+              )}
+              <div className="p-5">
+                <h2 className="font-semibold text-foreground">{article.title}</h2>
+                {article.summary && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{article.summary}</p>}
+                <p className="mt-3 text-xs text-muted-foreground">{calcReadingTime(article.body)} min read</p>
+              </div>
             </Link>
           ))}
         </div>

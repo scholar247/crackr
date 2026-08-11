@@ -1,4 +1,4 @@
-import { requireAuth } from '@/server/auth/require-auth';
+import { requireAuth, DEFAULT_CONTENT_AUTHOR_ID } from '@/server/auth/require-auth';
 import { articleRepository } from '@/server/repositories/article.repository';
 import { CreateArticleSchema } from '@/schemas/article.schema';
 import { apiError, apiSuccess } from '@/lib/utils';
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const parsed = CreateArticleSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
 
-  const authorId = isServiceKey ? null : session!.user.id;
+  const authorId = isServiceKey ? DEFAULT_CONTENT_AUTHOR_ID : session!.user.id;
   const article = await articleRepository.create(parsed.data, authorId);
   return apiSuccess(article, undefined, 201);
 }

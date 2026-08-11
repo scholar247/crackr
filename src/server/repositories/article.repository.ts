@@ -80,6 +80,10 @@ async function create(input: CreateArticleInput, authorId: string | null) {
     body: input.body,
     status: input.status,
     visibility: input.visibility,
+    metaTitle: input.metaTitle,
+    metaDescription: input.metaDescription,
+    keywords: input.keywords,
+    ogImage: input.ogImage,
     authorId,
   });
 

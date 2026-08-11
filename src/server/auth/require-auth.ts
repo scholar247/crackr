@@ -14,6 +14,10 @@ const SEED_USER = {
   email: null,
 };
 
+// Real `users` row (seeded via scripts/seed-default-author.ts) that service-key/seed-script
+// writes attribute content to instead of leaving authorId/updatedBy null.
+export const DEFAULT_CONTENT_AUTHOR_ID = 'e9a8ccc8-342e-4080-9ba8-c416a42ece5a';
+
 /**
  * The single place an API route resolves "who is making this request." That's either a
  * next-auth session cookie (web), or an `x-api-key` header matching `SEED_API_KEY` for

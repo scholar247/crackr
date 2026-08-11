@@ -32,6 +32,10 @@ interface ArticleRecord {
   body: string;
   status: (typeof ARTICLE_STATUS_VALUES)[number];
   visibility: (typeof ARTICLE_VISIBILITY_VALUES)[number];
+  metaTitle: string | null;
+  metaDescription: string | null;
+  keywords: string[] | null;
+  ogImage: string | null;
   updatedAt: string;
 }
 
@@ -54,6 +58,11 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
   const [slugManual, setSlugManual] = useState(false);
   const [slugValue, setSlugValue] = useState(initial?.slug ?? '');
   const [editorView, setEditorView] = useState<'rich' | 'markdown'>('rich');
+  const [metaTitleManual, setMetaTitleManual] = useState(false);
+  const [metaTitleValue, setMetaTitleValue] = useState(initial?.metaTitle ?? '');
+  const [metaDescManual, setMetaDescManual] = useState(false);
+  const [metaDescValue, setMetaDescValue] = useState(initial?.metaDescription ?? '');
+  const [keywordsValue, setKeywordsValue] = useState((initial?.keywords ?? []).join(', '));
 
   const form = useForm<CreateArticleInput>({
     // z.default() makes the schema's own inferred type disagree with zodResolver's
@@ -66,6 +75,7 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
       body: initial?.body ?? '',
       status: initial?.status ?? 'DRAFT',
       visibility: initial?.visibility ?? 'PRIVATE',
+      ogImage: initial?.ogImage ?? '',
     },
   });
 
@@ -73,7 +83,17 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
 
   const mutation = useMutation({
     mutationFn: (data: CreateArticleInput) => {
-      const payload = { ...data, slug: slugManual && slugValue ? slugValue : undefined };
+      const keywords = keywordsValue
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean);
+      const payload = {
+        ...data,
+        slug: slugManual && slugValue ? slugValue : undefined,
+        metaTitle: metaTitleManual && metaTitleValue ? metaTitleValue : undefined,
+        metaDescription: metaDescManual && metaDescValue ? metaDescValue : undefined,
+        keywords: keywords.length ? keywords : undefined,
+      };
       return mode === 'create'
         ? postJson('/api/v1/admin/blog', 'POST', payload)
         : postJson(`/api/v1/admin/blog/${initial!.id}`, 'PATCH', payload);
@@ -121,6 +141,7 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
           onChange={(e) => {
             form.setValue('title', e.target.value);
             if (!slugManual) setSlugValue(slugify(e.target.value));
+            if (!metaTitleManual) setMetaTitleValue(e.target.value);
           }}
         />
         {form.formState.errors.title && <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>}
@@ -147,7 +168,17 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
         <Controller
           control={form.control}
           name="summary"
-          render={({ field }) => <Textarea {...field} rows={3} placeholder="Short excerpt for listing cards…" />}
+          render={({ field }) => (
+            <Textarea
+              {...field}
+              rows={3}
+              placeholder="Short excerpt for listing cards…"
+              onChange={(e) => {
+                field.onChange(e);
+                if (!metaDescManual) setMetaDescValue(e.target.value);
+              }}
+            />
+          )}
         />
       </div>
 
@@ -193,6 +224,74 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
               </Select>
             )}
           />
+        </div>
+      </div>
+
+      <div className="space-y-4 rounded-md border border-border p-4">
+        <p className="text-sm font-medium text-foreground">SEO</p>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Meta title</Label>
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => setMetaTitleManual((v) => !v)}
+            >
+              {metaTitleManual ? 'Auto-generate' : 'Edit manually'}
+            </button>
+          </div>
+          <Input
+            value={metaTitleValue}
+            disabled={!metaTitleManual}
+            onChange={(e) => setMetaTitleValue(e.target.value)}
+            placeholder="Defaults to the article title"
+            maxLength={160}
+            className={cn(!metaTitleManual && 'opacity-60')}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label>Meta description</Label>
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => setMetaDescManual((v) => !v)}
+            >
+              {metaDescManual ? 'Auto-generate' : 'Edit manually'}
+            </button>
+          </div>
+          <Textarea
+            value={metaDescValue}
+            disabled={!metaDescManual}
+            onChange={(e) => setMetaDescValue(e.target.value)}
+            rows={2}
+            placeholder="Defaults to the summary"
+            maxLength={320}
+            className={cn(!metaDescManual && 'opacity-60')}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Keywords</Label>
+          <Input
+            value={keywordsValue}
+            onChange={(e) => setKeywordsValue(e.target.value)}
+            placeholder="comma, separated, keywords"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>OG image URL</Label>
+          <Controller
+            control={form.control}
+            name="ogImage"
+            render={({ field }) => <Input {...field} placeholder="https://…" />}
+          />
+          {form.formState.errors.ogImage && (
+            <p className="text-xs text-destructive">{form.formState.errors.ogImage.message}</p>
+          )}
         </div>
       </div>
 

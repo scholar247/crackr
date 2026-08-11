@@ -1,4 +1,4 @@
-import { requireAuth } from '@/server/auth/require-auth';
+import { requireAuth, DEFAULT_CONTENT_AUTHOR_ID } from '@/server/auth/require-auth';
 import { articleRepository } from '@/server/repositories/article.repository';
 import { UpdateArticleSchema } from '@/schemas/article.schema';
 import { isAdmin } from '@/lib/roles';
@@ -37,7 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = UpdateArticleSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
 
-  const editorId = isServiceKey ? null : session!.user.id;
+  const editorId = isServiceKey ? DEFAULT_CONTENT_AUTHOR_ID : session!.user.id;
   const updated = await articleRepository.update(articleId, parsed.data, editorId);
   return apiSuccess(updated);
 }

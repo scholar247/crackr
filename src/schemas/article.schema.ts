@@ -10,6 +10,15 @@ export const CreateArticleSchema = z.object({
   body: z.string().max(200_000).default(''),
   status: z.enum(ARTICLE_STATUS_VALUES).default('DRAFT'),
   visibility: z.enum(ARTICLE_VISIBILITY_VALUES).default('PRIVATE'),
+  metaTitle: z.string().max(160).optional(),
+  metaDescription: z.string().max(320).optional(),
+  keywords: z.array(z.string().max(60)).max(20).optional(),
+  // Empty-string is accepted (and normalized to undefined) so the form can send a
+  // just-cleared field without failing the url() check.
+  ogImage: z
+    .union([z.string().url().max(2048), z.literal('')])
+    .optional()
+    .transform((v) => v || undefined),
 });
 export type CreateArticleInput = z.infer<typeof CreateArticleSchema>;
 

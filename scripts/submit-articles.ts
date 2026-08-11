@@ -20,6 +20,10 @@ interface ArticlePayload {
   body: string;
   status?: 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
   visibility?: 'PUBLIC' | 'PRIVATE' | 'AUDIENCE_RESTRICTED';
+  metaTitle?: string;
+  metaDescription?: string;
+  keywords?: string[];
+  ogImage?: string;
 }
 
 async function main() {

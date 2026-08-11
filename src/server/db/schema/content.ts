@@ -56,6 +56,12 @@ export const articles = mysqlTable(
     language: varchar('language', { length: 10 }).notNull().default('en'),
     status: mysqlEnum('status', CONTENT_STATUSES).notNull().default('DRAFT'),
     visibility: mysqlEnum('visibility', CONTENT_VISIBILITIES).notNull().default('PRIVATE'),
+    // SEO metadata — all optional, independent of title/summary so editors can override
+    // what search engines/social previews see without changing the on-page copy.
+    metaTitle: varchar('meta_title', { length: 160 }),
+    metaDescription: varchar('meta_description', { length: 320 }),
+    keywords: json('keywords').$type<string[]>(),
+    ogImage: varchar('og_image', { length: 2048 }),
     authorId: varchar('author_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
     updatedBy: varchar('updated_by', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').notNull().defaultNow(),

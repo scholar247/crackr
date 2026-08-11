@@ -43,7 +43,7 @@ export default async function BlogPreviewPage({ params }: { params: Promise<{ id
 
         <div className="mt-6">
           <AuthorByline
-            name={author?.name ?? 'scholar247'}
+            name={author?.name ?? 'Scholar'}
             imageUrl={author?.image ?? undefined}
             updatedAt={article.updatedAt.toISOString()}
           />
