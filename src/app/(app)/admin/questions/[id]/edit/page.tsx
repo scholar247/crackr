@@ -22,6 +22,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
   if (!question) notFound();
 
   const examOptions = examRows.map(({ exam }) => ({ id: exam.id, name: exam.name }));
+  const initial = { ...question, updatedAt: question.updatedAt.toISOString() };
 
-  return <QuestionForm mode="edit" examOptions={examOptions} canPublish={isAdmin(session!.user.role)} initial={question} />;
+  return <QuestionForm mode="edit" examOptions={examOptions} canPublish={isAdmin(session!.user.role)} initial={initial} />;
 }

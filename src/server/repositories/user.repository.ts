@@ -1,10 +1,11 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
 import { users, authAccounts, userExamTargets } from '@/server/db/schema';
 import { isDuplicateKeyError } from '@/server/db/helpers';
 import type { UserRole } from '@/lib/roles';
 import type { PrepLevel } from '@/lib/prep-level';
+import type { UpdateUserInput } from '@/schemas/user.schema';
 
 interface CompleteOnboardingInput {
   targetYear: number;
@@ -114,10 +115,27 @@ async function completeOnboarding(userId: string, input: CompleteOnboardingInput
   });
 }
 
+async function findById(id: string) {
+  const [row] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return row ?? null;
+}
+
+async function listRecent(limit = 10) {
+  return db.select().from(users).orderBy(desc(users.createdAt)).limit(limit);
+}
+
+async function update(id: string, input: UpdateUserInput) {
+  await db.update(users).set({ ...input, updatedAt: new Date() }).where(eq(users.id, id));
+  return findById(id);
+}
+
 export const userRepository = {
   findByProviderIdentity,
   provisionGoogleUser,
   recordGoogleLogin,
   getAuthorizationSnapshot,
   completeOnboarding,
+  findById,
+  listRecent,
+  update,
 };

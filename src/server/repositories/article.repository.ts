@@ -86,8 +86,8 @@ async function create(input: CreateArticleInput, authorId: string | null) {
   return findById(result.insertId);
 }
 
-async function update(id: number, input: UpdateArticleInput) {
-  const patch: Partial<typeof articles.$inferInsert> = { ...input, updatedAt: new Date() };
+async function update(id: number, input: UpdateArticleInput, editorId: string | null = null) {
+  const patch: Partial<typeof articles.$inferInsert> = { ...input, updatedAt: new Date(), updatedBy: editorId ?? undefined };
 
   if (input.slug || input.title) {
     const current = await findById(id);

@@ -12,12 +12,15 @@ export async function GET(req: Request) {
   const status = searchParams.get('status') as 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED' | null;
   const difficulty = searchParams.get('difficulty') as 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT' | null;
   const search = searchParams.get('search') ?? undefined;
+  const limitParam = Number(searchParams.get('limit'));
+  const limit = Number.isInteger(limitParam) && limitParam > 0 ? limitParam : undefined;
 
   const rows = await questionRepository.list({
     examId,
     status: status ?? undefined,
     difficulty: difficulty ?? undefined,
     search,
+    limit,
   });
   return apiSuccess(rows);
 }

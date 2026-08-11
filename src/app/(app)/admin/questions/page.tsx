@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import { auth } from '@/lib/auth';
 import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
 import { Button } from '@/components/ui/button';
 import { QuestionBankBrowser } from './question-bank-browser';
@@ -7,6 +8,9 @@ import { QuestionBankBrowser } from './question-bank-browser';
 export const dynamic = 'force-dynamic';
 
 export default async function QuestionBankPage() {
+  // Layout already guarantees an authenticated session; the role is only needed here to
+  // gate the bulk select/publish controls (admin-only), not to gate the page itself.
+  const session = await auth();
   const examRows = await taxonomyRepository.listExams();
   const exams = examRows.map(({ exam, programName }) => ({ id: exam.id, name: exam.name, programName }));
 
@@ -24,7 +28,7 @@ export default async function QuestionBankPage() {
         </Button>
       </div>
 
-      <QuestionBankBrowser exams={exams} />
+      <QuestionBankBrowser exams={exams} role={session!.user.role} />
     </div>
   );
 }

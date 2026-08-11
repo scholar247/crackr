@@ -6,7 +6,7 @@ import { curriculumNodes, exams } from './taxonomy';
 // Shared across every content-bearing entity — this is the mechanism for "public vs
 // private content": public routes only ever query status=PUBLISHED AND visibility=PUBLIC.
 export const CONTENT_TYPES = ['QUESTION', 'ARTICLE'] as const;
-const CONTENT_STATUSES = ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED'] as const;
+export const CONTENT_STATUSES = ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED'] as const;
 const CONTENT_VISIBILITIES = ['PUBLIC', 'PRIVATE', 'AUDIENCE_RESTRICTED'] as const;
 const CONTENT_RELATION_TYPES = ['PRIMARY', 'SUPPLEMENTARY', 'PRACTICE'] as const;
 
@@ -35,6 +35,10 @@ export const questions = mysqlTable('questions', {
   status: mysqlEnum('status', CONTENT_STATUSES).notNull().default('DRAFT'),
   visibility: mysqlEnum('visibility', CONTENT_VISIBILITIES).notNull().default('PRIVATE'),
   authorId: varchar('author_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  // Who made the most recent write, distinct from authorId (who created it). Nullable for
+  // the same reason authorId is: rows created before this column existed, or written via
+  // the service-key/seed-script identity which has no backing users row.
+  updatedBy: varchar('updated_by', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -53,6 +57,7 @@ export const articles = mysqlTable(
     status: mysqlEnum('status', CONTENT_STATUSES).notNull().default('DRAFT'),
     visibility: mysqlEnum('visibility', CONTENT_VISIBILITIES).notNull().default('PRIVATE'),
     authorId: varchar('author_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: varchar('updated_by', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },

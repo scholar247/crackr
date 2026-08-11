@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { BlogContent } from '@/components/blog/blog-content';
+import { AuthorByline } from '@/components/blog/author-byline';
 import { cn } from '@/lib/utils';
 
 interface ExamOption {
@@ -40,6 +41,8 @@ export interface QuestionFormInitial {
   status: string;
   primaryNode: { nodeId: string } | null;
   exams: { examId: string }[];
+  author: { name: string | null; image: string | null } | null;
+  updatedAt: string;
 }
 
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD', 'EXPERT'] as const;
@@ -253,6 +256,12 @@ export function QuestionForm({
           </Button>
         </div>
       </div>
+
+      {mode === 'edit' && initial?.author?.name && (
+        <div className="mt-3">
+          <AuthorByline name={initial.author.name} imageUrl={initial.author.image ?? undefined} updatedAt={initial.updatedAt} />
+        </div>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[360px_1fr]">
         <div className="space-y-6">

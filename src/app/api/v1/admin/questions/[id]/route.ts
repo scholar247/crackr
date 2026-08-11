@@ -19,7 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { session, error } = await requireAuth('TEACHER');
+  const { session, error, isServiceKey } = await requireAuth('TEACHER');
   if (error) return error;
 
   const { id } = await params;
@@ -38,6 +38,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const parsed = UpdateQuestionSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
 
-  const updated = await questionRepository.update(questionId, parsed.data);
+  const editorId = isServiceKey ? null : session!.user.id;
+  const updated = await questionRepository.update(questionId, parsed.data, editorId);
   return apiSuccess(updated);
 }

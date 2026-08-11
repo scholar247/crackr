@@ -1,4 +1,4 @@
-import { LayoutDashboard, GraduationCap, Newspaper, ListChecks, Dumbbell, Settings, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Newspaper, ListChecks, Users, Dumbbell, Settings, type LucideIcon } from 'lucide-react';
 import type { UserRole } from '@/lib/roles';
 
 export interface NavItem {
@@ -24,6 +24,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/admin/curriculum', label: 'Curriculum & Exams', icon: GraduationCap },
   { href: '/admin/questions', label: 'Question Bank', icon: ListChecks },
   { href: '/admin/blog', label: 'Blog', icon: Newspaper },
+  { href: '/admin/users', label: 'User Management', icon: Users },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

@@ -1,8 +1,9 @@
 import { randomUUID } from 'crypto';
 import { and, desc, eq, inArray, like } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { questions, contentNodeMap, contentExamMap, curriculumNodes, exams } from '@/server/db/schema';
+import { questions, contentNodeMap, contentExamMap, curriculumNodes, exams, users } from '@/server/db/schema';
 import type { QuestionOption } from '@/server/db/schema/content';
+import { CONTENT_STATUSES } from '@/server/db/schema/content';
 import { taxonomyRepository } from './taxonomy.repository';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -22,6 +23,7 @@ export interface ListQuestionsFilters {
   status?: 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
   difficulty?: 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
   search?: string;
+  limit?: number;
 }
 
 /**
@@ -91,9 +93,9 @@ async function create(input: QuestionInput, authorId: string | null) {
   return findById(id);
 }
 
-async function update(id: number, input: Partial<QuestionInput>) {
+async function update(id: number, input: Partial<QuestionInput>, editorId: string | null = null) {
   await db.transaction(async (tx) => {
-    const patch: Partial<typeof questions.$inferInsert> = { updatedAt: new Date() };
+    const patch: Partial<typeof questions.$inferInsert> = { updatedAt: new Date(), updatedBy: editorId ?? undefined };
     if (input.stem !== undefined) patch.stem = input.stem;
     if (input.options !== undefined) patch.optionsJson = input.options;
     if (input.explanation !== undefined) patch.explanation = input.explanation;
@@ -108,8 +110,14 @@ async function update(id: number, input: Partial<QuestionInput>) {
 }
 
 async function findById(id: number) {
-  const [question] = await db.select().from(questions).where(eq(questions.id, id)).limit(1);
-  if (!question) return null;
+  const [row] = await db
+    .select({ question: questions, author: { name: users.name, image: users.image } })
+    .from(questions)
+    .leftJoin(users, eq(questions.authorId, users.id))
+    .where(eq(questions.id, id))
+    .limit(1);
+  if (!row) return null;
+  const { question, author } = row;
 
   const nodeRows = await db
     .select({
@@ -130,6 +138,7 @@ async function findById(id: number) {
 
   return {
     ...question,
+    author,
     primaryNode: nodeRows.find((n) => n.relationType === 'PRIMARY') ?? null,
     ancestorNodes: nodeRows.filter((n) => n.relationType === 'SUPPLEMENTARY'),
     exams: examRows,
@@ -144,25 +153,28 @@ async function list(filters: ListQuestionsFilters = {}) {
   if (filters.status) conditions.push(eq(questions.status, filters.status));
   if (filters.difficulty) conditions.push(eq(questions.difficulty, filters.difficulty));
   if (filters.search) conditions.push(like(questions.stem, `%${filters.search}%`));
+  const limit = filters.limit ?? 100;
 
   if (filters.examId) {
     const rows = await db
-      .selectDistinct({ question: questions })
+      .selectDistinct({ question: questions, authorName: users.name })
       .from(questions)
       .innerJoin(contentExamMap, and(eq(contentExamMap.contentType, 'QUESTION'), eq(contentExamMap.contentId, questions.id)))
+      .leftJoin(users, eq(questions.authorId, users.id))
       .where(and(eq(contentExamMap.examId, filters.examId), ...conditions))
       .orderBy(desc(questions.createdAt))
-      .limit(100);
-    return rows.map((r) => r.question);
+      .limit(limit);
+    return rows.map((r) => ({ ...r.question, authorName: r.authorName }));
   }
 
   const rows = await db
-    .select()
+    .select({ question: questions, authorName: users.name })
     .from(questions)
+    .leftJoin(users, eq(questions.authorId, users.id))
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(questions.createdAt))
-    .limit(100);
-  return rows;
+    .limit(limit);
+  return rows.map((r) => ({ ...r.question, authorName: r.authorName }));
 }
 
 export interface ListPublishedFilters {
@@ -207,12 +219,24 @@ async function listPublished(filters: ListPublishedFilters = {}) {
   return db.select().from(questions).where(and(...conditions)).orderBy(desc(questions.createdAt)).limit(200);
 }
 
-async function setPublishStatus(id: number, publish: boolean) {
+async function setPublishStatus(id: number, publish: boolean, editorId: string | null = null) {
   await db
     .update(questions)
-    .set({ status: publish ? 'PUBLISHED' : 'DRAFT', updatedAt: new Date() })
+    .set({ status: publish ? 'PUBLISHED' : 'DRAFT', updatedAt: new Date(), updatedBy: editorId ?? undefined })
     .where(eq(questions.id, id));
   return findById(id);
+}
+
+// Admin-only bulk status change from the question bank list view — same status enum as
+// setPublishStatus but not limited to the PUBLISHED/DRAFT pair, so an admin can also bulk
+// move a selection to IN_REVIEW or ARCHIVED in one action.
+async function setStatusMany(ids: number[], status: (typeof CONTENT_STATUSES)[number], editorId: string | null = null) {
+  if (ids.length === 0) return [];
+  await db
+    .update(questions)
+    .set({ status, updatedAt: new Date(), updatedBy: editorId ?? undefined })
+    .where(inArray(questions.id, ids));
+  return db.select().from(questions).where(inArray(questions.id, ids));
 }
 
 export const questionRepository = {
@@ -222,4 +246,5 @@ export const questionRepository = {
   list,
   listPublished,
   setPublishStatus,
+  setStatusMany,
 };

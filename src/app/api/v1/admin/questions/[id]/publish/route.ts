@@ -8,7 +8,7 @@ const PublishSchema = z.object({ publish: z.boolean() });
 // Deliberately ADMIN, not TEACHER: questions are created as DRAFT by anyone who can
 // author them, but only an admin promotes one to PUBLISHED (or pulls it back to DRAFT).
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { error } = await requireAuth('ADMIN');
+  const { session, error, isServiceKey } = await requireAuth('ADMIN');
   if (error) return error;
 
   const { id } = await params;
@@ -21,6 +21,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const parsed = PublishSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
 
-  const updated = await questionRepository.setPublishStatus(questionId, parsed.data.publish);
+  const editorId = isServiceKey ? null : session!.user.id;
+  const updated = await questionRepository.setPublishStatus(questionId, parsed.data.publish, editorId);
   return apiSuccess(updated);
 }
