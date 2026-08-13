@@ -9,5 +9,5 @@ export default async function AdminBlogPage() {
     redirect('/dashboard');
   }
 
-  return <BlogListClient />;
+  return <BlogListClient role={session.user.role} />;
 }

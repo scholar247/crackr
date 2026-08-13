@@ -18,11 +18,22 @@ import {
   CreateArticleSchema,
   ARTICLE_STATUS_VALUES,
   ARTICLE_VISIBILITY_VALUES,
+  ARTICLE_TYPE_VALUES,
   type CreateArticleInput,
 } from '@/schemas/article.schema';
 import { cn, slugify, STATUS_COLORS } from '@/lib/utils';
 
 const BlogEditor = dynamic(() => import('@/components/editor/blog-editor').then((m) => m.BlogEditor), { ssr: false });
+
+const ARTICLE_TYPE_LABELS: Record<(typeof ARTICLE_TYPE_VALUES)[number], string> = {
+  GENERAL: 'General',
+  CONCEPT: 'Concept',
+  SOLUTION: 'Solution',
+  TIPS_AND_TRICKS: 'Tips & Tricks',
+  FORMULA: 'Formula',
+  NEWS: 'News',
+  COURSE_CONTENT: 'Course Content',
+};
 
 interface ArticleRecord {
   id: number;
@@ -32,6 +43,7 @@ interface ArticleRecord {
   body: string;
   status: (typeof ARTICLE_STATUS_VALUES)[number];
   visibility: (typeof ARTICLE_VISIBILITY_VALUES)[number];
+  articleType: (typeof ARTICLE_TYPE_VALUES)[number];
   metaTitle: string | null;
   metaDescription: string | null;
   keywords: string[] | null;
@@ -75,6 +87,7 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
       body: initial?.body ?? '',
       status: initial?.status ?? 'DRAFT',
       visibility: initial?.visibility ?? 'PRIVATE',
+      articleType: initial?.articleType ?? 'GENERAL',
       ogImage: initial?.ogImage ?? '',
     },
   });
@@ -178,6 +191,28 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
                 if (!metaDescManual) setMetaDescValue(e.target.value);
               }}
             />
+          )}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Article type</Label>
+        <Controller
+          control={form.control}
+          name="articleType"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ARTICLE_TYPE_VALUES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {ARTICLE_TYPE_LABELS[t]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         />
       </div>

@@ -35,6 +35,7 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
             body: article.body,
             status: article.status,
             visibility: article.visibility,
+            articleType: article.articleType,
             metaTitle: article.metaTitle,
             metaDescription: article.metaDescription,
             keywords: article.keywords,

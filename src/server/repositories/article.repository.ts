@@ -1,8 +1,8 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { articles, users } from '@/server/db/schema';
 import { slugify } from '@/lib/utils';
-import type { CreateArticleInput, UpdateArticleInput } from '@/schemas/article.schema';
+import type { ARTICLE_STATUS_VALUES, CreateArticleInput, UpdateArticleInput } from '@/schemas/article.schema';
 
 async function findAll() {
   return db.select().from(articles).orderBy(desc(articles.updatedAt));
@@ -80,6 +80,7 @@ async function create(input: CreateArticleInput, authorId: string | null) {
     body: input.body,
     status: input.status,
     visibility: input.visibility,
+    articleType: input.articleType,
     metaTitle: input.metaTitle,
     metaDescription: input.metaDescription,
     keywords: input.keywords,
@@ -108,6 +109,15 @@ async function update(id: number, input: UpdateArticleInput, editorId: string | 
   return findById(id);
 }
 
+async function setStatusMany(ids: number[], status: (typeof ARTICLE_STATUS_VALUES)[number], editorId: string | null = null) {
+  if (ids.length === 0) return [];
+  await db
+    .update(articles)
+    .set({ status, updatedAt: new Date(), updatedBy: editorId ?? undefined })
+    .where(inArray(articles.id, ids));
+  return db.select().from(articles).where(inArray(articles.id, ids));
+}
+
 export const articleRepository = {
   findAll,
   findById,
@@ -118,4 +128,5 @@ export const articleRepository = {
   findPublishedBySlugWithAuthor,
   create,
   update,
+  setStatusMany,
 };

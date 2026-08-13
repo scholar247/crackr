@@ -20,6 +20,7 @@ interface ArticlePayload {
   body: string;
   status?: 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
   visibility?: 'PUBLIC' | 'PRIVATE' | 'AUDIENCE_RESTRICTED';
+  articleType?: 'GENERAL' | 'CONCEPT' | 'SOLUTION' | 'TIPS_AND_TRICKS' | 'FORMULA' | 'NEWS' | 'COURSE_CONTENT';
   metaTitle?: string;
   metaDescription?: string;
   keywords?: string[];

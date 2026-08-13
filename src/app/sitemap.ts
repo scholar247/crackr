@@ -1,14 +1,32 @@
 import type { MetadataRoute } from 'next';
+import { articleRepository } from '@/server/repositories/article.repository';
+import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://scholar247.org';
 
-// TODO(revamp): extend with dynamic exam and article routes once the curriculum/exam
-// (Task 8) and blog (Task 7) repositories exist — see the pre-revamp version in git
-// history for the pattern (subjects/exams/pyp/blog repositories feeding the sitemap).
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [articles, exams] = await Promise.all([
+    articleRepository.findPublished(),
+    taxonomyRepository.listPublicExams(),
+  ]);
+
+  const articleEntries: MetadataRoute.Sitemap = articles.map((article) => ({
+    url: `${BASE_URL}/blogs/${article.slug}`,
+    lastModified: article.updatedAt,
+    changeFrequency: 'monthly',
+    priority: 0.6,
+  }));
+
+  const examEntries: MetadataRoute.Sitemap = exams.map(({ exam }) => ({
+    url: `${BASE_URL}/exams/${exam.slug}`,
+    lastModified: exam.updatedAt,
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }));
+
   return [
     { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
     { url: `${BASE_URL}/exams`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
@@ -17,5 +35,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/contact`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.5 },
     { url: `${BASE_URL}/privacy-policy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
     { url: `${BASE_URL}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
+    ...examEntries,
+    ...articleEntries,
   ];
 }
