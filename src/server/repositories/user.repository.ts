@@ -1,11 +1,14 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
-import { users, authAccounts, userExamTargets } from '@/server/db/schema';
+import { users, authAccounts, userExamTargets, exams, programs } from '@/server/db/schema';
 import { isDuplicateKeyError } from '@/server/db/helpers';
 import type { UserRole } from '@/lib/roles';
 import type { PrepLevel } from '@/lib/prep-level';
 import type { UpdateUserInput } from '@/schemas/user.schema';
+import type { UpdateProfileInput } from '@/schemas/profile.schema';
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 interface CompleteOnboardingInput {
   targetYear: number;
@@ -94,24 +97,30 @@ async function getAuthorizationSnapshot(userId: string): Promise<AuthorizationSn
 }
 
 /**
- * Records the learner's exam targets alongside marking onboarding done — one exam
- * flagged primary, the rest as additional. Replaces any existing targets wholesale
- * rather than diffing (onboarding only ever runs once per user; the page redirects
- * away once onboardingCompletedAt is set, so there's no concurrent-edit case to
- * reconcile here). Wrapped in a transaction so a partial write never leaves the user
- * marked onboarded without their exam targets actually saved, or vice versa.
+ * Replaces a user's exam targets wholesale rather than diffing — every caller (onboarding,
+ * profile edits) always submits the complete intended set, so delete-then-insert is simpler
+ * and just as correct as a diff would be. Takes a transaction handle so callers can wrap
+ * this alongside a `users` column write in one atomic operation.
+ */
+async function setExamTargets(tx: Tx, userId: string, examIds: string[], primaryExamId: string) {
+  const uniqueIds = Array.from(new Set([primaryExamId, ...examIds]));
+  await tx.delete(userExamTargets).where(eq(userExamTargets.userId, userId));
+  await tx.insert(userExamTargets).values(uniqueIds.map((examId) => ({ userId, examId, isPrimary: examId === primaryExamId })));
+}
+
+/**
+ * Records the learner's exam targets alongside marking onboarding done. Wrapped in a
+ * transaction so a partial write never leaves the user marked onboarded without their
+ * exam targets actually saved, or vice versa.
  */
 async function completeOnboarding(userId: string, input: CompleteOnboardingInput) {
-  const examIds = Array.from(new Set([input.primaryExamId, ...input.additionalExamIds]));
-
   await db.transaction(async (tx) => {
     await tx
       .update(users)
       .set({ onboardingCompletedAt: new Date(), targetYear: input.targetYear, level: input.level, updatedAt: new Date() })
       .where(eq(users.id, userId));
 
-    await tx.delete(userExamTargets).where(eq(userExamTargets.userId, userId));
-    await tx.insert(userExamTargets).values(examIds.map((examId) => ({ userId, examId, isPrimary: examId === input.primaryExamId })));
+    await setExamTargets(tx, userId, input.additionalExamIds, input.primaryExamId);
   });
 }
 
@@ -129,6 +138,38 @@ async function update(id: string, input: UpdateUserInput) {
   return findById(id);
 }
 
+// Never read back until now — user_exam_targets is written once at onboarding and
+// otherwise dead data. Joins to exams + programs so the profile page can show real
+// names, not just ids.
+async function findExamTargetsByUserId(userId: string) {
+  return db
+    .select({ examId: exams.id, examName: exams.name, examSlug: exams.slug, programName: programs.name, isPrimary: userExamTargets.isPrimary })
+    .from(userExamTargets)
+    .innerJoin(exams, eq(userExamTargets.examId, exams.id))
+    .innerJoin(programs, eq(exams.programId, programs.id))
+    .where(eq(userExamTargets.userId, userId));
+}
+
+/**
+ * Self-service profile update (settings page) — a `users` column update plus, only when
+ * the caller is also updating exam targets, a `setExamTargets` call, both in one
+ * transaction so the two never land inconsistently.
+ */
+async function updateProfile(userId: string, input: UpdateProfileInput) {
+  const { examIds, primaryExamId, ...columns } = input;
+
+  await db.transaction(async (tx) => {
+    if (Object.keys(columns).length > 0) {
+      await tx.update(users).set({ ...columns, updatedAt: new Date() }).where(eq(users.id, userId));
+    }
+    if (examIds && primaryExamId) {
+      await setExamTargets(tx, userId, examIds, primaryExamId);
+    }
+  });
+
+  return findById(userId);
+}
+
 export const userRepository = {
   findByProviderIdentity,
   provisionGoogleUser,
@@ -138,4 +179,6 @@ export const userRepository = {
   findById,
   listRecent,
   update,
+  findExamTargetsByUserId,
+  updateProfile,
 };

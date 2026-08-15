@@ -2,27 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import NextImage from 'next/image';
-import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Check, X, Info, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BlogContent } from '@/components/blog/blog-content';
 import { cn } from '@/lib/utils';
-
-interface ExamOption {
-  id: string;
-  slug: string;
-  name: string;
-  programName: string;
-}
-
-interface SyllabusNode {
-  id: string;
-  nodeType: string;
-  name: string;
-  slug: string;
-  children: SyllabusNode[];
-}
+import type { SyllabusNode } from '@/server/repositories/taxonomy.repository';
 
 interface QuestionOption {
   key: string;
@@ -39,41 +24,37 @@ interface Question {
 }
 
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD', 'EXPERT'] as const;
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest First' },
+  { value: 'oldest', label: 'Oldest First' },
+  { value: 'difficulty_asc', label: 'Difficulty: Easy → Hard' },
+  { value: 'difficulty_desc', label: 'Difficulty: Hard → Easy' },
+] as const;
 
-export function PracticeBrowser({ exams }: { exams: ExamOption[] }) {
+interface PracticeBrowserProps {
+  examId: string;
+  examName: string;
+  examSlug: string;
+  syllabus: SyllabusNode[];
+  loggedIn: boolean;
+}
+
+export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn }: PracticeBrowserProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [examId, setExamId] = useState('');
-  const [syllabusTree, setSyllabusTree] = useState<SyllabusNode[]>([]);
   const [subjectId, setSubjectId] = useState('');
   const [chapterId, setChapterId] = useState('');
   const [topicId, setTopicId] = useState('');
   const [subtopicId, setSubtopicId] = useState('');
   const [difficulty, setDifficulty] = useState<string>('all');
+  const [sort, setSort] = useState<string>('newest');
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
   const [index, setIndex] = useState(0);
   const [selections, setSelections] = useState<Record<number, string>>({}); // in-memory only, never persisted
 
-  const selectedExam = exams.find((e) => e.id === examId);
-
-  const loadSyllabus = useCallback(async () => {
-    if (!selectedExam) {
-      setSyllabusTree([]);
-      return;
-    }
-    const res = await fetch(`/api/v1/public/exams/${selectedExam.slug}`);
-    const json = await res.json();
-    setSyllabusTree(json.data?.syllabus ?? []);
-  }, [selectedExam]);
-
-  useEffect(() => {
-    const timeout = setTimeout(loadSyllabus, 0);
-    return () => clearTimeout(timeout);
-  }, [loadSyllabus]);
-
-  const subjects = syllabusTree;
+  const subjects = syllabus;
   const chapters = useMemo(() => subjects.find((s) => s.id === subjectId)?.children ?? [], [subjects, subjectId]);
   const topics = useMemo(() => chapters.find((c) => c.id === chapterId)?.children ?? [], [chapters, chapterId]);
   const subtopics = useMemo(() => topics.find((t) => t.id === topicId)?.children ?? [], [topics, topicId]);
@@ -82,9 +63,10 @@ export function PracticeBrowser({ exams }: { exams: ExamOption[] }) {
   const loadQuestions = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (examId) params.set('examId', examId);
+    params.set('examId', examId);
     if (nodeId) params.set('nodeId', nodeId);
     if (difficulty !== 'all') params.set('difficulty', difficulty);
+    params.set('sort', sort);
 
     try {
       const res = await fetch(`/api/v1/public/questions?${params}`);
@@ -94,7 +76,7 @@ export function PracticeBrowser({ exams }: { exams: ExamOption[] }) {
     } finally {
       setLoading(false);
     }
-  }, [examId, nodeId, difficulty]);
+  }, [examId, nodeId, difficulty, sort]);
 
   useEffect(() => {
     const timeout = setTimeout(loadQuestions, 0);
@@ -106,15 +88,33 @@ export function PracticeBrowser({ exams }: { exams: ExamOption[] }) {
   const answered = selectedKey !== undefined;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
+    <div className="bg-background">
+      <div className="border-b border-border bg-muted/30">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <NextImage src="/logo.svg" alt="scholar247" width={110} height={23} className="dark:invert" />
-          <Link href="/dashboard" className="text-body-sm text-muted-foreground hover:text-foreground">
-            ← Exit practice
+          <span className="text-body-sm font-medium text-foreground">{examName} Practice</span>
+          <Link
+            href={`/practice/exams/${examSlug}`}
+            className="text-body-sm flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Exit practice
           </Link>
         </div>
-      </header>
+      </div>
+
+      {!loggedIn && (
+        <div className="border-b border-border bg-secondary/5">
+          <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5">
+            <Info className="h-4 w-4 shrink-0 text-secondary" />
+            <p className="text-body-sm text-muted-foreground">
+              Practicing as a guest — your answers won&apos;t be saved.{' '}
+              <Link href="/sign-in" className="font-medium text-secondary hover:underline">
+                Sign in
+              </Link>{' '}
+              to track your progress.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="flex gap-6">
@@ -127,35 +127,11 @@ export function PracticeBrowser({ exams }: { exams: ExamOption[] }) {
                 </button>
               </div>
 
-              <PickerField label="Exam">
-                <Select
-                  value={examId}
-                  onValueChange={(v) => {
-                    setExamId(v);
-                    setSubjectId('');
-                    setChapterId('');
-                    setTopicId('');
-                    setSubtopicId('');
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select exam…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {exams.map((exam) => (
-                      <SelectItem key={exam.id} value={exam.id}>
-                        {exam.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </PickerField>
-
               <PickerField label="Subject">
                 <CascadeSelect
                   value={subjectId}
                   options={subjects}
-                  disabled={!examId}
+                  disabled={false}
                   onChange={(v) => {
                     setSubjectId(v);
                     setChapterId('');
@@ -206,6 +182,21 @@ export function PracticeBrowser({ exams }: { exams: ExamOption[] }) {
                   </SelectContent>
                 </Select>
               </PickerField>
+
+              <PickerField label="Sort">
+                <Select value={sort} onValueChange={setSort}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </PickerField>
             </div>
           </aside>
 
@@ -228,7 +219,7 @@ export function PracticeBrowser({ exams }: { exams: ExamOption[] }) {
             ) : questions.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border bg-card/50 p-10 text-center">
                 <p className="text-body-md text-foreground">No published questions match these filters yet.</p>
-                <p className="text-body-sm mt-1 text-muted-foreground">Try a different exam, subject, or difficulty.</p>
+                <p className="text-body-sm mt-1 text-muted-foreground">Try a different subject, topic, or difficulty.</p>
               </div>
             ) : (
               current && (

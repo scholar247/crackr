@@ -17,6 +17,9 @@ const PUBLIC_PATH_PREFIXES = [
   '/contact',
   '/privacy-policy',
   '/terms',
+  // Practice is browsable and attemptable without an account — answers just aren't
+  // saved for anonymous visitors (practice-browser.tsx only persists when signed in).
+  '/practice',
 ];
 
 // Path prefix -> minimum role required to view it.

@@ -9,7 +9,13 @@ export async function GET(req: Request) {
   const examId = searchParams.get('examId') ?? undefined;
   const nodeId = searchParams.get('nodeId') ?? undefined;
   const difficulty = searchParams.get('difficulty') as 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT' | null;
+  const sort = searchParams.get('sort') as 'newest' | 'oldest' | 'difficulty_asc' | 'difficulty_desc' | null;
 
-  const rows = await questionRepository.listPublished({ examId, nodeId, difficulty: difficulty ?? undefined });
+  const rows = await questionRepository.listPublished({
+    examId,
+    nodeId,
+    difficulty: difficulty ?? undefined,
+    sort: sort ?? undefined,
+  });
   return apiSuccess(rows);
 }

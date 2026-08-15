@@ -2,6 +2,7 @@ import { mysqlTable, mysqlEnum, varchar, int, timestamp, uniqueIndex } from 'dri
 import { randomUUID } from 'crypto';
 import { USER_ROLES } from '@/lib/roles';
 import { PREP_LEVELS } from '@/lib/prep-level';
+import { programs } from './taxonomy';
 
 export const users = mysqlTable(
   'users',
@@ -19,6 +20,11 @@ export const users = mysqlTable(
     // year/level are single attributes of the learner, not per-exam.
     targetYear: int('target_year'),
     level: mysqlEnum('level', PREP_LEVELS),
+    // Self-service profile fields (settings page) — all optional, filled in after signup.
+    college: varchar('college', { length: 255 }),
+    degree: varchar('degree', { length: 255 }),
+    passingYear: int('passing_year'),
+    targetProgramId: varchar('target_program_id', { length: 36 }).references(() => programs.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },

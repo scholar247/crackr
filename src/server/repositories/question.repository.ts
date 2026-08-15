@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { and, desc, eq, inArray, like } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, like, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { questions, contentNodeMap, contentExamMap, curriculumNodes, exams, users } from '@/server/db/schema';
 import type { QuestionOption } from '@/server/db/schema/content';
@@ -177,11 +177,20 @@ async function list(filters: ListQuestionsFilters = {}) {
   return rows.map((r) => ({ ...r.question, authorName: r.authorName }));
 }
 
+export type PublishedSort = 'newest' | 'oldest' | 'difficulty_asc' | 'difficulty_desc';
+
 export interface ListPublishedFilters {
   examId?: string;
   nodeId?: string;
   difficulty?: 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
+  sort?: PublishedSort;
 }
+
+// Difficulty is a MySQL enum in declaration order (EASY, MEDIUM, HARD, EXPERT) — that's
+// not the same as severity order, so a plain ORDER BY difficulty sorts alphabetically
+// (EASY, EXPERT, HARD, MEDIUM). This case expression maps to actual difficulty rank.
+const DIFFICULTY_RANK = sql`case ${questions.difficulty}
+  when 'EASY' then 1 when 'MEDIUM' then 2 when 'HARD' then 3 when 'EXPERT' then 4 end`;
 
 /**
  * PUBLISHED + PUBLIC only — the student-facing practice browser's data source. Filtering
@@ -216,7 +225,16 @@ async function listPublished(filters: ListPublishedFilters = {}) {
     );
   }
 
-  return db.select().from(questions).where(and(...conditions)).orderBy(desc(questions.createdAt)).limit(200);
+  const orderBy =
+    filters.sort === 'oldest'
+      ? asc(questions.createdAt)
+      : filters.sort === 'difficulty_asc'
+        ? DIFFICULTY_RANK
+        : filters.sort === 'difficulty_desc'
+          ? sql`${DIFFICULTY_RANK} desc`
+          : desc(questions.createdAt);
+
+  return db.select().from(questions).where(and(...conditions)).orderBy(orderBy).limit(200);
 }
 
 async function setPublishStatus(id: number, publish: boolean, editorId: string | null = null) {
