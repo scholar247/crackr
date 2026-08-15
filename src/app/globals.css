@@ -139,54 +139,53 @@
 :root {
   /* ── Light theme — Synthetic Intelligence ──────────────────────────────────
    *
-   *  Derived from the dark scheme below using Material 3's own "inverse" and
-   *  "fixed" roles rather than picked freehand: M3 defines inverse-primary
-   *  (dark) as *the primary tone the light scheme should use*, and
-   *  inverse-surface/inverse-on-surface (dark) as the light scheme's
-   *  surface/on-surface pair — so those tokens are reused directly instead of
-   *  re-guessing a whole second palette. Roles without a direct M3 counterpart
-   *  (secondary/error mains) are called out below as "derived" instead of
-   *  quoted from a given token.
+   *  Background/surface tiers were originally the M3 inverse-surface tone
+   *  (#d4e4fa, a visibly blue-tinted powder blue). Product asked for that
+   *  tint pulled back to near-white — background and every surface tier
+   *  below (muted/accent/border/outline/surface-container-*) are now a
+   *  near-neutral cool gray (barely a whisper of the original blue hue)
+   *  instead of a saturated pale blue. Primary/secondary/semantic colors
+   *  (the actual brand blue, teal, amber, red) are unchanged — only the
+   *  surface/background family was de-blued. Dark theme is untouched.
    *
-   *  Background : inverse-surface        #d4e4fa — pale, cool powder blue
-   *  Foreground : inverse-on-surface     #233143 — dark navy-slate
-   *  Primary    : inverse-primary        #0053db — Electric Cobalt
-   *  Secondary  : derived from secondary-container hue — #006e7c teal-cyan
+   *  Background : #f8f9fb — near-white, minimal cool tint
+   *  Foreground : #262a33 — dark neutral slate
+   *  Primary    : #0053db — Electric Cobalt (unchanged)
+   *  Secondary  : #006e7c — teal-cyan (unchanged)
    *
    * ────────────────────────────────────────────────────────────────────────── */
 
-  --background: #d4e4fa;
-  --foreground: #233143;
-  --card: #ffffff;                    /* lifted above the tinted page bg, not a copy of it */
-  --card-foreground: #233143;
+  --background: #f8f9fb;
+  --foreground: #262a33;
+  --card: #ffffff;                    /* lifted above the page bg, not a copy of it */
+  --card-foreground: #262a33;
   --popover: #ffffff;
-  --popover-foreground: #233143;
+  --popover-foreground: #262a33;
 
-  /* Primary: inverse-primary (given directly) */
+  /* Primary: unchanged — the actual brand blue used for CTAs/links */
   --primary: #0053db;
   --primary-foreground: #ffffff;
 
-  /* Secondary: derived — same cyan hue as the dark scheme's secondary-container,
-   * darkened enough to hold white text at solid fill. */
+  /* Secondary: unchanged — teal-cyan, not part of the blue-background tint */
   --secondary: #006e7c;
   --secondary-foreground: #ffffff;
 
-  /* Tertiary — muted slate-blue, used for "Neutral" status chips */
-  --tertiary: #565e70;
+  /* Tertiary — neutral slate, used for "Neutral" status chips */
+  --tertiary: #5a5e68;
   --tertiary-foreground: #ffffff;
 
-  --muted: #eef2f9;
-  --muted-foreground: #5b6472;
+  --muted: #f1f2f5;
+  --muted-foreground: #61646d;
 
-  --accent: #e4ebf5;                  /* hover/highlight surface */
-  --accent-foreground: #233143;
+  --accent: #e9ebee;                  /* hover/highlight surface */
+  --accent-foreground: #262a33;
 
   /* Destructive: standard M3 light "error" tone for this red family */
   --destructive: #ba1a1a;
   --destructive-foreground: #ffffff;
 
-  --border: #c7d2e2;
-  --input: #c7d2e2;
+  --border: #dcdee2;
+  --input: #dcdee2;
   --ring: #0053db;                    /* matches primary */
 
   /* Semantic */
@@ -202,16 +201,16 @@
   --gold: #f2b400;
   --gold-foreground: #241a00;
 
-  /* Raw M3 surface tiers / outline (light) — approximate light-mode surface
-   * ladder, lightest at "highest" per M3's usual light-scheme convention. */
+  /* Raw M3 surface tiers / outline (light) — near-neutral gray ladder,
+   * lightest at "highest" per M3's usual light-scheme convention. */
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #f7f9fd;
-  --surface-container: #eef2f9;
-  --surface-container-high: #e4ebf5;
-  --surface-container-highest: #dbe4f2;
-  --outline: #75798a;
-  --outline-variant: #c7d2e2;
-  --on-surface-variant: #454954;
+  --surface-container-low: #fafbfc;
+  --surface-container: #f1f2f5;
+  --surface-container-high: #e9ebee;
+  --surface-container-highest: #e2e4e8;
+  --outline: #797c85;
+  --outline-variant: #dcdee2;
+  --on-surface-variant: #494c54;
   --error: #ba1a1a;
   --on-error: #ffffff;
 }
