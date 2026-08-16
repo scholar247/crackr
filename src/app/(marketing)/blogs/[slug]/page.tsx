@@ -1,11 +1,15 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { articleRepository } from '@/server/repositories/article.repository';
+import { questionRepository } from '@/server/repositories/question.repository';
 import { BlogContent } from '@/components/blog/blog-content';
-import { AuthorByline } from '@/components/blog/author-byline';
+import { AuthorCard } from '@/components/blog/author-card';
 import { ReadingProgressBar } from '@/components/blog/reading-progress-bar';
 import { ShareControls } from '@/components/blog/share-controls';
 import { TableOfContentsDesktop, TableOfContentsMobile } from '@/components/blog/table-of-contents';
+import { ConceptCheckCard } from '@/components/blog/concept-check-card';
+import { SuggestedArticles } from '@/components/blog/suggested-articles';
+import { BackToTopButton } from '@/components/blog/back-to-top-button';
 import { extractHeadings } from '@/lib/toc';
 import { calcReadingTime } from '@/lib/reading-time';
 import { cn } from '@/lib/utils';
@@ -54,6 +58,15 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
   const headings = extractHeadings(article.body);
   const url = `https://scholar247.org/blogs/${article.slug}`;
 
+  // Curriculum tag (leaf + ancestors) drives both "related ground" queries below — no tag
+  // means neither section has anything to match against, so both are skipped rather than
+  // shown empty.
+  const nodeIds = await articleRepository.findNodeIdsForArticle(article.id);
+  const [conceptQuestion, suggested] = await Promise.all([
+    nodeIds.length > 0 ? questionRepository.findRandomPublishedByNodes(nodeIds) : Promise.resolve(null),
+    nodeIds.length > 0 ? articleRepository.findRelatedPublished(nodeIds, article.id, 4) : Promise.resolve([]),
+  ]);
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <ReadingProgressBar />
@@ -63,38 +76,57 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
         <img
           src={article.ogImage}
           alt=""
-          className="mx-auto aspect-[2/1] w-full max-w-3xl rounded-xl object-cover"
+          className="mx-auto aspect-[2/1] w-full max-w-3xl rounded-xl object-cover lg:max-w-none"
         />
       )}
 
-      <div className="mx-auto max-w-3xl">
-        <h1 className={cn('font-bold tracking-tight text-foreground text-3xl sm:text-4xl', article.ogImage && 'mt-8')}>
-          {article.title}
-        </h1>
-        {article.summary && <p className="mt-3 text-lg text-muted-foreground">{article.summary}</p>}
+      <div className={cn('grid grid-cols-1 gap-8 lg:grid-cols-[1fr_280px]', article.ogImage && 'mt-8')}>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{article.title}</h1>
+          {article.summary && <p className="mt-3 text-lg text-muted-foreground">{article.summary}</p>}
 
-        <div className="mt-6 flex items-center justify-between gap-4">
-          <AuthorByline
-            name={author?.name ?? 'Scholar'}
-            imageUrl={author?.image ?? undefined}
-            updatedAt={article.updatedAt.toISOString()}
-          />
-          <ShareControls url={url} title={article.title} />
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">{calcReadingTime(article.body)} min read</p>
+            <ShareControls url={url} title={article.title} />
+          </div>
         </div>
 
-        <p className="mt-2 text-xs text-muted-foreground">{calcReadingTime(article.body)} min read</p>
+        <AuthorCard
+          authorId={author?.id}
+          name={author?.name ?? 'Scholar'}
+          imageUrl={author?.image}
+          college={author?.college}
+          degree={author?.degree}
+          updatedAt={article.updatedAt.toISOString()}
+        />
+      </div>
 
+      <div className="mt-8 lg:hidden">
         <TableOfContentsMobile headings={headings} />
       </div>
 
-      <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-10 lg:mx-0 lg:max-w-none lg:grid-cols-[1fr_220px]">
-        <div className="mx-auto w-full max-w-3xl lg:mx-0">
+      <div className="mt-4 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_220px]">
+        <div>
           <BlogContent content={article.body} />
+
+          {conceptQuestion && (
+            <div className="mt-10">
+              <ConceptCheckCard
+                stem={conceptQuestion.stem}
+                options={conceptQuestion.optionsJson}
+                explanation={conceptQuestion.explanation}
+                difficulty={conceptQuestion.difficulty}
+              />
+            </div>
+          )}
         </div>
         <div className="hidden lg:block">
           <TableOfContentsDesktop headings={headings} />
         </div>
       </div>
+
+      <SuggestedArticles articles={suggested} />
+      <BackToTopButton />
     </main>
   );
 }

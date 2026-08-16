@@ -21,6 +21,8 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
     redirect('/admin/blog');
   }
 
+  const node = await articleRepository.findNodeForArticle(article.id);
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-foreground">Edit article</h1>
@@ -40,6 +42,7 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
             metaDescription: article.metaDescription,
             keywords: article.keywords,
             ogImage: article.ogImage,
+            nodeId: node?.nodeId,
             updatedAt: article.updatedAt.toISOString(),
           }}
         />

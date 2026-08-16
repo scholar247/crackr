@@ -2,12 +2,12 @@
 
 import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
-import { Save, Eye } from 'lucide-react';
+import { Save, Eye, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,7 +48,14 @@ interface ArticleRecord {
   metaDescription: string | null;
   keywords: string[] | null;
   ogImage: string | null;
+  nodeId?: string | null;
   updatedAt: string;
+}
+
+interface CurriculumNode {
+  id: string;
+  nodeType: 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SUBTOPIC';
+  name: string;
 }
 
 async function postJson(url: string, method: string, body: unknown) {
@@ -75,6 +82,23 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
   const [metaDescManual, setMetaDescManual] = useState(false);
   const [metaDescValue, setMetaDescValue] = useState(initial?.metaDescription ?? '');
   const [keywordsValue, setKeywordsValue] = useState((initial?.keywords ?? []).join(', '));
+  const [nodeId, setNodeId] = useState<string | undefined>(initial?.nodeId ?? undefined);
+  const [nodeSearch, setNodeSearch] = useState('');
+
+  // Flat, filterable curriculum node list — same public endpoint the practice/exam pages
+  // use. Fetched once and searched client-side; simpler than a per-exam cascading picker
+  // since articles aren't tied to one exam the way questions are.
+  const { data: nodeOptions = [] } = useQuery<CurriculumNode[]>({
+    queryKey: ['public-nodes'],
+    queryFn: () => fetch('/api/v1/public/nodes').then((res) => res.json()).then((json) => json.data),
+    staleTime: 5 * 60 * 1000,
+  });
+  const selectedNode = useMemo(() => nodeOptions.find((n) => n.id === nodeId), [nodeOptions, nodeId]);
+  const filteredNodes = useMemo(() => {
+    if (!nodeSearch.trim()) return [];
+    const q = nodeSearch.trim().toLowerCase();
+    return nodeOptions.filter((n) => n.name.toLowerCase().includes(q)).slice(0, 30);
+  }, [nodeOptions, nodeSearch]);
 
   const form = useForm<CreateArticleInput>({
     // z.default() makes the schema's own inferred type disagree with zodResolver's
@@ -106,6 +130,7 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
         metaTitle: metaTitleManual && metaTitleValue ? metaTitleValue : undefined,
         metaDescription: metaDescManual && metaDescValue ? metaDescValue : undefined,
         keywords: keywords.length ? keywords : undefined,
+        nodeId,
       };
       return mode === 'create'
         ? postJson('/api/v1/admin/blog', 'POST', payload)
@@ -215,6 +240,51 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
             </Select>
           )}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Curriculum tag (optional)</Label>
+        <p className="text-xs text-muted-foreground">
+          Ties this article to a subject/chapter/topic — powers the &quot;Concept Check&quot; question and suggested
+          articles shown on the public page.
+        </p>
+        {selectedNode ? (
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="gap-1.5 py-1">
+              {selectedNode.name}
+              <span className="text-[10px] uppercase text-muted-foreground">{selectedNode.nodeType}</span>
+              <button type="button" onClick={() => setNodeId(undefined)} aria-label="Remove tag">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          </div>
+        ) : (
+          <div className="relative">
+            <Input
+              value={nodeSearch}
+              onChange={(e) => setNodeSearch(e.target.value)}
+              placeholder="Search subjects, chapters, topics…"
+            />
+            {filteredNodes.length > 0 && (
+              <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+                {filteredNodes.map((node) => (
+                  <button
+                    key={node.id}
+                    type="button"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted"
+                    onClick={() => {
+                      setNodeId(node.id);
+                      setNodeSearch('');
+                    }}
+                  >
+                    <span>{node.name}</span>
+                    <span className="text-[10px] uppercase text-muted-foreground">{node.nodeType}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

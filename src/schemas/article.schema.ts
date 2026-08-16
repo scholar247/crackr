@@ -23,6 +23,10 @@ export const CreateArticleSchema = z.object({
     .union([z.string().url().max(2048), z.literal('')])
     .optional()
     .transform((v) => v || undefined),
+  // Curriculum tag — same "single leaf, ancestors auto-tagged" convention as
+  // CreateQuestionSchema.nodeId. Drives concept-check/suggested-article matching on the
+  // public blog detail page.
+  nodeId: z.uuid().optional(),
 });
 export type CreateArticleInput = z.infer<typeof CreateArticleSchema>;
 

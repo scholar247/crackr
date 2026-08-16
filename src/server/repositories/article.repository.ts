@@ -1,8 +1,12 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { articles, users } from '@/server/db/schema';
+import { articles, users, contentNodeMap } from '@/server/db/schema';
 import { slugify } from '@/lib/utils';
+import { taxonomyRepository } from './taxonomy.repository';
 import type { ARTICLE_STATUS_VALUES, CreateArticleInput, UpdateArticleInput } from '@/schemas/article.schema';
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export interface FindAllOptions {
   status?: (typeof ARTICLE_STATUS_VALUES)[number];
@@ -83,12 +87,85 @@ async function findPublishedBySlug(slug: string) {
 
 async function findPublishedBySlugWithAuthor(slug: string) {
   const [row] = await db
-    .select({ article: articles, author: { name: users.name, image: users.image } })
+    .select({
+      article: articles,
+      author: { id: users.id, name: users.name, image: users.image, college: users.college, degree: users.degree },
+    })
     .from(articles)
     .leftJoin(users, eq(articles.authorId, users.id))
     .where(and(eq(articles.slug, slug), eq(articles.status, 'PUBLISHED'), eq(articles.visibility, 'PUBLIC')))
     .limit(1);
   return row ?? null;
+}
+
+async function findPublishedByAuthor(authorId: string, limit = 6) {
+  return db
+    .select()
+    .from(articles)
+    .where(and(eq(articles.authorId, authorId), eq(articles.status, 'PUBLISHED'), eq(articles.visibility, 'PUBLIC')))
+    .orderBy(desc(articles.updatedAt))
+    .limit(limit);
+}
+
+// Same shape as question.repository's setNodeTag: one explicit leaf node (PRIMARY) plus
+// every ancestor (SUPPLEMENTARY, for "topic and everything under it" queries). Tags the
+// article so the public detail page can find a matching concept-check question and
+// suggested articles that share curriculum ground.
+async function setNodeTags(tx: Tx, articleId: number, nodeId: string | undefined) {
+  await tx.delete(contentNodeMap).where(and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articleId)));
+  if (!nodeId) return;
+
+  const ancestorIds = await taxonomyRepository.getAncestorIds(nodeId);
+  await tx.insert(contentNodeMap).values({ id: randomUUID(), contentType: 'ARTICLE', contentId: articleId, nodeId, relationType: 'PRIMARY' });
+  if (ancestorIds.size > 0) {
+    await tx.insert(contentNodeMap).values(
+      Array.from(ancestorIds).map((id) => ({
+        id: randomUUID(),
+        contentType: 'ARTICLE' as const,
+        contentId: articleId,
+        nodeId: id,
+        relationType: 'SUPPLEMENTARY' as const,
+      }))
+    );
+  }
+}
+
+async function findNodeForArticle(articleId: number) {
+  const [row] = await db
+    .select({ nodeId: contentNodeMap.nodeId })
+    .from(contentNodeMap)
+    .where(and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articleId), eq(contentNodeMap.relationType, 'PRIMARY')))
+    .limit(1);
+  return row ?? null;
+}
+
+// All tagged nodes (leaf + ancestors) — the match set for "same node" concept-check
+// questions and suggested articles, not just the one explicit leaf tag.
+async function findNodeIdsForArticle(articleId: number) {
+  const rows = await db
+    .select({ nodeId: contentNodeMap.nodeId })
+    .from(contentNodeMap)
+    .where(and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articleId)));
+  return rows.map((r) => r.nodeId);
+}
+
+async function findRelatedPublished(nodeIds: string[], excludeId: number, limit = 4) {
+  if (nodeIds.length === 0) return [];
+  return db
+    .selectDistinct({ article: articles })
+    .from(articles)
+    .innerJoin(contentNodeMap, and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articles.id)))
+    .where(
+      and(
+        eq(articles.status, 'PUBLISHED'),
+        eq(articles.visibility, 'PUBLIC'),
+        inArray(contentNodeMap.nodeId, nodeIds),
+        ne(articles.id, excludeId)
+      )
+    )
+    .orderBy(desc(articles.updatedAt))
+    .limit(limit)
+    .then((rows) => rows.map((r) => r.article));
 }
 
 async function ensureUniqueSlug(base: string, excludeId?: number) {
@@ -106,26 +183,32 @@ async function create(input: CreateArticleInput, authorId: string | null) {
   const baseSlug = slugify(input.slug || input.title);
   const slug = await ensureUniqueSlug(baseSlug);
 
-  const [result] = await db.insert(articles).values({
-    title: input.title,
-    slug,
-    summary: input.summary,
-    body: input.body,
-    status: input.status,
-    visibility: input.visibility,
-    articleType: input.articleType,
-    metaTitle: input.metaTitle,
-    metaDescription: input.metaDescription,
-    keywords: input.keywords,
-    ogImage: input.ogImage,
-    authorId,
+  let id = 0;
+  await db.transaction(async (tx) => {
+    const [result] = await tx.insert(articles).values({
+      title: input.title,
+      slug,
+      summary: input.summary,
+      body: input.body,
+      status: input.status,
+      visibility: input.visibility,
+      articleType: input.articleType,
+      metaTitle: input.metaTitle,
+      metaDescription: input.metaDescription,
+      keywords: input.keywords,
+      ogImage: input.ogImage,
+      authorId,
+    });
+    id = result.insertId;
+    if (input.nodeId) await setNodeTags(tx, id, input.nodeId);
   });
 
-  return findById(result.insertId);
+  return findById(id);
 }
 
 async function update(id: number, input: UpdateArticleInput, editorId: string | null = null) {
-  const patch: Partial<typeof articles.$inferInsert> = { ...input, updatedAt: new Date(), updatedBy: editorId ?? undefined };
+  const { nodeId, ...rest } = input;
+  const patch: Partial<typeof articles.$inferInsert> = { ...rest, updatedAt: new Date(), updatedBy: editorId ?? undefined };
 
   if (input.slug || input.title) {
     const current = await findById(id);
@@ -138,7 +221,10 @@ async function update(id: number, input: UpdateArticleInput, editorId: string | 
     }
   }
 
-  await db.update(articles).set(patch).where(eq(articles.id, id));
+  await db.transaction(async (tx) => {
+    await tx.update(articles).set(patch).where(eq(articles.id, id));
+    if (nodeId !== undefined) await setNodeTags(tx, id, nodeId);
+  });
   return findById(id);
 }
 
@@ -160,6 +246,10 @@ export const articleRepository = {
   findPublished,
   findPublishedBySlug,
   findPublishedBySlugWithAuthor,
+  findPublishedByAuthor,
+  findNodeForArticle,
+  findNodeIdsForArticle,
+  findRelatedPublished,
   create,
   update,
   setStatusMany,

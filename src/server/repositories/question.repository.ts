@@ -340,6 +340,21 @@ async function setStatusMany(ids: number[], status: (typeof CONTENT_STATUSES)[nu
   return db.select().from(questions).where(inArray(questions.id, ids));
 }
 
+// Powers the blog detail page's "Concept Check" card — one random published question
+// tagged to any of the given node ids (typically an article's full tag set, leaf +
+// ancestors, so a question pinned to the parent chapter still counts as a match).
+async function findRandomPublishedByNodes(nodeIds: string[]) {
+  if (nodeIds.length === 0) return null;
+  const rows = await db
+    .selectDistinct({ id: questions.id })
+    .from(questions)
+    .innerJoin(contentNodeMap, and(eq(contentNodeMap.contentType, 'QUESTION'), eq(contentNodeMap.contentId, questions.id)))
+    .where(and(eq(questions.status, 'PUBLISHED'), eq(questions.visibility, 'PUBLIC'), inArray(contentNodeMap.nodeId, nodeIds)));
+  if (rows.length === 0) return null;
+  const chosen = rows[Math.floor(Math.random() * rows.length)];
+  return findById(chosen.id);
+}
+
 export const questionRepository = {
   create,
   bulkCreate,
@@ -349,4 +364,5 @@ export const questionRepository = {
   listPublished,
   setPublishStatus,
   setStatusMany,
+  findRandomPublishedByNodes,
 };

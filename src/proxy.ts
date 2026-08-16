@@ -13,6 +13,7 @@ const PUBLIC_PATH_PREFIXES = [
   // Public marketing site — accessible without login, must be indexed by Google
   '/exams',
   '/blogs',
+  '/authors',
   '/about',
   '/contact',
   '/privacy-policy',
