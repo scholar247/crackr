@@ -58,6 +58,44 @@ async function setNodeTag(tx: Tx, questionId: number, nodeId: string | undefined
   }
 }
 
+/**
+ * Like setNodeTag, but for tagging a question to *multiple* explicit nodes at once
+ * (e.g. a question equally relevant to "Probability" and "Permutations", not an
+ * ancestor-descendant pair) — the single-node admin form still only ever calls
+ * setNodeTag; this is purpose-built for bulkCreate, where callers hand over a whole
+ * list of nodes per question. Every given node is PRIMARY; every distinct ancestor
+ * across all of them is SUPPLEMENTARY, minus whatever's already explicitly listed.
+ */
+async function setNodeTags(tx: Tx, questionId: number, nodeIds: string[]) {
+  await tx.delete(contentNodeMap).where(and(eq(contentNodeMap.contentType, 'QUESTION'), eq(contentNodeMap.contentId, questionId)));
+  if (nodeIds.length === 0) return;
+
+  const explicitIds = new Set(nodeIds);
+  const ancestorIds = new Set<string>();
+  for (const nodeId of nodeIds) {
+    const ancestors = await taxonomyRepository.getAncestorIds(nodeId);
+    ancestors.forEach((id) => ancestorIds.add(id));
+  }
+  explicitIds.forEach((id) => ancestorIds.delete(id));
+
+  await tx.insert(contentNodeMap).values([
+    ...nodeIds.map((nodeId) => ({
+      id: randomUUID(),
+      contentType: 'QUESTION' as const,
+      contentId: questionId,
+      nodeId,
+      relationType: 'PRIMARY' as const,
+    })),
+    ...Array.from(ancestorIds).map((nodeId) => ({
+      id: randomUUID(),
+      contentType: 'QUESTION' as const,
+      contentId: questionId,
+      nodeId,
+      relationType: 'SUPPLEMENTARY' as const,
+    })),
+  ]);
+}
+
 async function setExamTags(tx: Tx, questionId: number, examIds: string[]) {
   await tx.delete(contentExamMap).where(and(eq(contentExamMap.contentType, 'QUESTION'), eq(contentExamMap.contentId, questionId)));
   if (examIds.length === 0) return;
@@ -91,6 +129,46 @@ async function create(input: QuestionInput, authorId: string | null) {
     await setExamTags(tx, id, input.examIds);
   });
   return findById(id);
+}
+
+export interface BulkQuestionInput {
+  stem: string;
+  options: QuestionOption[];
+  explanation?: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
+  tags?: string[];
+  // Plural, unlike QuestionInput.nodeId — bulk callers can map one question to several
+  // explicit nodes directly, not just one deepest node with inferred ancestors.
+  nodeIds?: string[];
+  examIds: string[];
+  status?: (typeof CONTENT_STATUSES)[number];
+}
+
+// Sequential, not Promise.all — mirrors the blog bulk-create route's reasoning: each
+// insert is its own transaction, and running many transactions concurrently against the
+// same connection pool has no benefit here while making failures harder to reason about.
+async function bulkCreate(inputs: BulkQuestionInput[], authorId: string | null) {
+  const created = [];
+  for (const input of inputs) {
+    let id = 0;
+    await db.transaction(async (tx) => {
+      const [result] = await tx.insert(questions).values({
+        stem: input.stem,
+        optionsJson: input.options,
+        explanation: input.explanation,
+        difficulty: input.difficulty,
+        tags: input.tags,
+        status: input.status ?? 'DRAFT',
+        visibility: 'PUBLIC',
+        authorId: authorId ?? undefined,
+      });
+      id = result.insertId;
+      await setNodeTags(tx, id, input.nodeIds ?? []);
+      await setExamTags(tx, id, input.examIds);
+    });
+    created.push(await findById(id));
+  }
+  return created;
 }
 
 async function update(id: number, input: Partial<QuestionInput>, editorId: string | null = null) {
@@ -139,7 +217,12 @@ async function findById(id: number) {
   return {
     ...question,
     author,
+    // Kept singular for the existing single-node admin edit form (question-form.tsx),
+    // which only ever reads the first one. primaryNodes (plural) is the full list —
+    // bulkCreate can tag more than one node PRIMARY, which the singular field alone
+    // would silently truncate.
     primaryNode: nodeRows.find((n) => n.relationType === 'PRIMARY') ?? null,
+    primaryNodes: nodeRows.filter((n) => n.relationType === 'PRIMARY'),
     ancestorNodes: nodeRows.filter((n) => n.relationType === 'SUPPLEMENTARY'),
     exams: examRows,
   };
@@ -259,6 +342,7 @@ async function setStatusMany(ids: number[], status: (typeof CONTENT_STATUSES)[nu
 
 export const questionRepository = {
   create,
+  bulkCreate,
   update,
   findById,
   list,

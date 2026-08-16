@@ -1,4 +1,4 @@
-import { asc, eq, and, sql } from 'drizzle-orm';
+import { asc, eq, and, sql, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/mysql-core';
 import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
@@ -128,6 +128,30 @@ async function findNodeBySlug(slug: string) {
 async function findNodeById(id: string) {
   const [row] = await db.select().from(curriculumNodes).where(eq(curriculumNodes.id, id)).limit(1);
   return row ?? null;
+}
+
+export type NodeType = 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SUBTOPIC';
+
+// Flat, filterable public listing of curriculum nodes — complements the nested syllabus
+// tree (getSyllabusTree) with a queryable "just give me all Topics" / "all nodes under
+// this exam" shape. ACTIVE only, same convention as listPublicPrograms/listPublicExams.
+async function listPublicNodes(filters: { nodeType?: NodeType; examId?: string } = {}) {
+  const conditions = [eq(curriculumNodes.status, 'ACTIVE')];
+  if (filters.nodeType) conditions.push(eq(curriculumNodes.nodeType, filters.nodeType));
+
+  if (filters.examId) {
+    const rootIds = await listNodeIdsForExam(filters.examId);
+    const idSet = new Set(rootIds);
+    for (const rootId of rootIds) {
+      const descendants = await getDescendantIds(rootId);
+      descendants.forEach((id) => idSet.add(id));
+    }
+    // Empty sentinel keeps the query valid (inArray([]) would otherwise match nothing
+    // predictably across drivers) when this exam has no mapped syllabus yet.
+    conditions.push(inArray(curriculumNodes.id, idSet.size > 0 ? Array.from(idSet) : ['__none__']));
+  }
+
+  return db.select().from(curriculumNodes).where(and(...conditions)).orderBy(asc(curriculumNodes.name));
 }
 
 // ── exam <-> curriculum_node (genuine many-to-many via exam_node_map) ────────
@@ -386,6 +410,7 @@ export const taxonomyRepository = {
   createExam,
   updateExam,
   listNodes,
+  listPublicNodes,
   listNodesWithParents,
   findNodeBySlug,
   findNodeById,

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { STATUS_COLORS } from '@/lib/utils';
 import { ARTICLE_STATUS_VALUES } from '@/schemas/article.schema';
 import { isAdmin, type UserRole } from '@/lib/roles';
+
+const LIMIT = 50;
+const ALL = 'all';
 
 interface ArticleRow {
   id: number;
@@ -22,18 +25,77 @@ interface ArticleRow {
   updatedAt: string;
 }
 
-async function fetchArticles(): Promise<ArticleRow[]> {
-  const res = await fetch('/api/v1/admin/blog');
+interface ArticlesResponse {
+  data: ArticleRow[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+interface Author {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
+async function fetchArticles(params: URLSearchParams): Promise<ArticlesResponse> {
+  const res = await fetch(`/api/v1/admin/blog?${params}`);
   if (!res.ok) throw new Error('Failed to load articles');
+  return res.json();
+}
+
+async function fetchAuthors(): Promise<Author[]> {
+  const res = await fetch('/api/v1/admin/blog/authors');
+  if (!res.ok) throw new Error('Failed to load authors');
   return (await res.json()).data;
 }
 
 export function BlogListClient({ role }: { role: UserRole }) {
   const canBulkEdit = isAdmin(role);
-  const { data: articles, isLoading, refetch } = useQuery({ queryKey: ['admin-blog'], queryFn: fetchArticles });
+
+  // Default: draft articles only, newest first, 50 per page.
+  const [statusFilter, setStatusFilter] = useState<string>('DRAFT');
+  const [authorFilter, setAuthorFilter] = useState<string>(ALL);
+  const [sort, setSort] = useState<'desc' | 'asc'>('desc');
+  const [page, setPage] = useState(1);
+
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkTarget, setBulkTarget] = useState<(typeof ARTICLE_STATUS_VALUES)[number]>('PUBLISHED');
   const [applying, setApplying] = useState(false);
+
+  const params = new URLSearchParams();
+  if (statusFilter !== ALL) params.set('status', statusFilter);
+  if (authorFilter !== ALL) params.set('authorId', authorFilter);
+  params.set('sort', sort);
+  params.set('page', String(page));
+  params.set('limit', String(LIMIT));
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['admin-blog', statusFilter, authorFilter, sort, page],
+    queryFn: () => fetchArticles(params),
+  });
+  const { data: authors } = useQuery({ queryKey: ['admin-blog-authors'], queryFn: fetchAuthors });
+
+  const articles = data?.data ?? [];
+  const meta = data?.meta;
+
+  function resetPaging() {
+    setPage(1);
+    setSelected(new Set());
+  }
+
+  function handleStatusChange(v: string) {
+    setStatusFilter(v);
+    resetPaging();
+  }
+
+  function handleAuthorChange(v: string) {
+    setAuthorFilter(v);
+    resetPaging();
+  }
+
+  function handleSortChange(v: string) {
+    setSort(v === 'asc' ? 'asc' : 'desc');
+    resetPaging();
+  }
 
   const toggleOne = (id: number) => {
     setSelected((prev) => {
@@ -45,7 +107,7 @@ export function BlogListClient({ role }: { role: UserRole }) {
   };
 
   const toggleAll = () => {
-    setSelected((prev) => (prev.size === articles?.length ? new Set() : new Set(articles?.map((a) => a.id) ?? [])));
+    setSelected((prev) => (prev.size === articles.length ? new Set() : new Set(articles.map((a) => a.id))));
   };
 
   const applyBulkStatus = async () => {
@@ -77,6 +139,52 @@ export function BlogListClient({ role }: { role: UserRole }) {
         </Button>
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <FilterField label="Status">
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All Statuses</SelectItem>
+              {ARTICLE_STATUS_VALUES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s.replace('_', ' ')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterField>
+
+        <FilterField label="Created By">
+          <Select value={authorFilter} onValueChange={handleAuthorChange}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All Authors</SelectItem>
+              {authors?.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name || a.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterField>
+
+        <FilterField label="Sort">
+          <Select value={sort} onValueChange={handleSortChange}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">Newest First</SelectItem>
+              <SelectItem value="asc">Oldest First</SelectItem>
+            </SelectContent>
+          </Select>
+        </FilterField>
+      </div>
+
       {canBulkEdit && selected.size > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/50 p-3">
           <p className="text-sm text-foreground">{selected.size} selected</p>
@@ -103,16 +211,16 @@ export function BlogListClient({ role }: { role: UserRole }) {
 
       <div className="mt-6 divide-y divide-border rounded-lg border border-border">
         {isLoading && <p className="p-4 text-sm text-muted-foreground">Loading…</p>}
-        {!isLoading && articles?.length === 0 && (
-          <p className="p-4 text-sm text-muted-foreground">No articles yet — create your first one.</p>
+        {!isLoading && articles.length === 0 && (
+          <p className="p-4 text-sm text-muted-foreground">No articles match these filters.</p>
         )}
-        {canBulkEdit && articles && articles.length > 0 && (
+        {canBulkEdit && articles.length > 0 && (
           <div className="flex items-center gap-3 bg-muted/30 p-4">
             <Checkbox checked={selected.size === articles.length} onCheckedChange={toggleAll} aria-label="Select all" />
-            <span className="text-sm text-muted-foreground">Select all</span>
+            <span className="text-sm text-muted-foreground">Select all on this page</span>
           </div>
         )}
-        {articles?.map((article) => (
+        {articles.map((article) => (
           <div key={article.id} className="flex items-center gap-3 p-4 transition-colors hover:bg-muted/50">
             {canBulkEdit && (
               <Checkbox checked={selected.has(article.id)} onCheckedChange={() => toggleOne(article.id)} aria-label="Select article" />
@@ -129,6 +237,31 @@ export function BlogListClient({ role }: { role: UserRole }) {
           </div>
         ))}
       </div>
+
+      {meta && meta.total > 0 && (
+        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+          <p>
+            Page {meta.page} of {meta.totalPages} · {meta.total} article{meta.total === 1 ? '' : 's'}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => p - 1)} disabled={meta.page <= 1}>
+              <ChevronLeft className="h-4 w-4" /> Previous
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => p + 1)} disabled={meta.page >= meta.totalPages}>
+              Next <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+      {children}
     </div>
   );
 }
