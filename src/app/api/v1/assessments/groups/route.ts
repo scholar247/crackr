@@ -5,9 +5,11 @@ import { userRepository } from '@/server/repositories/user.repository';
 import { audienceRepository } from '@/server/repositories/audience.repository';
 import { CreateGroupTestSchema } from '@/schemas/group-test.schema';
 import { apiError, apiSuccess } from '@/lib/utils';
+import { canInviteAudience } from '@/lib/roles';
 
 // Any signed-in user can organize a group test — same permissive creator model as
-// self-mocks and challenges (see the plan's "any signed-in user" decision).
+// self-mocks and challenges (see the plan's "any signed-in user" decision). Assigning by
+// user group (audience) is teacher/admin-only though — students only get email invites.
 export async function POST(req: Request) {
   const { session, error } = await requireAuth();
   if (error) return error;
@@ -15,6 +17,10 @@ export async function POST(req: Request) {
   const parsed = CreateGroupTestSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
   const input = parsed.data;
+
+  if ((input.audienceIds?.length ?? 0) > 0 && !canInviteAudience(session!.user.role)) {
+    return apiError('Only teachers and admins can invite by group', 403);
+  }
 
   const exam = await taxonomyRepository.findExamById(input.examId);
   if (!exam || exam.status !== 'ACTIVE') return apiError('Invalid exam', 400);

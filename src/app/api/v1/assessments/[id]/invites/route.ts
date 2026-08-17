@@ -2,7 +2,7 @@ import { requireAuth } from '@/server/auth/require-auth';
 import { assessmentRepository } from '@/server/repositories/assessment.repository';
 import { userRepository } from '@/server/repositories/user.repository';
 import { audienceRepository } from '@/server/repositories/audience.repository';
-import { isAdmin } from '@/lib/roles';
+import { isAdmin, canInviteAudience } from '@/lib/roles';
 import { AddInvitesSchema } from '@/schemas/group-test.schema';
 import { apiError, apiSuccess } from '@/lib/utils';
 
@@ -18,6 +18,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const parsed = AddInvitesSchema.safeParse(await req.json());
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
+
+  if ((parsed.data.audienceIds?.length ?? 0) > 0 && !canInviteAudience(session!.user.role)) {
+    return apiError('Only teachers and admins can invite by group', 403);
+  }
 
   const requestedEmails = Array.from(new Set((parsed.data.emails ?? []).map((e) => e.toLowerCase())));
   const matchedUsers = await userRepository.findManyByEmails(requestedEmails);

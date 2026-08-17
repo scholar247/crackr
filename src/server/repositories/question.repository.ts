@@ -24,6 +24,7 @@ export interface ListQuestionsFilters {
   difficulty?: 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
   search?: string;
   limit?: number;
+  page?: number;
 }
 
 /**
@@ -237,27 +238,43 @@ async function list(filters: ListQuestionsFilters = {}) {
   if (filters.difficulty) conditions.push(eq(questions.difficulty, filters.difficulty));
   if (filters.search) conditions.push(like(questions.stem, `%${filters.search}%`));
   const limit = filters.limit ?? 100;
+  const page = filters.page ?? 1;
+  const offset = (page - 1) * limit;
 
   if (filters.examId) {
-    const rows = await db
-      .selectDistinct({ question: questions, authorName: users.name })
-      .from(questions)
-      .innerJoin(contentExamMap, and(eq(contentExamMap.contentType, 'QUESTION'), eq(contentExamMap.contentId, questions.id)))
-      .leftJoin(users, eq(questions.authorId, users.id))
-      .where(and(eq(contentExamMap.examId, filters.examId), ...conditions))
-      .orderBy(desc(questions.createdAt))
-      .limit(limit);
-    return rows.map((r) => ({ ...r.question, authorName: r.authorName }));
+    const where = and(eq(contentExamMap.examId, filters.examId), ...conditions);
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .selectDistinct({ question: questions, authorName: users.name })
+        .from(questions)
+        .innerJoin(contentExamMap, and(eq(contentExamMap.contentType, 'QUESTION'), eq(contentExamMap.contentId, questions.id)))
+        .leftJoin(users, eq(questions.authorId, users.id))
+        .where(where)
+        .orderBy(desc(questions.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(distinct ${questions.id})` })
+        .from(questions)
+        .innerJoin(contentExamMap, and(eq(contentExamMap.contentType, 'QUESTION'), eq(contentExamMap.contentId, questions.id)))
+        .where(where),
+    ]);
+    return { rows: rows.map((r) => ({ ...r.question, authorName: r.authorName })), total: Number(count) };
   }
 
-  const rows = await db
-    .select({ question: questions, authorName: users.name })
-    .from(questions)
-    .leftJoin(users, eq(questions.authorId, users.id))
-    .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(questions.createdAt))
-    .limit(limit);
-  return rows.map((r) => ({ ...r.question, authorName: r.authorName }));
+  const where = conditions.length ? and(...conditions) : undefined;
+  const [rows, [{ count }]] = await Promise.all([
+    db
+      .select({ question: questions, authorName: users.name })
+      .from(questions)
+      .leftJoin(users, eq(questions.authorId, users.id))
+      .where(where)
+      .orderBy(desc(questions.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(questions).where(where),
+  ]);
+  return { rows: rows.map((r) => ({ ...r.question, authorName: r.authorName })), total: Number(count) };
 }
 
 export type PublishedSort = 'newest' | 'oldest' | 'difficulty_asc' | 'difficulty_desc';

@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 const NAV_LINKS = [
   { href: '/exams', label: 'Exams' },
   { href: '/practice', label: 'Practice' },
+  { href: '/communities', label: 'Communities' },
   { href: '/blogs', label: 'Blog' },
 ];
 

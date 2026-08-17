@@ -24,6 +24,14 @@ export function isSuperAdmin(role: UserRole): boolean {
   return role === 'SUPER_ADMIN';
 }
 
+/**
+ * Group-test/challenge invites: everyone can invite by email, but only teachers and
+ * admins can assign by an existing user group (audience) — students only get email.
+ */
+export function canInviteAudience(role: UserRole): boolean {
+  return meetsMinRole(role, 'TEACHER');
+}
+
 export function defaultDashboardPath(role: UserRole): string {
   switch (role) {
     case 'SUPER_ADMIN':

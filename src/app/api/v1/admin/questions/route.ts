@@ -13,16 +13,19 @@ export async function GET(req: Request) {
   const difficulty = searchParams.get('difficulty') as 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT' | null;
   const search = searchParams.get('search') ?? undefined;
   const limitParam = Number(searchParams.get('limit'));
-  const limit = Number.isInteger(limitParam) && limitParam > 0 ? limitParam : undefined;
+  const limit = Number.isInteger(limitParam) && limitParam > 0 ? limitParam : 10;
+  const pageParam = Number(searchParams.get('page'));
+  const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
 
-  const rows = await questionRepository.list({
+  const { rows, total } = await questionRepository.list({
     examId,
     status: status ?? undefined,
     difficulty: difficulty ?? undefined,
     search,
     limit,
+    page,
   });
-  return apiSuccess(rows);
+  return apiSuccess(rows, { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) });
 }
 
 export async function POST(req: Request) {

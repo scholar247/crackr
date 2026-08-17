@@ -42,7 +42,15 @@ function parseEmails(raw: string): string[] {
   );
 }
 
-export function GroupTestWizard({ examOptions, audienceOptions }: { examOptions: ExamOption[]; audienceOptions: AudienceOption[] }) {
+export function GroupTestWizard({
+  examOptions,
+  audienceOptions,
+  canAssignByGroup,
+}: {
+  examOptions: ExamOption[];
+  audienceOptions: AudienceOption[];
+  canAssignByGroup: boolean;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [examId, setExamId] = useState('');
@@ -179,21 +187,23 @@ export function GroupTestWizard({ examOptions, audienceOptions }: { examOptions:
               {emailsRaw.trim() && <p className="mt-1.5 text-xs text-muted-foreground">{emails.length} valid email{emails.length !== 1 ? 's' : ''} recognized.</p>}
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-5">
-              <Label>Invite an existing group</Label>
-              {audienceOptions.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">No groups yet.</p>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  {audienceOptions.map((a) => (
-                    <label key={a.id} className="flex items-center gap-2 text-sm text-foreground">
-                      <Checkbox checked={selectedAudienceIds.includes(a.id)} onCheckedChange={() => toggleAudience(a.id)} />
-                      {a.name}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+            {canAssignByGroup && (
+              <div className="rounded-xl border border-border bg-card p-5">
+                <Label>Invite an existing group</Label>
+                {audienceOptions.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">No groups yet.</p>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {audienceOptions.map((a) => (
+                      <label key={a.id} className="flex items-center gap-2 text-sm text-foreground">
+                        <Checkbox checked={selectedAudienceIds.includes(a.id)} onCheckedChange={() => toggleAudience(a.id)} />
+                        {a.name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -272,7 +282,8 @@ export function GroupTestWizard({ examOptions, audienceOptions }: { examOptions:
                   {sections.length} section{sections.length !== 1 ? 's' : ''}, {totalQuestions} questions total
                 </li>
                 <li>
-                  {emails.length} email{emails.length !== 1 ? 's' : ''} + {selectedAudienceIds.length} group{selectedAudienceIds.length !== 1 ? 's' : ''} invited
+                  {emails.length} email{emails.length !== 1 ? 's' : ''}
+                  {canAssignByGroup && ` + ${selectedAudienceIds.length} group${selectedAudienceIds.length !== 1 ? 's' : ''}`} invited
                 </li>
               </ul>
             </div>

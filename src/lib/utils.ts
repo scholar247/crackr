@@ -15,6 +15,17 @@ export function slugify(str: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/**
+ * Locale-independent date formatting ("18 Aug 2026") — plain `toLocaleDateString()` with
+ * no locale argument resolves the *runtime's* default locale, which differs between the
+ * Node SSR process and the browser (e.g. server "en-GB" vs browser "en-US"), producing a
+ * React hydration mismatch on any Server Component that renders a date and is then
+ * re-rendered by a client boundary. Pinning the locale here makes server and client agree.
+ */
+export function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 /** Format seconds as mm:ss */
 export function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);

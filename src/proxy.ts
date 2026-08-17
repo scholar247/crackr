@@ -21,6 +21,10 @@ const PUBLIC_PATH_PREFIXES = [
   // Practice is browsable and attemptable without an account — answers just aren't
   // saved for anonymous visitors (practice-browser.tsx only persists when signed in).
   '/practice',
+  // Communities — public browsing of PUBLIC communities/posts/search; pages that need a
+  // session (create, My Hub, notifications, manage members) redirect to /sign-in
+  // themselves (see src/app/(communities)/communities/**), same pattern as /practice.
+  '/communities',
 ];
 
 // Path prefix -> minimum role required to view it.

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 import { isAdmin } from '@/lib/roles';
 import type { UserRole } from '@/lib/roles';
 
@@ -24,6 +25,13 @@ interface QuestionRow {
   difficulty: string;
   status: string;
   authorName: string | null;
+}
+
+interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 const STATUS_VARIANT: Record<string, BadgeProps['variant']> = {
@@ -42,7 +50,10 @@ export function QuestionBankBrowser({ exams, role }: { exams: ExamOption[]; role
   // the full catalog — admins can still switch to another status via the filter above.
   const [status, setStatus] = useState('IN_REVIEW');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkTarget, setBulkTarget] = useState<(typeof BULK_STATUS_VALUES)[number]>('PUBLISHED');
@@ -54,18 +65,29 @@ export function QuestionBankBrowser({ exams, role }: { exams: ExamOption[]; role
     if (examId !== 'all') params.set('examId', examId);
     if (status !== 'all') params.set('status', status);
     if (search) params.set('search', search);
-    params.set('limit', '10');
+    params.set('limit', String(pageSize));
+    params.set('page', String(page));
     const res = await fetch(`/api/v1/admin/questions?${params}`);
     const json = await res.json();
     setQuestions(json.data ?? []);
+    setMeta(json.meta ?? null);
     setSelected(new Set());
     setLoading(false);
-  }, [examId, status, search]);
+  }, [examId, status, search, page, pageSize]);
 
   useEffect(() => {
     const timeout = setTimeout(load, 200); // debounce search keystrokes
     return () => clearTimeout(timeout);
   }, [load]);
+
+  function resetPaging() {
+    setPage(1);
+  }
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size);
+    setPage(1);
+  }
 
   const toggleOne = (id: string) => {
     setSelected((prev) => {
@@ -100,7 +122,13 @@ export function QuestionBankBrowser({ exams, role }: { exams: ExamOption[]; role
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={examId} onValueChange={setExamId}>
+        <Select
+          value={examId}
+          onValueChange={(v) => {
+            setExamId(v);
+            resetPaging();
+          }}
+        >
           <SelectTrigger className="w-64">
             <SelectValue placeholder="All Exams" />
           </SelectTrigger>
@@ -114,7 +142,13 @@ export function QuestionBankBrowser({ exams, role }: { exams: ExamOption[]; role
           </SelectContent>
         </Select>
 
-        <Select value={status} onValueChange={setStatus}>
+        <Select
+          value={status}
+          onValueChange={(v) => {
+            setStatus(v);
+            resetPaging();
+          }}
+        >
           <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
@@ -131,7 +165,10 @@ export function QuestionBankBrowser({ exams, role }: { exams: ExamOption[]; role
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              resetPaging();
+            }}
             placeholder="Search question text…"
             className="pl-9"
           />
@@ -199,6 +236,18 @@ export function QuestionBankBrowser({ exams, role }: { exams: ExamOption[]; role
           </div>
         )}
       </div>
+
+      {meta && (
+        <PaginationBar
+          page={meta.page}
+          totalPages={meta.totalPages}
+          total={meta.total}
+          pageSize={pageSize}
+          itemLabel="question"
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      )}
     </div>
   );
 }

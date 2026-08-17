@@ -4,16 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PaginationBar } from '@/components/ui/pagination-bar';
 import { STATUS_COLORS } from '@/lib/utils';
 import { ARTICLE_STATUS_VALUES } from '@/schemas/article.schema';
 import { isAdmin, type UserRole } from '@/lib/roles';
 
-const LIMIT = 50;
 const ALL = 'all';
 
 interface ArticleRow {

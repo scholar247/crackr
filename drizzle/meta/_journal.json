@@ -64,6 +64,20 @@
       "when": 1786911672130,
       "tag": "0008_robust_dagger",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1786992789125,
+      "tag": "0009_add_communities",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1786998730068,
+      "tag": "0010_lush_iron_fist",
+      "breakpoints": true
     }
   ]
 }

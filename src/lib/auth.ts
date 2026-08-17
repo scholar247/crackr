@@ -9,6 +9,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // Without this, a browser that already has a Google session silently re-authenticates
+      // the same Google account on every sign-in — no chooser shown — so "sign in with a
+      // different account" after signing out of the app appears to silently fail (you're
+      // still the account you were before).
+      authorization: { params: { prompt: 'select_account' } },
     }),
   ],
   session: {

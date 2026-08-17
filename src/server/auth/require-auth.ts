@@ -64,3 +64,21 @@ export async function requireAuth(minRole?: UserRole) {
     isServiceKey: false as const,
   };
 }
+
+/**
+ * Same DB-snapshot re-check as requireAuth(), but for read-only routes that should answer
+ * PUBLIC data to anonymous callers instead of 401ing — never returns an error. A caller
+ * with no/invalid session or a disabled account gets `{ userId: null, role: null }`, which
+ * repository functions treat as "PUBLIC only, no membership" (see
+ * communityRepository.findVisibleToUser/canView). Only for GET routes — every mutating
+ * route stays on requireAuth().
+ */
+export async function optionalAuth(): Promise<{ userId: string | null; role: UserRole | null }> {
+  const session = await auth();
+  if (!session?.user) return { userId: null, role: null };
+
+  const snapshot = await userRepository.getAuthorizationSnapshot(session.user.id);
+  if (!snapshot || snapshot.status === 'DISABLED') return { userId: null, role: null };
+
+  return { userId: session.user.id, role: snapshot.role };
+}
