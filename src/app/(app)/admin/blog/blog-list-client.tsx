@@ -51,11 +51,12 @@ async function fetchAuthors(): Promise<Author[]> {
 export function BlogListClient({ role }: { role: UserRole }) {
   const canBulkEdit = isAdmin(role);
 
-  // Default: draft articles only, newest first, 50 per page.
+  // Default: draft articles only, newest first, 10 per page.
   const [statusFilter, setStatusFilter] = useState<string>('DRAFT');
   const [authorFilter, setAuthorFilter] = useState<string>(ALL);
   const [sort, setSort] = useState<'desc' | 'asc'>('desc');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkTarget, setBulkTarget] = useState<(typeof ARTICLE_STATUS_VALUES)[number]>('PUBLISHED');
@@ -66,10 +67,10 @@ export function BlogListClient({ role }: { role: UserRole }) {
   if (authorFilter !== ALL) params.set('authorId', authorFilter);
   params.set('sort', sort);
   params.set('page', String(page));
-  params.set('limit', String(LIMIT));
+  params.set('limit', String(pageSize));
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-blog', statusFilter, authorFilter, sort, page],
+    queryKey: ['admin-blog', statusFilter, authorFilter, sort, page, pageSize],
     queryFn: () => fetchArticles(params),
   });
   const { data: authors } = useQuery({ queryKey: ['admin-blog-authors'], queryFn: fetchAuthors });
@@ -94,6 +95,11 @@ export function BlogListClient({ role }: { role: UserRole }) {
 
   function handleSortChange(v: string) {
     setSort(v === 'asc' ? 'asc' : 'desc');
+    resetPaging();
+  }
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size);
     resetPaging();
   }
 
@@ -238,20 +244,17 @@ export function BlogListClient({ role }: { role: UserRole }) {
         ))}
       </div>
 
-      {meta && meta.total > 0 && (
-        <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-          <p>
-            Page {meta.page} of {meta.totalPages} · {meta.total} article{meta.total === 1 ? '' : 's'}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setPage((p) => p - 1)} disabled={meta.page <= 1}>
-              <ChevronLeft className="h-4 w-4" /> Previous
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setPage((p) => p + 1)} disabled={meta.page >= meta.totalPages}>
-              Next <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      {meta && (
+        <PaginationBar
+          className="mt-4"
+          page={meta.page}
+          totalPages={meta.totalPages}
+          total={meta.total}
+          pageSize={pageSize}
+          itemLabel="article"
+          onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
+        />
       )}
     </div>
   );
