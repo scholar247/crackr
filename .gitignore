@@ -45,3 +45,4 @@ ship_script.sh
 *.zip
 ../builds/
 .claude
+feed_data/

@@ -1,0 +1,23 @@
+import { requireAuth } from '@/server/auth/require-auth';
+import { assessmentRepository, ASSESSMENT_ERROR_STATUS } from '@/server/repositories/assessment.repository';
+import { isAdmin } from '@/lib/roles';
+import { apiError, apiSuccess } from '@/lib/utils';
+
+// Organizer/admin only — revoke a pending (not-yet-registered) email invite.
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string; inviteId: string }> }) {
+  const { session, error } = await requireAuth();
+  if (error) return error;
+
+  const { id, inviteId } = await params;
+  const assessment = await assessmentRepository.findById(id);
+  if (!assessment) return apiError('Not found', 404);
+  if (assessment.creatorUserId !== session!.user.id && !isAdmin(session!.user.role)) return apiError('Forbidden', 403);
+
+  try {
+    await assessmentRepository.revokePendingInvite(id, inviteId);
+    return apiSuccess({ revoked: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not revoke invite';
+    return apiError(message, ASSESSMENT_ERROR_STATUS[message] ?? 400);
+  }
+}

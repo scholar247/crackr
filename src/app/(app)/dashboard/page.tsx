@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ClipboardList, ArrowRight } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { userRepository } from '@/server/repositories/user.repository';
 import { Button } from '@/components/ui/button';
+import { Card, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -20,6 +21,23 @@ export default async function DashboardPage() {
       <p className="mt-1.5 text-sm text-muted-foreground">
         Your practice, mocks, and progress will show up here as those modules come online.
       </p>
+
+      <Link href="/mocks" className="mt-6 block">
+        <Card>
+          <CardContent className="flex items-center justify-between gap-4 p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <ClipboardList className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Mock tests</CardTitle>
+                <CardDescription>Build a self mock, schedule a group test, or challenge someone to a 1v1.</CardDescription>
+              </div>
+            </div>
+            <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </Link>
 
       {!snapshot?.onboardingCompleted && (
         <div className="mt-6 flex items-start justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">

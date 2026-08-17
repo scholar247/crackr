@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Check, X, Inf
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BlogContent } from '@/components/blog/blog-content';
+import { InlineMarkdown } from '@/components/questions/inline-markdown';
 import { cn } from '@/lib/utils';
 import type { SyllabusNode } from '@/server/repositories/taxonomy.repository';
 
@@ -256,7 +257,7 @@ export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn
                         >
                           <span>
                             <span className="mr-1.5 font-mono text-muted-foreground">{option.key})</span>
-                            {option.text}
+                            <InlineMarkdown content={option.text} />
                           </span>
                           {isSelected && (option.isCorrect ? <Check className="h-4 w-4 text-secondary" /> : <X className="h-4 w-4 text-destructive" />)}
                         </button>

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Check, X, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { BlogContent } from '@/components/blog/blog-content';
+import { InlineMarkdown } from '@/components/questions/inline-markdown';
 import { DIFFICULTY_COLORS, cn } from '@/lib/utils';
 
 interface Option {
@@ -32,7 +34,9 @@ export function ConceptCheckCard({
         <Badge className={cn('ml-auto', DIFFICULTY_COLORS[difficulty])}>{difficulty}</Badge>
       </div>
 
-      <p className="mt-4 text-sm font-medium text-foreground">{stem}</p>
+      <div className="mt-4 text-sm font-medium text-foreground">
+        <BlogContent content={stem} />
+      </div>
 
       <div className="mt-4 space-y-2">
         {options.map((option) => {
@@ -55,7 +59,7 @@ export function ConceptCheckCard({
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-[11px] font-medium">
                 {option.key}
               </span>
-              <span className="flex-1 text-foreground">{option.text}</span>
+              <InlineMarkdown content={option.text} className="flex-1 text-foreground" />
               {showResult && option.isCorrect && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
               {showResult && isSelected && !option.isCorrect && <X className="h-4 w-4 shrink-0 text-destructive" />}
             </button>
@@ -64,7 +68,9 @@ export function ConceptCheckCard({
       </div>
 
       {selected !== null && explanation && (
-        <p className="mt-4 rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">{explanation}</p>
+        <div className="mt-4 rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground">
+          <BlogContent content={explanation} />
+        </div>
       )}
     </div>
   );

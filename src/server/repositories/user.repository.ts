@@ -1,8 +1,9 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
 import { users, authAccounts, userExamTargets, exams, programs } from '@/server/db/schema';
 import { isDuplicateKeyError } from '@/server/db/helpers';
+import { assessmentRepository } from './assessment.repository';
 import type { UserRole } from '@/lib/roles';
 import type { PrepLevel } from '@/lib/prep-level';
 import type { UpdateUserInput } from '@/schemas/user.schema';
@@ -65,6 +66,12 @@ async function provisionGoogleUser(input: ProvisionGoogleUserInput) {
     const id = randomUUID();
     await db.insert(users).values({ id, email: input.email, name: input.name, image: input.image });
     [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+    // A group-test organizer may have invited this email before the person ever signed
+    // up — this converts any such pending invites into real access now that there's a
+    // real account to grant it to. Only worth checking on genuine first-signup, not
+    // every login, since a claimed/revoked invite never becomes claimable again.
+    await assessmentRepository.claimPendingInvitesForEmail(user.id, input.email);
   }
 
   try {
@@ -129,6 +136,21 @@ async function findById(id: string) {
   return row ?? null;
 }
 
+// Lowercases the lookup value — Google's OAuth email claim (the only sign-in path this
+// app has) is itself already lowercase, so this matches how every row actually got
+// written without needing a LOWER() comparison in SQL.
+async function findByEmail(email: string) {
+  const [row] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+  return row ?? null;
+}
+
+// Batch form for group-test invite resolution — one query instead of one per invited
+// email, which matters once an organizer pastes in a few hundred addresses.
+async function findManyByEmails(emails: string[]) {
+  if (emails.length === 0) return [];
+  return db.select().from(users).where(inArray(users.email, emails.map((e) => e.toLowerCase())));
+}
+
 async function listRecent(limit = 10) {
   return db.select().from(users).orderBy(desc(users.createdAt)).limit(limit);
 }
@@ -177,6 +199,8 @@ export const userRepository = {
   getAuthorizationSnapshot,
   completeOnboarding,
   findById,
+  findByEmail,
+  findManyByEmails,
   listRecent,
   update,
   findExamTargetsByUserId,
