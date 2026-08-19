@@ -6,9 +6,11 @@ import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SectionBuilder, emptySection, type SectionDraft } from '@/components/mocks/section-builder';
+import { TagInput } from '@/components/mocks/tag-input';
 import { ASSESSMENT_LIMITS } from '@/lib/assessment-limits';
 
 interface ExamOption {
@@ -25,6 +27,10 @@ export function SelfMockWizard({ examOptions }: { examOptions: ExamOption[] }) {
   const [examId, setExamId] = useState('');
   const [sections, setSections] = useState<SectionDraft[]>([emptySection()]);
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [studentInstructions, setStudentInstructions] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [bannerImage, setBannerImage] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [maxAttempts, setMaxAttempts] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -55,6 +61,10 @@ export function SelfMockWizard({ examOptions }: { examOptions: ExamOption[] }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
+          description: description.trim() || undefined,
+          studentInstructions: studentInstructions.trim() || undefined,
+          tags: tags.length > 0 ? tags : undefined,
+          bannerImage: bannerImage.trim() || undefined,
           examId,
           durationMinutes,
           maxAttempts: maxAttempts ? Number(maxAttempts) : undefined,
@@ -124,49 +134,97 @@ export function SelfMockWizard({ examOptions }: { examOptions: ExamOption[] }) {
         {step === 1 && <SectionBuilder examId={examId} sections={sections} onChange={setSections} />}
 
         {step === 2 && (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <Label htmlFor="wizard-title">Title</Label>
-              <Input id="wizard-title" className="mt-1.5" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`${selectedExam?.name ?? ''} Mock`} />
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="wizard-duration">Duration (minutes)</Label>
-                  <Input
-                    id="wizard-duration"
-                    className="mt-1.5"
-                    type="number"
-                    min={ASSESSMENT_LIMITS.MIN_DURATION_MINUTES}
-                    max={ASSESSMENT_LIMITS.MAX_DURATION_MINUTES}
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                  />
+          <div className="grid gap-4 lg:grid-cols-12">
+            <div className="space-y-4 lg:col-span-8">
+              <div className="rounded-xl border border-border bg-card p-5">
+                <p className="text-sm font-semibold text-foreground">Assessment metadata</p>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <Label htmlFor="wizard-title">Title</Label>
+                    <Input id="wizard-title" className="mt-1.5" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`${selectedExam?.name ?? ''} Mock`} />
+                  </div>
+                  <div>
+                    <Label htmlFor="wizard-description">Description</Label>
+                    <Textarea
+                      id="wizard-description"
+                      className="mt-1.5"
+                      rows={3}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Briefly describe the purpose of this mock…"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="wizard-instructions">Student instructions</Label>
+                    <Textarea
+                      id="wizard-instructions"
+                      className="mt-1.5"
+                      rows={3}
+                      value={studentInstructions}
+                      onChange={(e) => setStudentInstructions(e.target.value)}
+                      placeholder="Enter instructions shown to students before starting…"
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <TagInput tags={tags} onChange={setTags} />
+                    <div>
+                      <Label htmlFor="wizard-banner">Banner image URL</Label>
+                      <Input
+                        id="wizard-banner"
+                        className="mt-1.5"
+                        type="url"
+                        value={bannerImage}
+                        onChange={(e) => setBannerImage(e.target.value)}
+                        placeholder="https://…"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="wizard-max-attempts">Max attempts (optional, blank = unlimited)</Label>
-                  <Input
-                    id="wizard-max-attempts"
-                    className="mt-1.5"
-                    type="number"
-                    min={1}
-                    max={ASSESSMENT_LIMITS.MAX_ATTEMPTS_CAP}
-                    value={maxAttempts}
-                    onChange={(e) => setMaxAttempts(e.target.value)}
-                    placeholder="Unlimited"
-                  />
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-5">
+                <p className="text-sm font-semibold text-foreground">Timing</p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="wizard-duration">Duration (minutes)</Label>
+                    <Input
+                      id="wizard-duration"
+                      className="mt-1.5"
+                      type="number"
+                      min={ASSESSMENT_LIMITS.MIN_DURATION_MINUTES}
+                      max={ASSESSMENT_LIMITS.MAX_DURATION_MINUTES}
+                      value={durationMinutes}
+                      onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="wizard-max-attempts">Max attempts (optional, blank = unlimited)</Label>
+                    <Input
+                      id="wizard-max-attempts"
+                      className="mt-1.5"
+                      type="number"
+                      min={1}
+                      max={ASSESSMENT_LIMITS.MAX_ATTEMPTS_CAP}
+                      value={maxAttempts}
+                      onChange={(e) => setMaxAttempts(e.target.value)}
+                      placeholder="Unlimited"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-muted/30 p-5">
-              <p className="text-sm font-semibold text-foreground">Summary</p>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                <li>Exam: {selectedExam?.name}</li>
-                <li>
-                  {sections.length} section{sections.length !== 1 ? 's' : ''}, {totalQuestions} questions total
-                </li>
-                <li>{durationMinutes} minutes</li>
-              </ul>
+            <div className="lg:col-span-4">
+              <div className="rounded-xl border border-border bg-muted/30 p-5">
+                <p className="text-sm font-semibold text-foreground">Summary</p>
+                <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                  <li>Exam: {selectedExam?.name}</li>
+                  <li>
+                    {sections.length} section{sections.length !== 1 ? 's' : ''}, {totalQuestions} questions total
+                  </li>
+                  <li>{durationMinutes} minutes</li>
+                </ul>
+              </div>
             </div>
           </div>
         )}

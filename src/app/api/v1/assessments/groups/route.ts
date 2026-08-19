@@ -60,6 +60,9 @@ export async function POST(req: Request) {
       endsAt: new Date(input.endsAt),
       organizerUserId: session!.user.id,
       invite: { matchedUserIds: matchedUsers.map((u) => u.id), unmatchedEmails, audienceIds: requestedAudienceIds },
+      studentInstructions: input.studentInstructions,
+      tags: input.tags,
+      bannerImage: input.bannerImage,
     });
     return apiSuccess(
       { ...created, inviteReport: { matched: matchedUsers.length, pending: unmatchedEmails.length, audiences: requestedAudienceIds.length } },

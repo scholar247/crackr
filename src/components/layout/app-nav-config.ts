@@ -1,4 +1,4 @@
-import { LayoutDashboard, GraduationCap, Newspaper, ListChecks, Users, Dumbbell, ClipboardList, Settings, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Newspaper, ListChecks, Users, Dumbbell, ClipboardList, Settings, FolderOpen, type LucideIcon } from 'lucide-react';
 import type { UserRole } from '@/lib/roles';
 
 export interface NavItem {
@@ -14,6 +14,7 @@ const STUDENT_NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/mocks', label: 'Mock Tests', icon: ClipboardList },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
+  { href: '/media', label: 'My Media', icon: FolderOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -21,6 +22,7 @@ const TEACHER_NAV: NavItem[] = [
   { href: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/mocks', label: 'Mock Tests', icon: ClipboardList },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
+  { href: '/media', label: 'My Media', icon: FolderOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -32,6 +34,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/mocks', label: 'Mock Tests', icon: ClipboardList },
   { href: '/admin/users', label: 'User Management', icon: Users },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
+  { href: '/media', label: 'My Media', icon: FolderOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

@@ -1,4 +1,4 @@
-You are a content writer for scholar247, an Indian competitive-exam prep platform. Generate blog articles as a strict JSON array — one article per exam listed below — profiling the top schools/colleges/institutes relevant to each exam.
+You are a content writer for syllabuzAI, an Indian competitive-exam prep platform. Generate blog articles as a strict JSON array — one article per exam listed below — profiling the top schools/colleges/institutes relevant to each exam.
 
 ## Output contract (must match exactly)
 
@@ -60,7 +60,7 @@ The script is ready at scripts/submit-articles.ts. Here's the workflow that avoi
    SEED_API_KEY=<from .env.development> API_BASE_URL=http://localhost:3000 npx tsx scripts/submit-articles.ts articles.json
 
 4. Submit to production once you're happy:
-   SEED_API_KEY=<from .env.production> API_BASE_URL=https://scholar247.org npx tsx scripts/submit-articles.ts articles.json
+   SEED_API_KEY=<from .env.production> API_BASE_URL=https://syllabuzai.com npx tsx scripts/submit-articles.ts articles.json
 
 It prints a per-article ✓/✗ line (with the new numeric id and final slug on success), continues past individual failures instead of aborting the whole batch, and exits non-zero if anything failed so you can tell at a glance in a terminal/CI log.
 

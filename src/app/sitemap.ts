@@ -1,8 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { articleRepository } from '@/server/repositories/article.repository';
 import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://scholar247.org';
+import { SITE_URL as BASE_URL } from '@/lib/site-config';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

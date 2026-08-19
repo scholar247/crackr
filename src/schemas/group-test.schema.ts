@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ASSESSMENT_LIMITS } from '@/lib/assessment-limits';
-import { AssessmentSectionSchema } from './self-mock.schema';
+import { AssessmentMetadataFields, AssessmentSectionSchema } from './self-mock.schema';
 
 export const CreateGroupTestSchema = z
   .object({
@@ -18,6 +18,7 @@ export const CreateGroupTestSchema = z
     endsAt: z.string().min(1),
     emails: z.array(z.email()).max(ASSESSMENT_LIMITS.MAX_INVITES_PER_REQUEST).optional(),
     audienceIds: z.array(z.uuid()).max(ASSESSMENT_LIMITS.MAX_INVITES_PER_REQUEST).optional(),
+    ...AssessmentMetadataFields,
   })
   .refine(
     (data) => {

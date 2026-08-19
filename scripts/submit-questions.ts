@@ -9,7 +9,7 @@
  * into batches automatically — you don't need to pre-split it.
  *
  * Usage:
- *   SEED_API_KEY=xxx API_BASE_URL=https://scholar247.org npx tsx scripts/submit-questions.ts questions.json
+ *   SEED_API_KEY=xxx API_BASE_URL=https://syllabuzai.com npx tsx scripts/submit-questions.ts questions.json
  *   npx tsx scripts/submit-questions.ts questions.json --dry-run   (validates shape, submits nothing)
  *
  * API_BASE_URL defaults to http://localhost:3000 (dev). Point it at your production origin

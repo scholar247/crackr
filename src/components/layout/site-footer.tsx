@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import NextImage from 'next/image';
 import { Mail, MessageCircle, Send, Globe } from 'lucide-react';
+import { Logo } from './logo';
+import { SITE_NAME, SITE_EMAIL } from '@/lib/site-config';
 
 export function SiteFooter() {
   const year = new Date().getFullYear();
@@ -11,7 +12,7 @@ export function SiteFooter() {
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           <div className="col-span-2">
             <Link href="/" className="mb-3 flex shrink-0 items-center">
-              <NextImage src="/logo.svg" alt="scholar247" width={144} height={30} className="dark:invert" />
+              <Logo width={144} height={30} />
             </Link>
             <p className="max-w-sm text-sm text-muted-foreground">
               Learn, practice, progress, crack — the modern toolkit for serious exam preparation.
@@ -27,7 +28,7 @@ export function SiteFooter() {
               <SocialLink href="https://discord.gg" label="Discord">
                 <MessageCircle className="h-4 w-4" />
               </SocialLink>
-              <SocialLink href="mailto:hello@scholar247.org" label="Email">
+              <SocialLink href={`mailto:${SITE_EMAIL}`} label="Email">
                 <Mail className="h-4 w-4" />
               </SocialLink>
             </div>
@@ -47,7 +48,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 md:flex-row">
-          <p className="text-xs text-muted-foreground">© {year} scholar247. All rights reserved.</p>
+          <p className="text-xs text-muted-foreground">© {year} {SITE_NAME}. All rights reserved.</p>
           <p className="text-xs text-muted-foreground">Learn · Practice · Progress · Crack</p>
         </div>
       </div>

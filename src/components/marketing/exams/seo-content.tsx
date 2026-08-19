@@ -1,3 +1,5 @@
+import { SITE_NAME } from '@/lib/site-config';
+
 export function SeoContent() {
   return (
     <section className="bg-muted/40 py-16">
@@ -11,7 +13,7 @@ export function SeoContent() {
             pattern is the crucial first step.
           </p>
           <p>
-            At Scholar247, we provide a structured learning environment. By exploring our detailed exam directories, you
+            At {SITE_NAME}, we provide a structured learning environment. By exploring our detailed exam directories, you
             can track syllabus coverage, review previous-year questions, and practice subject-wise question banks
             organized around each exam&apos;s actual pattern.
           </p>

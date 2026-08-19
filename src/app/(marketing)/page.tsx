@@ -9,9 +9,10 @@ import { MasterConcepts } from '@/components/marketing/home/master-concepts';
 import { PracticeShowcase } from '@/components/marketing/home/practice-showcase';
 import { FrameworkSteps } from '@/components/marketing/home/framework-steps';
 import { CtaBand } from '@/components/marketing/home/cta-band';
+import { SITE_NAME } from '@/lib/site-config';
 
 export const metadata: Metadata = {
-  title: 'scholar247 — Learn, Practice, Progress, Crack Exams',
+  title: `${SITE_NAME} — Learn, Practice, Progress, Crack Exams`,
   description:
     'The smartest way to prepare for competitive exams. Practice curated question banks, follow structured curricula, and track your progress.',
 };

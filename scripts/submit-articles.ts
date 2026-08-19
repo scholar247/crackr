@@ -5,7 +5,7 @@
  * batches without needing this repo's assistant in the loop again.
  *
  * Usage:
- *   SEED_API_KEY=xxx API_BASE_URL=https://scholar247.org npx tsx scripts/submit-articles.ts articles.json
+ *   SEED_API_KEY=xxx API_BASE_URL=https://syllabuzai.com npx tsx scripts/submit-articles.ts articles.json
  *   npx tsx scripts/submit-articles.ts articles.json --dry-run   (validates shape, submits nothing)
  *
  * API_BASE_URL defaults to http://localhost:3000 (dev). Point it at your production

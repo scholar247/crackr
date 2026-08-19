@@ -9,7 +9,7 @@ These endpoints are designed for programmatic bulk ingestion — they are **not*
 
 | Environment | URL |
 |---|---|
-| **Production** | `https://scholar247.org` |
+| **Production** | `https://syllabuzai.com` |
 | Local | `http://localhost:3000` |
 
 ---
@@ -73,7 +73,7 @@ Authorization: Bearer <KEY>
 **curl**
 
 ```bash
-curl -s "https://scholar247.org/api/seed/lookup?type=exams" \
+curl -s "https://syllabuzai.com/api/seed/lookup?type=exams" \
   -H "Authorization: Bearer d846e4f1862433c8d265f459f5264b721c28a93057c9b7949d8a4cf98e7bdb9f" | jq .
 ```
 
@@ -103,7 +103,7 @@ To know which subjects belong to a specific exam, cross-reference the `subjectId
 **curl**
 
 ```bash
-curl -s "https://scholar247.org/api/seed/lookup?type=subjects" \
+curl -s "https://syllabuzai.com/api/seed/lookup?type=subjects" \
   -H "Authorization: Bearer d846e4f1862433c8d265f459f5264b721c28a93057c9b7949d8a4cf98e7bdb9f" | jq .
 ```
 
@@ -156,7 +156,7 @@ Always use the **most specific** (deepest) `topicId` that applies to your MCQ.
 **curl**
 
 ```bash
-curl -s "https://scholar247.org/api/seed/lookup?type=topics&subjectId=<SUBJECT_ID>" \
+curl -s "https://syllabuzai.com/api/seed/lookup?type=topics&subjectId=<SUBJECT_ID>" \
   -H "Authorization: Bearer d846e4f1862433c8d265f459f5264b721c28a93057c9b7949d8a4cf98e7bdb9f" | jq .
 ```
 
@@ -408,7 +408,7 @@ Dedup key: `(slug + subjectId + parentId)`. For a hierarchy, create parents firs
 
 ```bash
 #!/bin/bash
-BASE="https://scholar247.org"
+BASE="https://syllabuzai.com"
 KEY="d846e4f1862433c8d265f459f5264b721c28a93057c9b7949d8a4cf98e7bdb9f"
 AUTH="Authorization: Bearer $KEY"
 

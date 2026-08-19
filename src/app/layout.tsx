@@ -5,6 +5,7 @@ import { Providers } from './providers';
 import { cn } from '@/lib/utils';
 import Script from 'next/script';
 import { GoogleAnalytics } from '@next/third-parties/google';
+import { SITE_NAME, SITE_URL, SITE_TWITTER_HANDLE } from '@/lib/site-config';
 
 const isProd = process.env.NODE_ENV === 'production';
 const gaId = process.env.NEXT_PUBLIC_GA_ID;
@@ -20,16 +21,13 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-jetbrains-mono',
 });
 
-const BASE_URL = 'https://scholar247.org';
-
 export const metadata: Metadata = {
-  metadataBase: new URL(BASE_URL),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Scholar247 — Learn, Practice, Progress, Crack',
-    template: '%s | scholar247',
+    default: `${SITE_NAME} — Learn, Practice, Progress, Crack`,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    'scholar247 is an EdTech platform for practising MCQs, taking mock tests, and tracking your exam preparation progress.',
+  description: `${SITE_NAME} is an EdTech platform for practising MCQs, taking mock tests, and tracking your exam preparation progress.`,
   keywords: ['MCQ', 'practice', 'exam preparation', 'mock test', 'EdTech'],
   alternates: {
     canonical: '/',
@@ -46,14 +44,14 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    siteName: 'scholar247',
+    siteName: SITE_NAME,
     type: 'website',
-    url: BASE_URL,
-    images: [{ url: '/logo.svg', width: 512, height: 512, alt: 'scholar247' }],
+    url: SITE_URL,
+    images: [{ url: '/logo.svg', width: 512, height: 512, alt: SITE_NAME }],
   },
   twitter: {
     card: 'summary',
-    site: '@scholar247',
+    site: SITE_TWITTER_HANDLE,
     images: ['/logo.svg'],
   },
   verification: {

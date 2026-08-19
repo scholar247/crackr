@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 """
-Scholar247 Blog Generator
+syllabuzAI Blog Generator
 ==========================
 Generates educational blog articles for competitive exams using a local LLM via Ollama,
-then saves them as DRAFT blogs via the Scholar247 seed API.
+then saves them as DRAFT blogs via the syllabuzAI seed API.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 RECOMMENDED MODEL (install via Ollama):
@@ -68,7 +68,7 @@ except ImportError:
 
 # ─── Configuration ─────────────────────────────────────────────────────────────
 
-DEFAULT_BASE_URL   = "https://scholar247.org"
+DEFAULT_BASE_URL   = "https://syllabuzai.com"
 DEFAULT_LOCAL_URL  = "http://localhost:3000"
 OLLAMA_BASE        = "http://localhost:11434"
 DEFAULT_MODEL      = "qwen2.5:14b"
@@ -2167,7 +2167,7 @@ def build_blog_payload(metadata: dict, html_content: str, exam_id: str | None,
             "schemaType": "Article",
             "robots": "index,follow",
         },
-        "authorEmail": "seed@scholar247.org",
+        "authorEmail": "seed@syllabuzai.com",
         "authorId": "system-seed",
     }
 
@@ -2288,7 +2288,7 @@ def run_demo(args: argparse.Namespace) -> None:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Scholar247 Blog Generator — generates educational articles via local LLM",
+        description="syllabuzAI Blog Generator — generates educational articles via local LLM",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""
         ─── Entity IDs (all optional — any combination works) ─────────────────────
@@ -2352,7 +2352,7 @@ def parse_args() -> argparse.Namespace:
 
     # API options
     p.add_argument("--base-url",    default=DEFAULT_BASE_URL, dest="base_url",
-                   help=f"Scholar247 API base URL (default: {DEFAULT_BASE_URL})")
+                   help=f"syllabuzAI API base URL (default: {DEFAULT_BASE_URL})")
     p.add_argument("--api-key",     dest="api_key",
                    help="Seed API key (auto-detected from base URL if not set)")
     p.add_argument("--output-dir",  dest="output_dir",
@@ -2373,7 +2373,7 @@ def main() -> None:
 
     tpl_label = args.template if args.template != "auto" else "auto-detect"
     print("═" * 60)
-    print("  Scholar247 Blog Generator")
+    print("  syllabuzAI Blog Generator")
     print(f"  API:      {args.base_url}")
     print(f"  Model:    {args.model}  (Ollama: {args.ollama})")
     print(f"  Template: {tpl_label}")

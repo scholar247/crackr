@@ -21,7 +21,7 @@ async function main() {
   await db.insert(users).values({
     id: DEFAULT_CONTENT_AUTHOR_ID,
     name: 'Scholar',
-    email: 'scholar@scholar247.org',
+    email: 'scholar@syllabuzai.com',
     role: 'ADMIN',
     status: 'ACTIVE',
   });

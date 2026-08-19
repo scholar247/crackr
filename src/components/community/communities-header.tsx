@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import NextImage from 'next/image';
 import { useSession } from 'next-auth/react';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { UserMenu } from '@/components/layout/user-menu';
+import { Logo } from '@/components/layout/logo';
 import { NotificationBell } from '@/components/community/notification-bell';
 import { CommunitySearchBox } from '@/components/community/community-search-box';
 
@@ -28,7 +28,7 @@ export function CommunitiesHeader({ onMenuClick }: { onMenuClick?: () => void })
         </Button>
       )}
       <Link href="/" className="flex shrink-0 items-center">
-        <NextImage src="/logo.svg" alt="scholar247" width={120} height={25} className="dark:invert" />
+        <Logo width={120} height={25} />
       </Link>
 
       <CommunitySearchBox className="hidden max-w-md flex-1 md:block" />

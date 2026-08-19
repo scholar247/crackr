@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import NextImage from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,6 +10,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { ThemeToggle } from './theme-toggle';
 import { UserMenu } from './user-menu';
 import { NAV_BY_ROLE } from './app-nav-config';
+import { Logo } from './logo';
 import type { UserRole } from '@/lib/roles';
 
 function isActive(pathname: string, href: string) {
@@ -52,7 +52,7 @@ export function AppShell({ role, children }: { role: UserRole; children: React.R
       <aside className="hidden w-60 shrink-0 border-r border-border bg-background md:flex md:flex-col">
         <div className="flex h-16 items-center border-b border-border px-4">
           <Link href="/" className="flex shrink-0 items-center">
-            <NextImage src="/logo.svg" alt="scholar247" width={120} height={25} className="dark:invert" />
+            <Logo width={120} height={25} />
           </Link>
         </div>
         <div className="flex-1 overflow-y-auto p-3">
@@ -80,7 +80,7 @@ export function AppShell({ role, children }: { role: UserRole; children: React.R
         <SheetContent side="left" className="flex flex-col p-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <div className="flex h-16 items-center border-b border-border px-4">
-            <NextImage src="/logo.svg" alt="scholar247" width={120} height={25} className="dark:invert" />
+            <Logo width={120} height={25} />
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             <NavLinks role={role} pathname={pathname} onNavigate={() => setMobileOpen(false)} />

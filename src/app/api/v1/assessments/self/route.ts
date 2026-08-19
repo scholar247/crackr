@@ -33,6 +33,9 @@ export async function POST(req: Request) {
       durationSeconds: parsed.data.durationMinutes * 60,
       maxAttempts: parsed.data.maxAttempts ?? null,
       creatorUserId: session!.user.id,
+      studentInstructions: parsed.data.studentInstructions,
+      tags: parsed.data.tags,
+      bannerImage: parsed.data.bannerImage,
     });
     return apiSuccess(created, undefined, 201);
   } catch (err) {

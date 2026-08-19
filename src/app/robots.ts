@@ -1,6 +1,5 @@
 import type { MetadataRoute } from 'next';
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://scholar247.org';
+import { SITE_URL } from '@/lib/site-config';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -11,6 +10,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/admin/', '/api/', '/onboarding', '/dashboard', '/settings', '/sign-in'],
       },
     ],
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { isDuplicateKeyError } from '@/server/db/helpers';
 import {
@@ -13,6 +13,8 @@ import {
   assessmentPendingInvites,
   userAudienceMap,
   users,
+  contentNodeMap,
+  curriculumNodes,
 } from '@/server/db/schema';
 import type { QuestionOption } from '@/server/db/schema/content';
 import { questionRepository } from './question.repository';
@@ -144,6 +146,9 @@ async function createAssessmentWithSections(input: {
   startsAt?: Date;
   endsAt?: Date;
   visibility?: 'PRIVATE' | 'UNLISTED' | 'PUBLIC' | 'RESTRICTED';
+  studentInstructions?: string;
+  tags?: string[];
+  bannerImage?: string;
 }) {
   const pools = await resolveSectionPools(input.examId, input.sections);
   const assessmentId = randomUUID();
@@ -163,6 +168,9 @@ async function createAssessmentWithSections(input: {
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       maxAttempts: input.maxAttempts ?? undefined,
+      studentInstructions: input.studentInstructions,
+      tags: input.tags,
+      bannerImage: input.bannerImage,
     });
 
     let position = 0;
@@ -206,6 +214,9 @@ async function createSelfMock(input: {
   durationSeconds: number;
   maxAttempts?: number | null;
   creatorUserId: string;
+  studentInstructions?: string;
+  tags?: string[];
+  bannerImage?: string;
 }) {
   return createAssessmentWithSections({ ...input, type: 'MOCK', visibility: 'PRIVATE' });
 }
@@ -234,6 +245,9 @@ async function createGroupTest(input: {
   endsAt: Date;
   organizerUserId: string;
   invite: GroupTestInvite;
+  studentInstructions?: string;
+  tags?: string[];
+  bannerImage?: string;
 }) {
   const created = await createAssessmentWithSections({
     type: 'TEST',
@@ -248,6 +262,9 @@ async function createGroupTest(input: {
     startsAt: input.startsAt,
     endsAt: input.endsAt,
     visibility: 'RESTRICTED',
+    studentInstructions: input.studentInstructions,
+    tags: input.tags,
+    bannerImage: input.bannerImage,
   });
   if (!created) throw new Error('NOT_FOUND');
 
@@ -776,6 +793,10 @@ async function getAttemptState(assessmentId: string, attemptId: string, userId: 
         isCorrect: inProgress ? undefined : (response?.isCorrect ?? null),
         marksAwarded: inProgress ? undefined : (response?.marksAwarded ?? null),
         markedForReview: response?.markedForReview ?? false,
+        // Per-question timing — only meaningful once the attempt is no longer live (the
+        // results/summary page's speed-distribution chart), so withheld the same way
+        // isCorrect/marksAwarded are while IN_PROGRESS.
+        timeSpentSeconds: inProgress ? undefined : (response?.timeSpentSeconds ?? null),
       };
     }),
   };
@@ -952,6 +973,223 @@ async function getResultsSummary(assessmentId: string, attemptId: string, userId
   };
 }
 
+// ── Reporting & analytics (organizer/admin) ─────────────────────────────────
+// Everything below aggregates across every participant of a TEST/CHALLENGE assessment —
+// the single-attempt result above (getResultsSummary) stays the one-participant view,
+// this is the many-participant view. All three functions share one definition of
+// "completed" (latest attempt is SUBMITTED or EXPIRED, i.e. not still IN_PROGRESS/
+// ABANDONED) via getCompletedParticipants, so ranking/question-stats/topic-stats can
+// never disagree about who counts.
+
+async function getCompletedParticipants(assessmentId: string) {
+  const { participants } = await listParticipants(assessmentId);
+  return participants.filter(
+    (p): p is typeof p & { attempt: NonNullable<(typeof p)['attempt']> } =>
+      p.attempt !== null && (p.attempt.status === 'SUBMITTED' || p.attempt.status === 'EXPIRED'),
+  );
+}
+
+// Ranked leaderboard + assessment-level aggregates for a TEST/CHALLENGE assessment.
+// Backs both the organizer's enriched participant table and the participant-facing
+// leaderboard — one ranking implementation, not two. Tie-break (score desc, then time
+// taken asc) matches getChallengeComparison's DUET winner rule exactly, so a 1v1
+// challenge and a 2-person group test rank identically for the same inputs.
+async function getAssessmentReport(assessmentId: string) {
+  const assessment = await findById(assessmentId);
+  if (!assessment) throw new Error('NOT_FOUND');
+
+  const [{ count: totalQuestions }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(assessmentQuestions)
+    .where(eq(assessmentQuestions.assessmentId, assessmentId));
+
+  const { participants } = await listParticipants(assessmentId);
+  const completed = await getCompletedParticipants(assessmentId);
+  const attemptIds = completed.map((p) => p.attempt.id);
+
+  const responseCounts = attemptIds.length
+    ? await db
+        .select({ attemptId: attemptResponses.attemptId, isCorrect: attemptResponses.isCorrect, count: sql<number>`count(*)` })
+        .from(attemptResponses)
+        .where(inArray(attemptResponses.attemptId, attemptIds))
+        .groupBy(attemptResponses.attemptId, attemptResponses.isCorrect)
+    : [];
+  const correctByAttempt = new Map<string, number>();
+  const wrongByAttempt = new Map<string, number>();
+  for (const row of responseCounts) {
+    if (row.isCorrect === true) correctByAttempt.set(row.attemptId, row.count);
+    else if (row.isCorrect === false) wrongByAttempt.set(row.attemptId, row.count);
+  }
+
+  const rows = completed.map((p) => {
+    const correct = correctByAttempt.get(p.attempt.id) ?? 0;
+    const wrong = wrongByAttempt.get(p.attempt.id) ?? 0;
+    const attempted = correct + wrong;
+    return {
+      userId: p.userId,
+      name: p.name,
+      email: p.email,
+      attemptId: p.attempt.id,
+      score: Number(p.attempt.score ?? 0),
+      percentage: Number(p.attempt.percentage ?? 0),
+      attempted,
+      correct,
+      wrong,
+      unattempted: Math.max(0, totalQuestions - attempted),
+      accuracy: attempted > 0 ? Number(((correct / attempted) * 100).toFixed(2)) : 0,
+      timeSpentSeconds: p.attempt.timeSpentSeconds ?? 0,
+      status: p.attempt.status,
+    };
+  });
+
+  rows.sort((a, b) => (b.score !== a.score ? b.score - a.score : a.timeSpentSeconds - b.timeSpentSeconds));
+  const ranking = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+
+  const completedCount = ranking.length;
+  const scores = ranking.map((r) => r.score);
+  const sortedScores = [...scores].sort((a, b) => a - b);
+  const averageScore = completedCount ? scores.reduce((a, b) => a + b, 0) / completedCount : 0;
+  const medianScore = completedCount
+    ? completedCount % 2 === 1
+      ? sortedScores[(completedCount - 1) / 2]
+      : (sortedScores[completedCount / 2 - 1] + sortedScores[completedCount / 2]) / 2
+    : 0;
+  const averageAccuracy = completedCount ? ranking.reduce((a, r) => a + r.accuracy, 0) / completedCount : 0;
+
+  return {
+    totalQuestions,
+    participantCount: participants.length,
+    completedCount,
+    averageScore: Number(averageScore.toFixed(2)),
+    medianScore: Number(medianScore.toFixed(2)),
+    highestScore: completedCount ? Math.max(...scores) : 0,
+    lowestScore: completedCount ? Math.min(...scores) : 0,
+    averageAccuracy: Number(averageAccuracy.toFixed(2)),
+    ranking,
+  };
+}
+
+// Per-question correct/wrong/skipped counts across every completed attempt — the
+// "% of participants who got this right" view. skipped = completed attempts that never
+// selected an option for this question (no response row, or a row with no selection).
+async function getQuestionAnalytics(assessmentId: string) {
+  const completed = await getCompletedParticipants(assessmentId);
+  const attemptIds = completed.map((p) => p.attempt.id);
+  const totalCompleted = attemptIds.length;
+
+  const questionRows = await db
+    .select()
+    .from(assessmentQuestions)
+    .where(eq(assessmentQuestions.assessmentId, assessmentId))
+    .orderBy(assessmentQuestions.position);
+
+  const responseCounts = attemptIds.length
+    ? await db
+        .select({ questionId: attemptResponses.questionId, isCorrect: attemptResponses.isCorrect, count: sql<number>`count(*)` })
+        .from(attemptResponses)
+        .where(inArray(attemptResponses.attemptId, attemptIds))
+        .groupBy(attemptResponses.questionId, attemptResponses.isCorrect)
+    : [];
+  const correctByQuestion = new Map<number, number>();
+  const wrongByQuestion = new Map<number, number>();
+  for (const row of responseCounts) {
+    if (row.isCorrect === true) correctByQuestion.set(row.questionId, row.count);
+    else if (row.isCorrect === false) wrongByQuestion.set(row.questionId, row.count);
+  }
+
+  const pct = (n: number) => (totalCompleted ? Number(((n / totalCompleted) * 100).toFixed(1)) : 0);
+
+  const questionStats = questionRows.map((q) => {
+    const snapshot = q.questionSnapshot as QuestionSnapshot;
+    const correct = correctByQuestion.get(q.questionId) ?? 0;
+    const wrong = wrongByQuestion.get(q.questionId) ?? 0;
+    const skipped = Math.max(0, totalCompleted - correct - wrong);
+    return {
+      questionId: q.questionId,
+      position: q.position,
+      stem: snapshot.stem,
+      difficulty: snapshot.difficulty,
+      correct,
+      wrong,
+      skipped,
+      correctPct: pct(correct),
+      wrongPct: pct(wrong),
+      skippedPct: pct(skipped),
+    };
+  });
+
+  const hardestQuestionId = questionStats.length ? [...questionStats].sort((a, b) => a.correctPct - b.correctPct)[0].questionId : null;
+  const mostSkippedQuestionId = questionStats.length ? [...questionStats].sort((a, b) => b.skippedPct - a.skippedPct)[0].questionId : null;
+
+  return { totalCompleted, questions: questionStats, hardestQuestionId, mostSkippedQuestionId };
+}
+
+// Rolls the same per-question correct/wrong counts up by each question's tagged
+// subject/chapter (content_node_map's PRIMARY tag — the exact leaf node the question
+// was tagged with, not the propagated SUPPLEMENTARY ancestor rows question.repository.ts
+// also writes for filtering purposes).
+async function getTopicAnalytics(assessmentId: string) {
+  const completed = await getCompletedParticipants(assessmentId);
+  const attemptIds = completed.map((p) => p.attempt.id);
+  const totalCompleted = attemptIds.length;
+
+  const questionRows = await db.select().from(assessmentQuestions).where(eq(assessmentQuestions.assessmentId, assessmentId));
+  const questionIds = questionRows.map((q) => q.questionId);
+
+  const topicTags = questionIds.length
+    ? await db
+        .select({ questionId: contentNodeMap.contentId, nodeId: contentNodeMap.nodeId, nodeName: curriculumNodes.name })
+        .from(contentNodeMap)
+        .innerJoin(curriculumNodes, eq(curriculumNodes.id, contentNodeMap.nodeId))
+        .where(and(eq(contentNodeMap.contentType, 'QUESTION'), inArray(contentNodeMap.contentId, questionIds), eq(contentNodeMap.relationType, 'PRIMARY')))
+    : [];
+  const topicByQuestion = new Map(topicTags.map((t) => [t.questionId, { nodeId: t.nodeId, nodeName: t.nodeName }]));
+
+  const responseCounts = attemptIds.length
+    ? await db
+        .select({ questionId: attemptResponses.questionId, isCorrect: attemptResponses.isCorrect, count: sql<number>`count(*)` })
+        .from(attemptResponses)
+        .where(inArray(attemptResponses.attemptId, attemptIds))
+        .groupBy(attemptResponses.questionId, attemptResponses.isCorrect)
+    : [];
+  const correctByQuestion = new Map<number, number>();
+  const wrongByQuestion = new Map<number, number>();
+  for (const row of responseCounts) {
+    if (row.isCorrect === true) correctByQuestion.set(row.questionId, row.count);
+    else if (row.isCorrect === false) wrongByQuestion.set(row.questionId, row.count);
+  }
+
+  interface TopicBucket {
+    nodeId: string;
+    nodeName: string;
+    questionCount: number;
+    attempted: number;
+    correct: number;
+  }
+  const byTopic = new Map<string, TopicBucket>();
+  for (const q of questionRows) {
+    const topic = topicByQuestion.get(q.questionId);
+    const key = topic?.nodeId ?? 'untagged';
+    const bucket = byTopic.get(key) ?? { nodeId: key, nodeName: topic?.nodeName ?? 'Untagged', questionCount: 0, attempted: 0, correct: 0 };
+    bucket.questionCount += 1;
+    bucket.attempted += (correctByQuestion.get(q.questionId) ?? 0) + (wrongByQuestion.get(q.questionId) ?? 0);
+    bucket.correct += correctByQuestion.get(q.questionId) ?? 0;
+    byTopic.set(key, bucket);
+  }
+
+  const topics = Array.from(byTopic.values())
+    .map((t) => ({
+      nodeId: t.nodeId,
+      nodeName: t.nodeName,
+      questionCount: t.questionCount,
+      attempted: t.attempted,
+      accuracy: t.attempted > 0 ? Number(((t.correct / t.attempted) * 100).toFixed(1)) : 0,
+    }))
+    .sort((a, b) => b.attempted - a.attempted);
+
+  return { totalCompleted, topics };
+}
+
 async function listMyAttempts(userId: string, filters: { countsTowardProgress?: boolean } = {}) {
   const conditions = [eq(assessmentAttempts.userId, userId)];
   if (filters.countsTowardProgress !== undefined) conditions.push(eq(assessmentAttempts.countsTowardProgress, filters.countsTowardProgress));
@@ -1019,6 +1257,9 @@ export const assessmentRepository = {
   saveResponse,
   submitAttempt,
   getResultsSummary,
+  getAssessmentReport,
+  getQuestionAnalytics,
+  getTopicAnalytics,
   listMyAttempts,
   claimPendingInvitesForEmail,
 };

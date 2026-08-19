@@ -1,3 +1,5 @@
+import { SITE_NAME } from '@/lib/site-config';
+
 const STEPS = [
   { title: 'Choose Exam', description: 'Select your target' },
   { title: 'Learn Concepts', description: 'Study theory & notes' },
@@ -11,7 +13,7 @@ export function FrameworkSteps() {
     <section className="bg-muted/40 py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h2 className="text-headline-lg text-foreground">The Scholar247 Framework</h2>
+          <h2 className="text-headline-lg text-foreground">The {SITE_NAME} Framework</h2>
           <p className="text-body-md mx-auto mt-2 max-w-xl text-muted-foreground">
             A proven, systematic approach to cracking competitive exams.
           </p>

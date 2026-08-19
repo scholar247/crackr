@@ -13,6 +13,7 @@ import { BackToTopButton } from '@/components/blog/back-to-top-button';
 import { extractHeadings } from '@/lib/toc';
 import { calcReadingTime } from '@/lib/reading-time';
 import { cn } from '@/lib/utils';
+import { SITE_URL } from '@/lib/site-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
 
   const { article, author } = row;
   const headings = extractHeadings(article.body);
-  const url = `https://scholar247.org/blogs/${article.slug}`;
+  const url = `${SITE_URL}/blogs/${article.slug}`;
 
   // Curriculum tag (leaf + ancestors) drives both "related ground" queries below — no tag
   // means neither section has anything to match against, so both are skipped rather than

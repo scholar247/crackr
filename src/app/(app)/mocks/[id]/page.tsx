@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Clock, ListChecks, CalendarClock, Users, BarChart3 } from 'lucide-react';
+import { Clock, ListChecks, CalendarClock, Users, BarChart3, Trophy } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { assessmentRepository } from '@/server/repositories/assessment.repository';
 import { userRepository } from '@/server/repositories/user.repository';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StartMockDialog } from '@/components/mocks/start-mock-dialog';
 import { ChallengeControls } from '@/components/mocks/challenge-controls';
+import { CountdownLobby } from '@/components/mocks/countdown-lobby';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,14 +68,34 @@ export default async function MockLobbyPage({ params }: { params: Promise<{ id: 
   const windowNotYetOpen = Boolean(window?.from && now < window.from && !isOrganizer);
   const windowClosed = Boolean(window?.until && now > window.until && !isOrganizer);
 
+  // Pre-start lobby: only meaningful for FIXED-mode group tests, which have a real
+  // future-dated shared startsAt known ahead of time. A CHALLENGE's startsAt is only ever
+  // set by "Start Now" (assessmentRepository.startChallenge sets it to the current
+  // instant, never a future one) — there's no scheduled wait to show a countdown for.
+  const showLobby = assessment.type === 'TEST' && assessment.schedulingMode === 'FIXED' && windowNotYetOpen && Boolean(window?.from);
+  const lobbyParticipantCount = showLobby ? (await assessmentRepository.listParticipants(id)).participants.length : 0;
+
   return (
     <div className="max-w-2xl">
+      {assessment.bannerImage && (
+        // eslint-disable-next-line @next/next/no-img-element -- arbitrary user-supplied URL, not an optimizable local/remote-pattern asset
+        <img src={assessment.bannerImage} alt="" className="mb-4 h-40 w-full rounded-xl border border-border object-cover" />
+      )}
       <div className="flex items-center gap-2">
         <Badge variant="secondary">{assessment.type === 'MOCK' ? 'Self Mock' : assessment.type === 'TEST' ? 'Group Test' : 'Challenge'}</Badge>
         <Badge>{assessment.status}</Badge>
       </div>
       <h1 className="mt-2 text-2xl font-semibold text-foreground">{assessment.title}</h1>
       {assessment.description && <p className="mt-1.5 text-sm text-muted-foreground">{assessment.description}</p>}
+      {assessment.tags && assessment.tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {assessment.tags.map((tag) => (
+            <span key={tag} className="rounded-full border border-border bg-muted px-2.5 py-1 text-label-caps uppercase text-muted-foreground">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <InfoCard icon={Clock} label="Duration" value={assessment.durationSeconds ? `${Math.round(assessment.durationSeconds / 60)} min` : '—'} />
@@ -94,6 +115,13 @@ export default async function MockLobbyPage({ params }: { params: Promise<{ id: 
               {window.until ? new Intl.DateTimeFormat('en-IN', DATE_FORMAT).format(window.until) : 'No end'}
             </p>
           </div>
+        </div>
+      )}
+
+      {assessment.studentInstructions && (
+        <div className="mt-6 rounded-xl border border-border bg-muted/30 p-5">
+          <p className="text-sm font-semibold text-foreground">Instructions</p>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{assessment.studentInstructions}</p>
         </div>
       )}
 
@@ -117,6 +145,13 @@ export default async function MockLobbyPage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
+      {showLobby && window?.from && (
+        <CountdownLobby
+          startsAt={window.from.toISOString()}
+          participantSummary={`${lobbyParticipantCount} participant${lobbyParticipantCount === 1 ? '' : 's'} invited`}
+        />
+      )}
+
       {challengeReadyToPlay && (
         <div className="mt-6 flex flex-wrap items-center gap-3">
           {inProgress ? (
@@ -124,7 +159,7 @@ export default async function MockLobbyPage({ params }: { params: Promise<{ id: 
               <Link href={`/mocks/${id}/room?attempt=${inProgress.id}`}>Resume attempt</Link>
             </Button>
           ) : windowNotYetOpen ? (
-            <Button disabled>Not open yet</Button>
+            showLobby ? null : <Button disabled>Not open yet</Button>
           ) : windowClosed ? (
             <Button disabled>Window closed</Button>
           ) : (
@@ -133,6 +168,13 @@ export default async function MockLobbyPage({ params }: { params: Promise<{ id: 
           {latestCompleted && !(assessment.type === 'CHALLENGE' && bothCompleted) && (
             <Button asChild variant="outline">
               <Link href={`/mocks/${id}/results/${latestCompleted.id}`}>View last results</Link>
+            </Button>
+          )}
+          {assessment.type === 'TEST' && (
+            <Button asChild variant="outline">
+              <Link href={`/mocks/${id}/leaderboard`}>
+                <Trophy className="h-4 w-4" /> Leaderboard
+              </Link>
             </Button>
           )}
           {isOrganizer && assessment.type === 'TEST' && (

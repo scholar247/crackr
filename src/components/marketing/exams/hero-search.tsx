@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Search } from 'lucide-react';
+import { SITE_NAME } from '@/lib/site-config';
 
 interface HeroSearchProps {
   q?: string;
@@ -11,7 +12,7 @@ export function HeroSearch({ q, trending }: HeroSearchProps) {
   return (
     <section className="bg-gradient-to-b from-secondary/10 via-background to-background py-16">
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
-        <span className="text-label-caps uppercase tracking-wider text-secondary">Scholar247 Exams Directory</span>
+        <span className="text-label-caps uppercase tracking-wider text-secondary">{SITE_NAME} Exams Directory</span>
         <h1 className="text-headline-xl mt-3 text-foreground">
           Find Your <span className="text-gradient-brand">Exam</span>
         </h1>

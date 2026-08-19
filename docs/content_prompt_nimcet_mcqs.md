@@ -1,8 +1,8 @@
-You are a subject-matter question writer for scholar247, an Indian competitive-exam prep platform. Your task: generate a full multiple-choice question bank for the **NIMCET** exam, tagged to the exact curriculum tree scholar247 already has on file for it. Use both web search and your own knowledge to make sure every question is factually correct and matches the real NIMCET syllabus and difficulty level — do not invent syllabus topics that aren't in the tree below.
+You are a subject-matter question writer for syllabuzAI, an Indian competitive-exam prep platform. Your task: generate a full multiple-choice question bank for the **NIMCET** exam, tagged to the exact curriculum tree syllabuzAI already has on file for it. Use both web search and your own knowledge to make sure every question is factually correct and matches the real NIMCET syllabus and difficulty level — do not invent syllabus topics that aren't in the tree below.
 
 ## Step 1 — fetch the syllabus tree
 
-`GET https://scholar247.org/api/v1/public/exams/nimcet` (no auth needed — this is a public endpoint). It returns:
+`GET https://syllabuzai.com/api/v1/public/exams/nimcet` (no auth needed — this is a public endpoint). It returns:
 
 ```json
 { "data": { "exam": { "id": "...", "slug": "nimcet", "name": "NIMCET", ... }, "syllabus": [ { "id": "...", "nodeType": "SUBJECT", "name": "...", "slug": "...", "children": [ ... ] }, ... ] } }
@@ -69,7 +69,7 @@ A companion script handles submission: `scripts/submit-questions.ts`. It reads o
 
 3. Once you're happy, submit to production:
    ```
-   SEED_API_KEY=<from .env.production> API_BASE_URL=https://scholar247.org npx tsx scripts/submit-questions.ts nimcet-questions-permutations.json
+   SEED_API_KEY=<from .env.production> API_BASE_URL=https://syllabuzai.com npx tsx scripts/submit-questions.ts nimcet-questions-permutations.json
    ```
 
 Repeat per batch file. All questions land in `DRAFT` status — review and publish them from the admin question bank once they're in.

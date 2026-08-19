@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import NextImage from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { ThemeToggle } from './theme-toggle';
 import { UserMenu } from './user-menu';
+import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -45,7 +45,7 @@ export function MarketingNavbar() {
       <div className="mx-auto grid w-full max-w-7xl grid-cols-3 items-center px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <Link href="/" className="flex shrink-0 items-center">
-            <NextImage src="/logo.svg" alt="scholar247" width={144} height={30} className="dark:invert" priority />
+            <Logo width={144} height={30} priority />
           </Link>
         </div>
 

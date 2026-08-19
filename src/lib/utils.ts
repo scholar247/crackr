@@ -26,6 +26,19 @@ export function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Format a byte count as a human-readable size ("234 KB", "1.2 MB") */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB'];
+  let value = bytes / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  return `${value.toFixed(value < 10 ? 1 : 0)} ${units[unitIndex]}`;
+}
+
 /** Format seconds as mm:ss */
 export function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
