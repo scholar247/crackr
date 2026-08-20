@@ -40,17 +40,6 @@ export function computeExamInitials(name: string, takenInGroup: Set<string>): st
   return initials;
 }
 
-// Illustrative — application-window state isn't tracked in the DB (exams only have an
-// ACTIVE/ARCHIVED lifecycle status, not a deadline). A couple of exceptions for visual
-// variety, everything else defaults to "open."
-export type ExamStatusBadge = 'Applications Open' | 'Coming Soon' | 'Closing Soon';
-export const EXAM_STATUS_BADGES: Record<string, ExamStatusBadge> = {
-  'cuet-ug': 'Coming Soon',
-  'gate-cse': 'Closing Soon',
-  'gate-ece': 'Closing Soon',
-};
-export const DEFAULT_EXAM_STATUS_BADGE: ExamStatusBadge = 'Applications Open';
-
 // Illustrative — eligibility/core-subjects/duration aren't tracked in the DB. Covers the
 // well-known exam slugs also present in EXAM_STATS; anything else falls back to
 // DEFAULT_EXAM_COMPARISON.

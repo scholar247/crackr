@@ -6,6 +6,7 @@ import { apiError, apiSuccess } from '@/lib/utils';
 const UpdateNodeSchema = z.object({
   name: z.string().min(2).max(160).optional(),
   description: z.string().max(1000).optional(),
+  thumbnailUrl: z.url().max(2048).optional(),
   status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
   // Full desired set of parents — a node can have more than one (e.g. Thermodynamics
   // under both Physics and Chemistry). Reconciled (attach/detach), not replaced wholesale

@@ -7,6 +7,7 @@ const UpdateProgramSchema = z.object({
   name: z.string().min(2).max(160).optional(),
   description: z.string().max(500).optional(),
   status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+  thumbnailUrl: z.url().max(2048).optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -7,6 +7,7 @@ const CreateNodeSchema = z.object({
   nodeType: z.enum(['SUBJECT', 'CHAPTER', 'TOPIC', 'SUBTOPIC']),
   name: z.string().min(2).max(160),
   description: z.string().max(1000).optional(),
+  thumbnailUrl: z.url().max(2048).optional(),
   parentNodeId: z.uuid().optional(),
   examId: z.uuid().optional(),
 });

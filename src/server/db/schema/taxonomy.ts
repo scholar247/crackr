@@ -10,6 +10,10 @@ export const programs = mysqlTable(
     name: varchar('name', { length: 160 }).notNull(),
     slug: varchar('slug', { length: 160 }).notNull(),
     description: text('description'),
+    // Not surfaced in any UI yet — reserved for whichever surface needs a program
+    // thumbnail first (e.g. program-browse cards), same URL-only pattern as
+    // communities.bannerImage / assessments.bannerImage.
+    thumbnailUrl: varchar('thumbnail_url', { length: 2048 }),
     status: mysqlEnum('status', ['ACTIVE', 'ARCHIVED']).notNull().default('ACTIVE'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -29,6 +33,9 @@ export const exams = mysqlTable(
     name: varchar('name', { length: 160 }).notNull(),
     slug: varchar('slug', { length: 160 }).notNull(),
     description: text('description'),
+    // Not surfaced in any UI yet — reserved for whichever surface needs an exam
+    // thumbnail first, same URL-only pattern as communities.bannerImage / assessments.bannerImage.
+    thumbnailUrl: varchar('thumbnail_url', { length: 2048 }),
     status: mysqlEnum('status', ['ACTIVE', 'ARCHIVED']).notNull().default('ACTIVE'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -46,6 +53,9 @@ export const curriculumNodes = mysqlTable('curriculum_nodes', {
   name: varchar('name', { length: 160 }).notNull(),
   slug: varchar('slug', { length: 160 }).notNull(),
   description: text('description'),
+  // Not surfaced in any UI yet — reserved for whichever surface needs a subject/chapter
+  // thumbnail first, same URL-only pattern as communities.bannerImage / assessments.bannerImage.
+  thumbnailUrl: varchar('thumbnail_url', { length: 2048 }),
   status: mysqlEnum('status', ['ACTIVE', 'ARCHIVED']).notNull().default('ACTIVE'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

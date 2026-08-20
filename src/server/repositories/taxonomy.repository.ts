@@ -47,16 +47,19 @@ async function findProgramById(id: string) {
   return row ?? null;
 }
 
-async function createProgram(input: { name: string; description?: string }) {
+async function createProgram(input: { name: string; description?: string; thumbnailUrl?: string }) {
   const slug = await ensureUniqueSlug(slugify(input.name), findProgramBySlug);
   const id = randomUUID();
-  await db.insert(programs).values({ id, name: input.name, slug, description: input.description });
+  await db.insert(programs).values({ id, name: input.name, slug, description: input.description, thumbnailUrl: input.thumbnailUrl });
   return findProgramBySlug(slug);
 }
 
 // Slug is deliberately left untouched on edit — simpler and avoids anything else needing
 // to track a slug change; programs don't have their own public detail page today anyway.
-async function updateProgram(id: string, input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED' }) {
+async function updateProgram(
+  id: string,
+  input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED'; thumbnailUrl?: string },
+) {
   await db
     .update(programs)
     .set({ ...input, updatedAt: new Date() })
@@ -93,10 +96,12 @@ async function findExamById(id: string) {
   return row ?? null;
 }
 
-async function createExam(input: { programId: string; name: string; description?: string }) {
+async function createExam(input: { programId: string; name: string; description?: string; thumbnailUrl?: string }) {
   const slug = await ensureUniqueSlug(slugify(input.name), findExamBySlug);
   const id = randomUUID();
-  await db.insert(exams).values({ id, programId: input.programId, name: input.name, slug, description: input.description });
+  await db
+    .insert(exams)
+    .values({ id, programId: input.programId, name: input.name, slug, description: input.description, thumbnailUrl: input.thumbnailUrl });
   return findExamBySlug(slug);
 }
 
@@ -105,7 +110,7 @@ async function createExam(input: { programId: string; name: string; description?
 // defines program->exam as 1-to-many, unlike exam<->curriculum_node below).
 async function updateExam(
   id: string,
-  input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED'; programId?: string },
+  input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED'; programId?: string; thumbnailUrl?: string },
 ) {
   await db
     .update(exams)
@@ -193,12 +198,15 @@ async function createNode(input: {
   nodeType: 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SUBTOPIC';
   name: string;
   description?: string;
+  thumbnailUrl?: string;
   parentNodeId?: string;
   examId?: string;
 }) {
   const slug = await ensureUniqueSlug(slugify(input.name), findNodeBySlug);
   const id = randomUUID();
-  await db.insert(curriculumNodes).values({ id, nodeType: input.nodeType, name: input.name, slug, description: input.description });
+  await db
+    .insert(curriculumNodes)
+    .values({ id, nodeType: input.nodeType, name: input.name, slug, description: input.description, thumbnailUrl: input.thumbnailUrl });
 
   if (input.parentNodeId) {
     await db.insert(curriculumEdges).values({ parentNodeId: input.parentNodeId, childNodeId: id, sortOrder: 0 });
@@ -212,7 +220,10 @@ async function createNode(input: {
 
 // name/description/status only — nodeType stays fixed once created (changing SUBJECT to
 // CHAPTER etc. after the fact would be more likely to corrupt an existing tree than fix one).
-async function updateNode(id: string, input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED' }) {
+async function updateNode(
+  id: string,
+  input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED'; thumbnailUrl?: string },
+) {
   await db
     .update(curriculumNodes)
     .set({ ...input, updatedAt: new Date() })
@@ -304,6 +315,7 @@ interface NodeWithParents {
   name: string;
   slug: string;
   description: string | null;
+  thumbnailUrl: string | null;
   status: string;
   parents: { id: string; name: string }[];
 }

@@ -5,7 +5,7 @@ import { PopularExamsGrid } from './popular-exams-grid';
 
 interface PopularExamsSectionProps {
   exams: ExamCardData[];
-  searchParams: { q?: string; category?: string; program?: string; sort?: string };
+  searchParams: { q?: string; program?: string; sort?: string };
 }
 
 function buildHref(current: PopularExamsSectionProps['searchParams'], overrides: Record<string, string>) {
@@ -30,7 +30,7 @@ export function PopularExamsSection({ exams, searchParams }: PopularExamsSection
           </div>
           <div className="flex items-center gap-4">
             <Link
-              href="#browse-by-category"
+              href="#browse-by-program"
               className="text-label-caps rounded-full border border-border px-4 py-2 uppercase text-muted-foreground transition-colors hover:text-foreground"
             >
               Filters

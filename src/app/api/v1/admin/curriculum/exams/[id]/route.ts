@@ -8,6 +8,7 @@ const UpdateExamSchema = z.object({
   description: z.string().max(500).optional(),
   status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
   programId: z.uuid().optional(),
+  thumbnailUrl: z.url().max(2048).optional(),
   // Full desired set of mapped curriculum nodes — the exam<->node relationship is a
   // genuine many-to-many (exam_node_map), unlike programId above, so this reconciles
   // membership (attach what's missing, detach what's no longer wanted) rather than replace.

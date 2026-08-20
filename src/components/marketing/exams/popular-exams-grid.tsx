@@ -2,21 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
 import type { ExamCardData } from '@/lib/exam-stats';
-import { EXAM_STATUS_BADGES, DEFAULT_EXAM_STATUS_BADGE, type ExamStatusBadge } from '@/lib/exam-stats';
 
 const PAGE_SIZE = 6;
-
-const BADGE_STYLES: Record<ExamStatusBadge, string> = {
-  'Applications Open': 'border-secondary/30 bg-secondary/10 text-secondary',
-  'Coming Soon': 'border-primary/30 bg-primary/10 text-primary',
-  // Solid fill, not a tint: --destructive is a dark red in dark theme (meant to pair with
-  // --destructive-foreground as a background, not sit as standalone text on a dark page),
-  // so a text-destructive-on-tint reads as near-invisible in dark mode. The solid
-  // fill+foreground pairing is guaranteed contrast in both themes.
-  'Closing Soon': 'border-transparent bg-destructive text-destructive-foreground',
-};
 
 // The array is already fully fetched+filtered+sorted server-side — this just reveals more
 // of it locally, no refetch involved.
@@ -48,15 +36,10 @@ export function PopularExamsGrid({ exams }: { exams: ExamCardData[] }) {
 }
 
 function ExamCard({ exam }: { exam: ExamCardData }) {
-  const badge = EXAM_STATUS_BADGES[exam.slug] ?? DEFAULT_EXAM_STATUS_BADGE;
-
   return (
     <div className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground text-body-sm font-semibold text-background">
-          {exam.initials}
-        </div>
-        <span className={cn('text-label-caps rounded-full border px-2.5 py-1 uppercase', BADGE_STYLES[badge])}>{badge}</span>
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground text-body-sm font-semibold text-background">
+        {exam.initials}
       </div>
 
       <h3 className="text-body-lg mt-4 font-semibold text-foreground">{exam.name}</h3>

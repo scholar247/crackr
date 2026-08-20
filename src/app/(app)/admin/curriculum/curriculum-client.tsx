@@ -22,6 +22,7 @@ interface Program {
   name: string;
   slug: string;
   description: string | null;
+  thumbnailUrl: string | null;
   status: TaxonomyStatus;
 }
 interface Exam {
@@ -29,6 +30,7 @@ interface Exam {
   name: string;
   slug: string;
   description: string | null;
+  thumbnailUrl: string | null;
   status: TaxonomyStatus;
   programId: string;
   programName: string;
@@ -39,6 +41,7 @@ interface NodeItem {
   slug: string;
   nodeType: string;
   description: string | null;
+  thumbnailUrl: string | null;
   status: TaxonomyStatus;
   parents: { id: string; name: string }[];
 }
@@ -97,11 +100,13 @@ function ProgramDialog({ program, exams, onClose }: { program: Program; exams: E
   const queryClient = useQueryClient();
   const [name, setName] = useState(program.name);
   const [description, setDescription] = useState(program.description ?? '');
+  const [thumbnailUrl, setThumbnailUrl] = useState(program.thumbnailUrl ?? '');
   const [status, setStatus] = useState<TaxonomyStatus>(program.status);
   const [addExamId, setAddExamId] = useState('');
 
   const save = useMutation({
-    mutationFn: () => patchJson(`/api/v1/admin/curriculum/programs/${program.id}`, { name, description, status }),
+    mutationFn: () =>
+      patchJson(`/api/v1/admin/curriculum/programs/${program.id}`, { name, description, thumbnailUrl: thumbnailUrl || undefined, status }),
     onSuccess: () => {
       toast.success('Program saved');
       queryClient.invalidateQueries({ queryKey: ['admin-programs'] });
@@ -137,6 +142,15 @@ function ProgramDialog({ program, exams, onClose }: { program: Program; exams: E
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What this program covers…" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Thumbnail / banner image URL</Label>
+            <Input
+              type="url"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              placeholder="https://…"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Status</Label>
@@ -197,16 +211,19 @@ function ProgramsTab() {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [editing, setEditing] = useState<Program | null>(null);
   const { data: programs, isLoading } = useQuery({ queryKey: ['admin-programs'], queryFn: () => fetchJson<Program[]>('/api/v1/admin/curriculum/programs') });
   const { data: examList } = useQuery({ queryKey: ['admin-exams'], queryFn: () => fetchJson<Exam[]>('/api/v1/admin/curriculum/exams') });
 
   const create = useMutation({
-    mutationFn: () => postJson('/api/v1/admin/curriculum/programs', { name, description: description || undefined }),
+    mutationFn: () =>
+      postJson('/api/v1/admin/curriculum/programs', { name, description: description || undefined, thumbnailUrl: thumbnailUrl || undefined }),
     onSuccess: () => {
       toast.success('Program created');
       setName('');
       setDescription('');
+      setThumbnailUrl('');
       queryClient.invalidateQueries({ queryKey: ['admin-programs'] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -233,6 +250,16 @@ function ProgramsTab() {
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
             placeholder="Optional — what this program covers…"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="program-thumbnail">Thumbnail / banner image URL</Label>
+          <Input
+            id="program-thumbnail"
+            type="url"
+            value={thumbnailUrl}
+            onChange={(e) => setThumbnailUrl(e.target.value)}
+            placeholder="Optional — https://…"
           />
         </div>
         <Button type="submit" disabled={create.isPending || name.trim().length < 2} className="gap-1.5">
@@ -283,6 +310,7 @@ function ExamDialog({
   const queryClient = useQueryClient();
   const [name, setName] = useState(exam.name);
   const [description, setDescription] = useState(exam.description ?? '');
+  const [thumbnailUrl, setThumbnailUrl] = useState(exam.thumbnailUrl ?? '');
   const [status, setStatus] = useState<TaxonomyStatus>(exam.status);
   const [programId, setProgramId] = useState(exam.programId);
 
@@ -302,6 +330,7 @@ function ExamDialog({
       patchJson(`/api/v1/admin/curriculum/exams/${exam.id}`, {
         name,
         description,
+        thumbnailUrl: thumbnailUrl || undefined,
         status,
         programId,
         nodeIds: checkedNodeIds ? Array.from(checkedNodeIds) : undefined,
@@ -337,6 +366,15 @@ function ExamDialog({
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What this exam is for…" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Thumbnail / banner image URL</Label>
+            <Input
+              type="url"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              placeholder="https://…"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -392,6 +430,7 @@ function ExamsTab() {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [programId, setProgramId] = useState('');
   const [editing, setEditing] = useState<Exam | null>(null);
   const { data: programs } = useQuery({ queryKey: ['admin-programs'], queryFn: () => fetchJson<Program[]>('/api/v1/admin/curriculum/programs') });
@@ -399,11 +438,13 @@ function ExamsTab() {
   const { data: nodes } = useQuery({ queryKey: ['admin-nodes'], queryFn: () => fetchJson<NodeItem[]>('/api/v1/admin/curriculum/nodes') });
 
   const create = useMutation({
-    mutationFn: () => postJson('/api/v1/admin/curriculum/exams', { name, description: description || undefined, programId }),
+    mutationFn: () =>
+      postJson('/api/v1/admin/curriculum/exams', { name, description: description || undefined, thumbnailUrl: thumbnailUrl || undefined, programId }),
     onSuccess: () => {
       toast.success('Exam created');
       setName('');
       setDescription('');
+      setThumbnailUrl('');
       queryClient.invalidateQueries({ queryKey: ['admin-exams'] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -449,6 +490,16 @@ function ExamsTab() {
             placeholder="Optional — what this exam is for…"
           />
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="exam-thumbnail">Thumbnail / banner image URL</Label>
+          <Input
+            id="exam-thumbnail"
+            type="url"
+            value={thumbnailUrl}
+            onChange={(e) => setThumbnailUrl(e.target.value)}
+            placeholder="Optional — https://…"
+          />
+        </div>
         <Button type="submit" disabled={create.isPending || !programId || name.trim().length < 2} className="gap-1.5">
           <Plus className="h-4 w-4" /> Add
         </Button>
@@ -489,6 +540,7 @@ function NodeDialog({ node, nodes, onClose }: { node: NodeItem; nodes: NodeItem[
   const queryClient = useQueryClient();
   const [name, setName] = useState(node.name);
   const [description, setDescription] = useState(node.description ?? '');
+  const [thumbnailUrl, setThumbnailUrl] = useState(node.thumbnailUrl ?? '');
   const [status, setStatus] = useState<TaxonomyStatus>(node.status);
   const [parentIds, setParentIds] = useState<Set<string>>(new Set(node.parents.map((p) => p.id)));
 
@@ -499,6 +551,7 @@ function NodeDialog({ node, nodes, onClose }: { node: NodeItem; nodes: NodeItem[
       patchJson(`/api/v1/admin/curriculum/nodes/${node.id}`, {
         name,
         description,
+        thumbnailUrl: thumbnailUrl || undefined,
         status,
         parentNodeIds: Array.from(parentIds),
       }),
@@ -535,6 +588,15 @@ function NodeDialog({ node, nodes, onClose }: { node: NodeItem; nodes: NodeItem[
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="What this covers…" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Thumbnail / banner image URL</Label>
+            <Input
+              type="url"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              placeholder="https://…"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Status</Label>
@@ -575,6 +637,7 @@ function NodesTab() {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [nodeType, setNodeType] = useState<(typeof NODE_TYPES)[number]>('SUBJECT');
   const [parentNodeId, setParentNodeId] = useState<string>('');
   const [examId, setExamId] = useState<string>('');
@@ -587,6 +650,7 @@ function NodesTab() {
       postJson('/api/v1/admin/curriculum/nodes', {
         name,
         description: description || undefined,
+        thumbnailUrl: thumbnailUrl || undefined,
         nodeType,
         parentNodeId: parentNodeId || undefined,
         examId: examId || undefined,
@@ -595,6 +659,7 @@ function NodesTab() {
       toast.success('Node created');
       setName('');
       setDescription('');
+      setThumbnailUrl('');
       queryClient.invalidateQueries({ queryKey: ['admin-nodes'] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -663,6 +728,16 @@ function NodesTab() {
         <div className="space-y-1.5">
           <Label>Description</Label>
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Optional — what this covers…" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="node-thumbnail">Thumbnail / banner image URL</Label>
+          <Input
+            id="node-thumbnail"
+            type="url"
+            value={thumbnailUrl}
+            onChange={(e) => setThumbnailUrl(e.target.value)}
+            placeholder="Optional — https://…"
+          />
         </div>
         <Button type="submit" disabled={create.isPending || name.trim().length < 2} className="gap-1.5">
           <Plus className="h-4 w-4" /> Add node

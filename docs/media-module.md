@@ -107,7 +107,7 @@ input next to the upload button; leaving it blank auto-derives from the filename
 MEDIA_STORAGE_PROVIDER=local        # "local" | "s3"
 MEDIA_STORAGE_ROOT=./storage        # local only — resolved against process.cwd()
 MEDIA_MAX_FILE_SIZE=5242880         # bytes, default 5 MB
-MEDIA_PUBLIC_ACCESS=false           # true = GET metadata/content is public; false = owner/admin only
+MEDIA_PUBLIC_ACCESS=true            # true = GET metadata/content is public; false = owner/admin only
 MEDIA_ALLOWED_MIME_TYPES=image/jpeg,image/png,...   # comma-separated; "*" disables the allowlist; unset = built-in default list
 
 # S3/R2 (only read once MEDIA_STORAGE_PROVIDER=s3; also accepts the pre-existing
@@ -208,6 +208,18 @@ be a more confusing bug to hit as a user.
 - Delete: owner or admin, always — never affected by `MEDIA_PUBLIC_ACCESS`.
 - Enforced entirely server-side in `media.service.ts` (`canView`/`canDelete`), independent
   of any frontend — matches this repo's `requireAuth`/`optionalAuth` convention.
+
+**`MEDIA_PUBLIC_ACCESS=true` is the current setting in both `.env.development` and
+`.env.production`.** This is deliberately all-or-nothing — there's no per-item
+public/private flag yet — and was chosen because `thumbnailUrl` fields on
+programs/exams/curriculum nodes (see `docs/`... the taxonomy schema) point admins at
+`/api/v1/media/{slug}/content` URLs that need to load on public, unauthenticated marketing
+pages (`/exams`). The tradeoff: every file uploaded through this module is readable by
+anyone with its URL, not just the uploader. Don't use "My Media" for anything sensitive
+(resumes, personal documents) while this flag is on — if that need comes up, the proper
+fix is a per-item `isPublic` column checked alongside this global flag in
+`media.service.ts#canView`, not flipping this back to `false`, which would break every
+thumbnail already in use.
 
 ## Adding a real S3/R2 provider later
 
