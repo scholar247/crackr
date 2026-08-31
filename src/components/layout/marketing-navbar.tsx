@@ -42,7 +42,7 @@ export function MarketingNavbar() {
         showSolidHeader ? 'border-border bg-background/95 backdrop-blur' : 'border-transparent bg-transparent',
       )}
     >
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-3 items-center px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 sm:grid sm:grid-cols-3 sm:justify-normal sm:px-6 lg:px-8">
         <div className="flex items-center">
           <Link href="/" className="flex shrink-0 items-center">
             <Logo width={144} height={30} priority />

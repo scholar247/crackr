@@ -66,6 +66,9 @@ export function AppShell({ role, children }: { role: UserRole; children: React.R
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu className="h-5 w-5" />
           </Button>
+          <Link href="/" className="flex shrink-0 items-center md:hidden">
+            <Logo width={110} height={23} />
+          </Link>
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <UserMenu />
@@ -80,7 +83,9 @@ export function AppShell({ role, children }: { role: UserRole; children: React.R
         <SheetContent side="left" className="flex flex-col p-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <div className="flex h-16 items-center border-b border-border px-4">
-            <Logo width={120} height={25} />
+            <Link href="/" className="flex shrink-0 items-center" onClick={() => setMobileOpen(false)}>
+              <Logo width={120} height={25} />
+            </Link>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             <NavLinks role={role} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
