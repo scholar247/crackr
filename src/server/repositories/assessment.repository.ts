@@ -1280,8 +1280,21 @@ async function getUserProgress(userId: string, type: 'exam' | 'subject' | 'chapt
       group.totalAttempts++;
     }
 
+    // Fetch exam details (name/slug) for grouped exams
+    const examIds = Array.from(grouped.keys()).filter((id) => id !== 'UNKNOWN');
+    let examDetails = new Map<string, { name: string; slug: string }>();
+    if (examIds.length > 0) {
+      const examsData = await db
+        .select({ id: exams.id, name: exams.name, slug: exams.slug })
+        .from(exams)
+        .where(inArray(exams.id, examIds));
+      examDetails = new Map(examsData.map((e) => [e.id, { name: e.name, slug: e.slug }]));
+    }
+
     return Array.from(grouped.values()).map((group) => ({
       examId: group.examId,
+      examName: group.examId ? examDetails.get(group.examId)?.name || 'Unknown Exam' : 'General',
+      examSlug: group.examId ? examDetails.get(group.examId)?.slug || 'unknown' : 'general',
       totalAttempts: group.totalAttempts,
       avgPercentage: group.attempts.reduce((sum, a) => sum + (parseFloat(a.percentage as any) || 0), 0) / group.totalAttempts,
       attempts: group.attempts,

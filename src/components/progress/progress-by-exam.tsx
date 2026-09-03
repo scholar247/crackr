@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface ExamProgress {
   examId: string | null;
+  examName: string;
+  examSlug: string;
   totalAttempts: number;
   avgPercentage: number;
 }
@@ -66,7 +68,7 @@ export function ProgressByExam({ userId }: { userId: string }) {
       {data.map((exam) => (
         <Card key={exam.examId || 'unknown'}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">{exam.examId ? `Exam: ${exam.examId}` : 'General Exam'}</CardTitle>
+            <CardTitle className="text-base">{exam.examName}</CardTitle>
             <CardDescription>{exam.totalAttempts} attempt{exam.totalAttempts !== 1 ? 's' : ''}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">

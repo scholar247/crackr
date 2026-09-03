@@ -65,11 +65,12 @@ async function main() {
 
   console.log(`✓ Found ${allQuestions.length} questions\n`);
 
-  // Create 3 sample mocks
+  // Create 4 sample mocks
   const mockConfigs = [
     { title: 'NIMCET Practice Mock 1', description: 'First practice mock for NIMCET', durationMinutes: 180 },
     { title: 'NIMCET Practice Mock 2', description: 'Second practice mock for NIMCET', durationMinutes: 120 },
     { title: 'NIMCET Full Mock', description: 'Full-length NIMCET mock test', durationMinutes: 200 },
+    { title: 'NIMCET Final Revision Mock', description: 'Final revision mock before exam', durationMinutes: 180 },
   ];
 
   for (const mockConfig of mockConfigs) {
@@ -138,7 +139,7 @@ async function main() {
     console.log(`  ✓ Added ${position} questions to assessment\n`);
 
     // Create 2-3 attempts for this mock with varying scores
-    const attemptCounts = [2, 3, 2];
+    const attemptCounts = [2, 3, 2, 2];
     for (let attemptNum = 0; attemptNum < attemptCounts[mockConfigs.indexOf(mockConfig)]; attemptNum++) {
       const attemptId = randomUUID();
       const score = Math.random() * 30 + 10; // 10-40 marks
@@ -178,9 +179,10 @@ async function main() {
 
   console.log('✅ Seed completed successfully!\n');
   console.log('📊 Sample data created:');
-  console.log(`   • 3 mock tests for user ${TEST_EMAIL}`);
-  console.log('   • 7 total attempts across mocks');
+  console.log(`   • 4 mock tests for user ${TEST_EMAIL}`);
+  console.log('   • 9 total attempts across mocks');
   console.log('   • Varying scores and performance metrics');
+  console.log('   • Multiple exams for comparative analysis');
   console.log('\n🚀 Visit /progress to see the progress tracking dashboard!');
 }
 
