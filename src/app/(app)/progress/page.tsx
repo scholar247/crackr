@@ -1,8 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { auth } from '@/lib/auth';
-import { ProgressByExam } from '@/components/progress/progress-by-exam';
-import { ProgressBySubject } from '@/components/progress/progress-by-subject';
-import { ProgressByChapter } from '@/components/progress/progress-by-chapter';
+import { ProgressTab } from '@/components/progress/progress-tab';
 import { TrendingUp } from 'lucide-react';
 
 export default async function ProgressPage() {
@@ -32,15 +30,15 @@ export default async function ProgressPage() {
         </TabsList>
 
         <TabsContent value="exam" className="space-y-4">
-          <ProgressByExam userId={session.user.id} />
+          <ProgressTab type="exam" />
         </TabsContent>
 
         <TabsContent value="subject" className="space-y-4">
-          <ProgressBySubject userId={session.user.id} />
+          <ProgressTab type="subject" />
         </TabsContent>
 
         <TabsContent value="chapter" className="space-y-4">
-          <ProgressByChapter userId={session.user.id} />
+          <ProgressTab type="chapter" />
         </TabsContent>
       </Tabs>
     </div>

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { isDuplicateKeyError } from '@/server/db/helpers';
 import {
@@ -15,6 +15,7 @@ import {
   users,
   contentNodeMap,
   curriculumNodes,
+  exams,
 } from '@/server/db/schema';
 import type { QuestionOption } from '@/server/db/schema/content';
 import { questionRepository } from './question.repository';
@@ -1232,127 +1233,154 @@ async function claimPendingInvitesForEmail(userId: string, email: string) {
 
 // ── Progress tracking ──
 
-async function getUserProgress(userId: string, type: 'exam' | 'subject' | 'chapter') {
-  // Get all submitted attempts for the user that count toward progress
+export interface ProgressSeriesPoint {
+  // 1-based — "this was your Nth mock touching this exam/subject/chapter," which is
+  // exactly what the progress charts plot on the x-axis (not a calendar timeline).
+  attemptNumber: number;
+  percentage: number;
+  submittedAt: string | null;
+}
+
+export interface ProgressGroup {
+  id: string | null;
+  name: string;
+  /** examSlug for 'exam'; nodeType (SUBJECT/CHAPTER) for 'subject'/'chapter'. */
+  meta: string;
+  totalAttempts: number;
+  avgPercentage: number;
+  bestPercentage: number;
+  latestPercentage: number;
+  trend: 'up' | 'down' | 'flat';
+  series: ProgressSeriesPoint[];
+}
+
+function buildGroupFromSeries(id: string | null, name: string, meta: string, chronological: { percentage: number; submittedAt: Date | null }[]): ProgressGroup {
+  const series = chronological.map((a, i) => ({
+    attemptNumber: i + 1,
+    percentage: a.percentage,
+    submittedAt: a.submittedAt ? a.submittedAt.toISOString() : null,
+  }));
+  const percentages = series.map((s) => s.percentage);
+  const latest = percentages[percentages.length - 1] ?? 0;
+  const prev = percentages[percentages.length - 2];
+  return {
+    id,
+    name,
+    meta,
+    totalAttempts: series.length,
+    avgPercentage: percentages.reduce((sum, p) => sum + p, 0) / percentages.length,
+    bestPercentage: Math.max(...percentages),
+    latestPercentage: latest,
+    trend: prev === undefined ? 'flat' : latest > prev ? 'up' : latest < prev ? 'down' : 'flat',
+    series,
+  };
+}
+
+// Exam-level: the attempt's own overall percentage already means "score for this exam" —
+// no need to touch sections/questions, and critically, no join that could fan out one
+// attempt into several rows (a prior version left-joined assessment_sections here, which
+// silently multiplied totalAttempts by each mock's section count).
+async function getExamProgress(userId: string): Promise<ProgressGroup[]> {
   const attempts = await db
     .select({
-      attemptId: assessmentAttempts.id,
-      assessmentId: assessmentAttempts.assessmentId,
-      score: assessmentAttempts.score,
       percentage: assessmentAttempts.percentage,
-      timeSpentSeconds: assessmentAttempts.timeSpentSeconds,
       submittedAt: assessmentAttempts.submittedAt,
       examId: assessments.examId,
-      assessmentTitle: assessments.title,
-      nodeId: assessmentSections.nodeId,
     })
     .from(assessmentAttempts)
     .innerJoin(assessments, eq(assessments.id, assessmentAttempts.assessmentId))
-    .leftJoin(assessmentSections, eq(assessmentSections.assessmentId, assessments.id))
     .where(and(
       eq(assessmentAttempts.userId, userId),
       eq(assessmentAttempts.status, 'SUBMITTED'),
       eq(assessmentAttempts.countsTowardProgress, true),
     ))
-    .orderBy(desc(assessmentAttempts.submittedAt));
+    .orderBy(asc(assessmentAttempts.submittedAt));
 
-  if (type === 'exam') {
-    // Group by exam
-    const grouped = new Map<string, {
-      examId: string | null;
-      attempts: typeof attempts;
-      avgPercentage: number;
-      totalAttempts: number;
-    }>();
-
-    for (const attempt of attempts) {
-      const examId = attempt.examId || 'UNKNOWN';
-      if (!grouped.has(examId)) {
-        grouped.set(examId, {
-          examId: attempt.examId,
-          attempts: [],
-          avgPercentage: 0,
-          totalAttempts: 0,
-        });
-      }
-      const group = grouped.get(examId)!;
-      group.attempts.push(attempt);
-      group.totalAttempts++;
-    }
-
-    // Fetch exam details (name/slug) for grouped exams
-    const examIds = Array.from(grouped.keys()).filter((id) => id !== 'UNKNOWN');
-    let examDetails = new Map<string, { name: string; slug: string }>();
-    if (examIds.length > 0) {
-      const examsData = await db
-        .select({ id: exams.id, name: exams.name, slug: exams.slug })
-        .from(exams)
-        .where(inArray(exams.id, examIds));
-      examDetails = new Map(examsData.map((e) => [e.id, { name: e.name, slug: e.slug }]));
-    }
-
-    return Array.from(grouped.values()).map((group) => ({
-      examId: group.examId,
-      examName: group.examId ? examDetails.get(group.examId)?.name || 'Unknown Exam' : 'General',
-      examSlug: group.examId ? examDetails.get(group.examId)?.slug || 'unknown' : 'general',
-      totalAttempts: group.totalAttempts,
-      avgPercentage: group.attempts.reduce((sum, a) => sum + (parseFloat(a.percentage as any) || 0), 0) / group.totalAttempts,
-      attempts: group.attempts,
-    }));
-  } else if (type === 'subject') {
-    // Group by nodeId (subject/chapter)
-    const grouped = new Map<string, {
-      nodeId: string | null;
-      attempts: typeof attempts;
-      avgPercentage: number;
-      totalAttempts: number;
-    }>();
-
-    for (const attempt of attempts) {
-      if (!attempt.nodeId) continue;
-      if (!grouped.has(attempt.nodeId)) {
-        grouped.set(attempt.nodeId, {
-          nodeId: attempt.nodeId,
-          attempts: [],
-          avgPercentage: 0,
-          totalAttempts: 0,
-        });
-      }
-      const group = grouped.get(attempt.nodeId)!;
-      group.attempts.push(attempt);
-      group.totalAttempts++;
-    }
-
-    // Fetch node details
-    const nodeIds = Array.from(grouped.keys());
-    let nodeDetails = new Map<string, { name: string; nodeType: string }>();
-    if (nodeIds.length > 0) {
-      const nodes = await db
-        .select({ id: curriculumNodes.id, name: curriculumNodes.name, nodeType: curriculumNodes.nodeType })
-        .from(curriculumNodes)
-        .where(inArray(curriculumNodes.id, nodeIds));
-      nodeDetails = new Map(nodes.map((n) => [n.id, { name: n.name, nodeType: n.nodeType }]));
-    }
-
-    return Array.from(grouped.values()).map((group) => ({
-      nodeId: group.nodeId,
-      nodeName: nodeDetails.get(group.nodeId!)?.name || 'Unknown',
-      nodeType: nodeDetails.get(group.nodeId!)?.nodeType || 'CHAPTER',
-      totalAttempts: group.totalAttempts,
-      avgPercentage: group.attempts.reduce((sum, a) => sum + (parseFloat(a.percentage as any) || 0), 0) / group.totalAttempts,
-      attempts: group.attempts,
-    }));
-  } else {
-    // type === 'chapter' — same as subject for now
-    return Array.from(
-      new Map(attempts.filter((a) => a.nodeId).map((a) => [a.nodeId!, a])).values(),
-    ).map((attempt) => ({
-      nodeId: attempt.nodeId,
-      totalAttempts: 1,
-      avgPercentage: parseFloat(attempt.percentage as any) || 0,
-      attempts: [attempt],
-    }));
+  const byExam = new Map<string, { percentage: number; submittedAt: Date | null }[]>();
+  for (const a of attempts) {
+    const key = a.examId ?? 'UNKNOWN';
+    if (!byExam.has(key)) byExam.set(key, []);
+    byExam.get(key)!.push({ percentage: parseFloat(a.percentage as unknown as string) || 0, submittedAt: a.submittedAt });
   }
+
+  const examIds = Array.from(byExam.keys()).filter((id) => id !== 'UNKNOWN');
+  const examDetails = new Map<string, { name: string; slug: string }>();
+  if (examIds.length > 0) {
+    const rows = await db.select({ id: exams.id, name: exams.name, slug: exams.slug }).from(exams).where(inArray(exams.id, examIds));
+    for (const r of rows) examDetails.set(r.id, { name: r.name, slug: r.slug });
+  }
+
+  return Array.from(byExam.entries()).map(([examId, series]) => {
+    const detail = examId !== 'UNKNOWN' ? examDetails.get(examId) : undefined;
+    return buildGroupFromSeries(examId === 'UNKNOWN' ? null : examId, detail?.name ?? 'Unknown Exam', detail?.slug ?? 'general', series);
+  });
+}
+
+// Subject/chapter-level: an attempt's overall percentage can't be attributed to any one
+// subject (a mock mixing Maths + CS sections might be acing Maths and failing CS) — the
+// only accurate source is per-question scoring, rolled up by the section's curriculum
+// node. Matches curriculumNodes.nodeType exactly (SUBJECT vs CHAPTER), so a node only
+// shows up in the tab it actually belongs to instead of a fabricated "Chapter N" label.
+async function getNodeProgress(userId: string, nodeType: 'SUBJECT' | 'CHAPTER'): Promise<ProgressGroup[]> {
+  const rows = await db
+    .select({
+      attemptId: assessmentAttempts.id,
+      submittedAt: assessmentAttempts.submittedAt,
+      nodeId: assessmentSections.nodeId,
+      marksAwarded: attemptResponses.marksAwarded,
+      marks: assessmentQuestions.marks,
+    })
+    .from(assessmentAttempts)
+    .innerJoin(attemptResponses, eq(attemptResponses.attemptId, assessmentAttempts.id))
+    .innerJoin(
+      assessmentQuestions,
+      and(eq(assessmentQuestions.assessmentId, assessmentAttempts.assessmentId), eq(assessmentQuestions.questionId, attemptResponses.questionId))
+    )
+    .innerJoin(assessmentSections, eq(assessmentSections.id, assessmentQuestions.sectionId))
+    .where(and(
+      eq(assessmentAttempts.userId, userId),
+      eq(assessmentAttempts.status, 'SUBMITTED'),
+      eq(assessmentAttempts.countsTowardProgress, true),
+    ));
+
+  // Roll up per (attempt, node) first — one attempt can touch a node through several
+  // questions, and we want one score per node per mock, not one row per question.
+  const byAttemptNode = new Map<string, { nodeId: string; submittedAt: Date | null; scored: number; max: number }>();
+  for (const r of rows) {
+    if (!r.nodeId) continue; // section pulls "from anywhere in the exam" — not attributable to one node
+    const key = `${r.attemptId}:${r.nodeId}`;
+    if (!byAttemptNode.has(key)) byAttemptNode.set(key, { nodeId: r.nodeId, submittedAt: r.submittedAt, scored: 0, max: 0 });
+    const entry = byAttemptNode.get(key)!;
+    entry.scored += Number(r.marksAwarded) || 0;
+    entry.max += Number(r.marks) || 0;
+  }
+
+  // Then group those per-mock node scores by node, chronologically, for the trend series.
+  const byNode = new Map<string, { percentage: number; submittedAt: Date | null }[]>();
+  for (const entry of byAttemptNode.values()) {
+    if (entry.max <= 0) continue;
+    if (!byNode.has(entry.nodeId)) byNode.set(entry.nodeId, []);
+    byNode.get(entry.nodeId)!.push({ percentage: (entry.scored / entry.max) * 100, submittedAt: entry.submittedAt });
+  }
+  for (const series of byNode.values()) series.sort((a, b) => (a.submittedAt?.getTime() ?? 0) - (b.submittedAt?.getTime() ?? 0));
+
+  const nodeIds = Array.from(byNode.keys());
+  if (nodeIds.length === 0) return [];
+
+  const nodes = await db
+    .select({ id: curriculumNodes.id, name: curriculumNodes.name, nodeType: curriculumNodes.nodeType })
+    .from(curriculumNodes)
+    .where(inArray(curriculumNodes.id, nodeIds));
+  const nodeDetails = new Map(nodes.map((n) => [n.id, { name: n.name, nodeType: n.nodeType }]));
+
+  return Array.from(byNode.entries())
+    .filter(([nodeId]) => nodeDetails.get(nodeId)?.nodeType === nodeType)
+    .map(([nodeId, series]) => buildGroupFromSeries(nodeId, nodeDetails.get(nodeId)!.name, nodeType, series));
+}
+
+async function getUserProgress(userId: string, type: 'exam' | 'subject' | 'chapter'): Promise<ProgressGroup[]> {
+  if (type === 'exam') return getExamProgress(userId);
+  return getNodeProgress(userId, type === 'subject' ? 'SUBJECT' : 'CHAPTER');
 }
 
 export const assessmentRepository = {
