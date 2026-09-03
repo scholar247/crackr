@@ -8,7 +8,7 @@
 
 import { randomUUID } from 'crypto';
 import { db } from '@/server/db/client';
-import { users, exams, curriculumNodes, assessments, assessmentSections, assessmentQuestions, assessmentAttempts, attemptResponses, questions } from '@/server/db/schema';
+import { users, exams, curriculumNodes, examNodeMap, assessments, assessmentSections, assessmentQuestions, assessmentAttempts, attemptResponses } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 const TEST_EMAIL = 'shivam.anuj.pradhan@gmail.com';
@@ -17,7 +17,7 @@ async function main() {
   console.log('🌱 Seeding progress mocks...\n');
 
   // Find or create the test user
-  let user = await db.query.users.findFirst({
+  const user = await db.query.users.findFirst({
     where: eq(users.email, TEST_EMAIL),
   });
 
@@ -40,11 +40,15 @@ async function main() {
 
   console.log(`✓ Found exam: ${nimcetExam.name}`);
 
-  // Get some nodes (subjects/chapters)
-  const nodes = await db.query.curriculumNodes.findMany({
-    where: eq(curriculumNodes.examId, nimcetExam.id),
-    limit: 5,
-  });
+  // Get some nodes (subjects/chapters) — curriculumNodes has no examId column; the
+  // exam <-> node relationship lives in the exam_node_map join table.
+  const examNodeRows = await db
+    .select({ node: curriculumNodes })
+    .from(examNodeMap)
+    .innerJoin(curriculumNodes, eq(curriculumNodes.id, examNodeMap.nodeId))
+    .where(eq(examNodeMap.examId, nimcetExam.id))
+    .limit(5);
+  const nodes = examNodeRows.map((r) => r.node);
 
   if (nodes.length === 0) {
     console.error('❌ No curriculum nodes found. Please create curriculum structure first.');
@@ -103,9 +107,10 @@ async function main() {
         nodeId: nodes[i].id,
         position: i,
         questionCount: 10,
-        difficulty: ['EASY', 'MEDIUM', 'HARD'][i % 3] as any,
-        defaultMarks: 1,
-        defaultNegativeMarks: 0.25,
+        difficulty: ['EASY', 'MEDIUM', 'HARD'][i % 3] as 'EASY' | 'MEDIUM' | 'HARD',
+        // decimal columns are typed as strings by drizzle, not numbers.
+        defaultMarks: '1',
+        defaultNegativeMarks: '0.25',
       });
       sectionIds.push(sectionId);
       console.log(`    ✓ Section created: ${nodes[i].name}`);
@@ -123,8 +128,8 @@ async function main() {
           questionId: question.id,
           sectionId: sectionIds[sectionIdx],
           position,
-          marks: 1,
-          negativeMarks: 0.25,
+          marks: '1',
+          negativeMarks: '0.25',
           questionSnapshot: {
             stem: question.stem,
             options: question.optionsJson,
