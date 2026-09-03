@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { assessmentRepository } from '@/server/repositories/assessment.repository';
-import { apiError, apiSuccess } from '@/server/api/helpers';
+import { apiError, apiSuccess } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
