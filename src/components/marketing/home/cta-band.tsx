@@ -10,7 +10,8 @@ export function CtaBand() {
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
         <h2 className="text-headline-lg">Start Preparing Smarter Today</h2>
         <p className="text-body-md mt-3 text-background/70">
-          Join thousands of students who have transformed their preparation strategy. Stop guessing, start measuring.
+          Structured theory, real practice, and mocks that tell you exactly where you stand. Stop guessing, start
+          measuring.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

@@ -1,4 +1,4 @@
-import { LayoutDashboard, GraduationCap, Newspaper, ListChecks, Users, Dumbbell, ClipboardList, Settings, FolderOpen, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Newspaper, ListChecks, Users, Dumbbell, ClipboardList, Settings, FolderOpen, TrendingUp, type LucideIcon } from 'lucide-react';
 import type { UserRole } from '@/lib/roles';
 
 export interface NavItem {
@@ -12,6 +12,7 @@ export interface NavItem {
 // main nav (see communities-header.tsx) instead of this sidebar.
 const STUDENT_NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/progress', label: 'Progress', icon: TrendingUp },
   { href: '/mocks', label: 'Mock Tests', icon: ClipboardList },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
   { href: '/media', label: 'My Media', icon: FolderOpen },
@@ -20,6 +21,7 @@ const STUDENT_NAV: NavItem[] = [
 
 const TEACHER_NAV: NavItem[] = [
   { href: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/progress', label: 'Progress', icon: TrendingUp },
   { href: '/mocks', label: 'Mock Tests', icon: ClipboardList },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
   { href: '/media', label: 'My Media', icon: FolderOpen },

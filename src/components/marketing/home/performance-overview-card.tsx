@@ -3,6 +3,9 @@ import { Activity, TrendingDown, CheckCircle2 } from 'lucide-react';
 // Illustrative dashboard mockup for the hero — no live data, purely a visual
 // stand-in showing "what the product feels like" (mirrors QuizPreviewCard's role
 // as a static mockup, just for the analytics side of the product instead of MCQs).
+// Explicitly labeled "Sample report" in the UI (not just in this comment) so it reads as a
+// feature preview, not a claimed platform-wide stat — a prior version showed these numbers
+// unlabeled, which read as a real (and unverifiable) accuracy claim.
 const BAR_HEIGHTS = [40, 65, 30, 90, 55];
 
 export function PerformanceOverviewCard() {
@@ -10,8 +13,8 @@ export function PerformanceOverviewCard() {
     <div className="relative rounded-2xl border border-border bg-card/80 p-6 shadow-2xl backdrop-blur-xl">
       <div className="mb-5 flex items-center justify-between border-b border-border pb-4">
         <div>
-          <p className="text-body-md font-semibold text-foreground">Performance Overview</p>
-          <p className="text-body-sm text-muted-foreground">Last 30 Days</p>
+          <p className="text-body-md font-semibold text-foreground">Sample Performance Report</p>
+          <p className="text-body-sm text-muted-foreground">What you&apos;ll see after a mock</p>
         </div>
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Activity className="h-4 w-4" />
@@ -49,8 +52,8 @@ export function PerformanceOverviewCard() {
       <div className="absolute -bottom-4 -left-4 flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 shadow-lg">
         <CheckCircle2 className="h-4 w-4 text-secondary" />
         <div>
-          <p className="text-body-sm font-medium text-foreground">Mock Test Completed</p>
-          <p className="text-[11px] text-muted-foreground">Rank 42/500</p>
+          <p className="text-body-sm font-medium text-foreground">Sample: Mock Test Completed</p>
+          <p className="text-[11px] text-muted-foreground">Rank shown after every mock</p>
         </div>
       </div>
     </div>

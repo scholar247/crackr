@@ -1230,6 +1230,118 @@ async function claimPendingInvitesForEmail(userId: string, email: string) {
   });
 }
 
+// ── Progress tracking ──
+
+async function getUserProgress(userId: string, type: 'exam' | 'subject' | 'chapter') {
+  // Get all submitted attempts for the user that count toward progress
+  const attempts = await db
+    .select({
+      attemptId: assessmentAttempts.id,
+      assessmentId: assessmentAttempts.assessmentId,
+      score: assessmentAttempts.score,
+      percentage: assessmentAttempts.percentage,
+      timeSpentSeconds: assessmentAttempts.timeSpentSeconds,
+      submittedAt: assessmentAttempts.submittedAt,
+      examId: assessments.examId,
+      assessmentTitle: assessments.title,
+      nodeId: assessmentSections.nodeId,
+    })
+    .from(assessmentAttempts)
+    .innerJoin(assessments, eq(assessments.id, assessmentAttempts.assessmentId))
+    .leftJoin(assessmentSections, eq(assessmentSections.assessmentId, assessments.id))
+    .where(and(
+      eq(assessmentAttempts.userId, userId),
+      eq(assessmentAttempts.status, 'SUBMITTED'),
+      eq(assessmentAttempts.countsTowardProgress, true),
+    ))
+    .orderBy(desc(assessmentAttempts.submittedAt));
+
+  if (type === 'exam') {
+    // Group by exam
+    const grouped = new Map<string, {
+      examId: string | null;
+      attempts: typeof attempts;
+      avgPercentage: number;
+      totalAttempts: number;
+    }>();
+
+    for (const attempt of attempts) {
+      const examId = attempt.examId || 'UNKNOWN';
+      if (!grouped.has(examId)) {
+        grouped.set(examId, {
+          examId: attempt.examId,
+          attempts: [],
+          avgPercentage: 0,
+          totalAttempts: 0,
+        });
+      }
+      const group = grouped.get(examId)!;
+      group.attempts.push(attempt);
+      group.totalAttempts++;
+    }
+
+    return Array.from(grouped.values()).map((group) => ({
+      examId: group.examId,
+      totalAttempts: group.totalAttempts,
+      avgPercentage: group.attempts.reduce((sum, a) => sum + (parseFloat(a.percentage as any) || 0), 0) / group.totalAttempts,
+      attempts: group.attempts,
+    }));
+  } else if (type === 'subject') {
+    // Group by nodeId (subject/chapter)
+    const grouped = new Map<string, {
+      nodeId: string | null;
+      attempts: typeof attempts;
+      avgPercentage: number;
+      totalAttempts: number;
+    }>();
+
+    for (const attempt of attempts) {
+      if (!attempt.nodeId) continue;
+      if (!grouped.has(attempt.nodeId)) {
+        grouped.set(attempt.nodeId, {
+          nodeId: attempt.nodeId,
+          attempts: [],
+          avgPercentage: 0,
+          totalAttempts: 0,
+        });
+      }
+      const group = grouped.get(attempt.nodeId)!;
+      group.attempts.push(attempt);
+      group.totalAttempts++;
+    }
+
+    // Fetch node details
+    const nodeIds = Array.from(grouped.keys());
+    let nodeDetails = new Map<string, { name: string; nodeType: string }>();
+    if (nodeIds.length > 0) {
+      const nodes = await db
+        .select({ id: curriculumNodes.id, name: curriculumNodes.name, nodeType: curriculumNodes.nodeType })
+        .from(curriculumNodes)
+        .where(inArray(curriculumNodes.id, nodeIds));
+      nodeDetails = new Map(nodes.map((n) => [n.id, { name: n.name, nodeType: n.nodeType }]));
+    }
+
+    return Array.from(grouped.values()).map((group) => ({
+      nodeId: group.nodeId,
+      nodeName: nodeDetails.get(group.nodeId!)?.name || 'Unknown',
+      nodeType: nodeDetails.get(group.nodeId!)?.nodeType || 'CHAPTER',
+      totalAttempts: group.totalAttempts,
+      avgPercentage: group.attempts.reduce((sum, a) => sum + (parseFloat(a.percentage as any) || 0), 0) / group.totalAttempts,
+      attempts: group.attempts,
+    }));
+  } else {
+    // type === 'chapter' — same as subject for now
+    return Array.from(
+      new Map(attempts.filter((a) => a.nodeId).map((a) => [a.nodeId!, a])).values(),
+    ).map((attempt) => ({
+      nodeId: attempt.nodeId,
+      totalAttempts: 1,
+      avgPercentage: parseFloat(attempt.percentage as any) || 0,
+      attempts: [attempt],
+    }));
+  }
+}
+
 export const assessmentRepository = {
   createSelfMock,
   createAssessmentWithSections,
@@ -1262,4 +1374,5 @@ export const assessmentRepository = {
   getTopicAnalytics,
   listMyAttempts,
   claimPendingInvitesForEmail,
+  getUserProgress,
 };

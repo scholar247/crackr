@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { LiveDot } from '@/components/marketing/live-dot';
 import { PerformanceOverviewCard } from '@/components/marketing/home/performance-overview-card';
 
-// Illustrative — aggregate platform totals aren't tracked/queried live yet, same
-// convention as the exam/program stat lookups elsewhere on the marketing site.
+// Real, verifiable facts about the exams themselves — not platform usage stats — so this
+// stays true regardless of how much content is seeded yet. See the audit note on
+// performance-overview-card.tsx for why we stopped leading with invented usage numbers.
 const STATS = [
-  { value: '50K+', label: 'Practice Questions' },
-  { value: '15+', label: 'Exam Categories' },
+  { value: '4', label: 'Exams: NIMCET, GATE-CSE, CUET-UG, CBSE' },
+  { value: '30+', label: 'NITs via NIMCET alone' },
 ];
 
 export function Hero() {
@@ -27,21 +28,21 @@ export function Hero() {
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-container-high/60 px-4 py-2 backdrop-blur-md">
             <Flame className="h-4 w-4 text-secondary" />
             <LiveDot />
-            <span className="text-label-caps uppercase tracking-wider text-foreground">Data-Driven Prep Strategy</span>
+            <span className="text-label-caps uppercase tracking-wider text-foreground">Built by exam-crackers, not marketers</span>
           </div>
 
           <h1 className="text-headline-xl mt-6 tracking-tighter text-foreground lg:text-[64px] lg:leading-[72px]">
-            Your Complete Platform for <span className="text-gradient-brand">Exam Preparation</span>
+            Built by People Who&apos;ve <span className="text-gradient-brand">Actually Cracked These Exams</span>
           </h1>
 
           <p className="text-body-lg mt-6 max-w-xl leading-relaxed text-muted-foreground">
-            Study smarter with structured study material, practice questions, previous-year questions, mock tests, and
-            performance insights.
+            We got tired of scattered PDFs and no way to tell if we were ready — so we built the structured theory,
+            practice, and mock tests we wished we&apos;d had, hosted by us and by verified tutors.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button size="lg" className="text-label-caps rounded-full uppercase tracking-wider" asChild>
-              <Link href="/sign-in">Explore Exams</Link>
+              <Link href="/exams">Explore Exams</Link>
             </Button>
             <Button size="lg" variant="outline" className="text-label-caps rounded-full uppercase tracking-wider" asChild>
               <Link href="/sign-in">Start Practicing</Link>

@@ -1,10 +1,45 @@
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, FileCheck2, NotebookPen, Target, GraduationCap } from 'lucide-react';
 import type { ExamCardData } from '@/lib/exam-stats';
+import { Badge } from '@/components/ui/badge';
 
 interface ExploreExamsProps {
   /** First entry renders as the large featured card; the rest (up to 4) as small cards. */
   exams: ExamCardData[];
+}
+
+// Per-exam quick links to the platform's 4 real pillars. Course has no destination yet —
+// no payment integration exists — so it renders as a plain "Coming soon" badge, never a
+// dead link. The other three point at real, working routes.
+function ExamQuickLinks({ slug }: { slug: string }) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[11px] text-muted-foreground">
+        <GraduationCap className="h-3 w-3" /> Course
+        <Badge variant="warning" className="ml-1 px-1.5 py-0 text-[9px]">
+          Soon
+        </Badge>
+      </span>
+      <Link
+        href={`/exams/${slug}?tab=mock-tests`}
+        className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+      >
+        <FileCheck2 className="h-3 w-3" /> Test Series
+      </Link>
+      <Link
+        href="/blogs"
+        className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+      >
+        <NotebookPen className="h-3 w-3" /> Blogs
+      </Link>
+      <Link
+        href={`/exams/${slug}?tab=subjects`}
+        className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+      >
+        <Target className="h-3 w-3" /> MCQs
+      </Link>
+    </div>
+  );
 }
 
 export function ExploreExams({ exams }: ExploreExamsProps) {
@@ -19,7 +54,7 @@ export function ExploreExams({ exams }: ExploreExamsProps) {
           <div>
             <h2 className="text-headline-lg text-foreground">Explore Targeted Exams</h2>
             <p className="text-body-md mt-1 text-muted-foreground">
-              Select your target to access curated study plans and specialized question banks.
+              Starting with NIMCET, GATE-CSE, CUET-UG &amp; CBSE — more exams joining as we build out their syllabi.
             </p>
           </div>
           <Link
@@ -31,29 +66,25 @@ export function ExploreExams({ exams }: ExploreExamsProps) {
         </div>
 
         <div className="mt-8 grid gap-4 lg:grid-cols-2">
-          <Link
-            href={`/exams/${featured.slug}`}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-xl"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                {featured.initials}
+          <div className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-xl">
+            <Link href={`/exams/${featured.slug}`} className="block">
+              <div className="flex items-start justify-between">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  {featured.initials}
+                </div>
+                <span className="text-label-caps inline-flex items-center gap-1 rounded-full border border-secondary/30 bg-secondary/10 px-2.5 py-1 uppercase text-secondary">
+                  <Sparkles className="h-3 w-3" /> Featured
+                </span>
               </div>
-              <span className="text-label-caps inline-flex items-center gap-1 rounded-full border border-secondary/30 bg-secondary/10 px-2.5 py-1 uppercase text-secondary">
-                <Sparkles className="h-3 w-3" /> Trending
-              </span>
-            </div>
 
-            <div className="mt-6">
-              <h3 className="text-headline-md text-foreground">{featured.name}</h3>
-              {featured.description && <p className="text-body-sm mt-1 text-muted-foreground">{featured.description}</p>}
-            </div>
+              <div className="mt-6">
+                <h3 className="text-headline-md text-foreground">{featured.name}</h3>
+                {featured.description && <p className="text-body-sm mt-1 text-muted-foreground">{featured.description}</p>}
+              </div>
+            </Link>
 
-            <div className="mt-6 flex items-center gap-4">
-              <span className="text-body-sm text-muted-foreground">{featured.stats.mocks} Mocks</span>
-              <span className="text-body-sm text-muted-foreground">{featured.stats.mcqs} MCQs</span>
-            </div>
-          </Link>
+            <ExamQuickLinks slug={featured.slug} />
+          </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {smallExams.map((exam) => (
@@ -66,7 +97,7 @@ export function ExploreExams({ exams }: ExploreExamsProps) {
                   {exam.initials}
                 </div>
                 <h3 className="text-body-md mt-3 font-semibold text-foreground">{exam.name}</h3>
-                <p className="text-body-sm mt-1 text-muted-foreground">{exam.stats.mcqs} Questions</p>
+                <p className="text-body-sm mt-1 text-muted-foreground">Course · Test Series · Blogs · MCQs</p>
               </Link>
             ))}
           </div>
