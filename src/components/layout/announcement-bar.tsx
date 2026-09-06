@@ -34,15 +34,16 @@ export function AnnouncementBar() {
   let href = '/sign-in';
 
   if (isLoggedIn) {
-    if (!onboardingCompleted) {
-      message = "Tell us which exam you're targeting — get a personalized prep hub in under a minute";
-      href = '/onboarding';
-    } else if (primaryLoading) {
+    if (primaryLoading) {
       message = 'Welcome back — loading your prep hub…';
       href = '/';
     } else if (primary) {
       message = `Your ${primary.examName} prep hub is ready — mocks, fresh reading & more`;
       href = '/';
+    } else if (!onboardingCompleted) {
+      // No exam targets + onboarding not completed = go to onboarding
+      message = "Tell us which exam you're targeting — get a personalized prep hub in under a minute";
+      href = '/onboarding';
     } else {
       // Onboarded, but no exam target set (or one that's since been archived) — same edge
       // case the homepage's own incomplete-profile branch handles.
