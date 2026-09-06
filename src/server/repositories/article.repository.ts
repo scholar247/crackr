@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { articles, users, contentNodeMap } from '@/server/db/schema';
+import { articles, users, contentNodeMap, examNodeMap } from '@/server/db/schema';
 import { slugify } from '@/lib/utils';
 import { taxonomyRepository } from './taxonomy.repository';
 import type { ARTICLE_STATUS_VALUES, CreateArticleInput, UpdateArticleInput } from '@/schemas/article.schema';
@@ -168,6 +168,48 @@ async function findRelatedPublished(nodeIds: string[], excludeId: number, limit 
     .then((rows) => rows.map((r) => r.article));
 }
 
+// Article <-> exam is indirect (article -> content_node_map -> exam_node_map -> exam) —
+// there's no direct exam column on articles. Powers the homepage's "Fresh Reading"
+// carousel: featured articles (an editorial pin, see articles.isFeatured) lead, backfilled
+// with the most recent published articles up to `limit`, deduped. Deliberately not named
+// findTrending/findHot — recency + an explicit editorial flag, not a computed signal.
+async function findPublishedByExam(examId: string, limit = 10, featuredCount = 3) {
+  const whereBase = and(eq(examNodeMap.examId, examId), eq(articles.status, 'PUBLISHED'), eq(articles.visibility, 'PUBLIC'));
+
+  const [featuredRows, latestRows] = await Promise.all([
+    db
+      .selectDistinct({ article: articles })
+      .from(articles)
+      .innerJoin(contentNodeMap, and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articles.id)))
+      .innerJoin(examNodeMap, eq(examNodeMap.nodeId, contentNodeMap.nodeId))
+      .where(and(whereBase, eq(articles.isFeatured, true)))
+      .orderBy(desc(articles.createdAt))
+      .limit(featuredCount),
+    db
+      .selectDistinct({ article: articles })
+      .from(articles)
+      .innerJoin(contentNodeMap, and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articles.id)))
+      .innerJoin(examNodeMap, eq(examNodeMap.nodeId, contentNodeMap.nodeId))
+      .where(whereBase)
+      .orderBy(desc(articles.createdAt))
+      .limit(limit),
+  ]);
+
+  const seen = new Set<number>();
+  const merged: (typeof articles.$inferSelect)[] = [];
+  for (const row of featuredRows) {
+    merged.push(row.article);
+    seen.add(row.article.id);
+  }
+  for (const row of latestRows) {
+    if (merged.length >= limit) break;
+    if (seen.has(row.article.id)) continue;
+    merged.push(row.article);
+    seen.add(row.article.id);
+  }
+  return merged.slice(0, limit);
+}
+
 async function ensureUniqueSlug(base: string, excludeId?: number) {
   let candidate = base;
   let suffix = 1;
@@ -193,6 +235,7 @@ async function create(input: CreateArticleInput, authorId: string | null) {
       status: input.status,
       visibility: input.visibility,
       articleType: input.articleType,
+      isFeatured: input.isFeatured,
       metaTitle: input.metaTitle,
       metaDescription: input.metaDescription,
       keywords: input.keywords,
@@ -247,6 +290,7 @@ export const articleRepository = {
   findPublishedBySlug,
   findPublishedBySlugWithAuthor,
   findPublishedByAuthor,
+  findPublishedByExam,
   findNodeForArticle,
   findNodeIdsForArticle,
   findRelatedPublished,

@@ -17,8 +17,15 @@ export default async function OnboardingPage() {
   const snapshot = await userRepository.getAuthorizationSnapshot(session.user.id);
   if (snapshot?.onboardingCompleted) redirect(defaultDashboardPath(session.user.role));
 
-  const examRows = await taxonomyRepository.listPublicExams();
-  const exams = examRows.map(({ exam, programName }) => ({ id: exam.id, name: exam.name, programName }));
+  const [examRows, programs] = await Promise.all([taxonomyRepository.listPublicExams(), taxonomyRepository.listPublicPrograms()]);
+  const exams = examRows.map(({ exam, programName }) => ({ id: exam.id, name: exam.name, programId: exam.programId, programName }));
 
-  return <OnboardingClient name={session.user.name ?? ''} role={session.user.role} exams={exams} />;
+  return (
+    <OnboardingClient
+      name={session.user.name ?? ''}
+      role={session.user.role}
+      exams={exams}
+      programs={programs.map((p) => ({ id: p.id, name: p.name }))}
+    />
+  );
 }

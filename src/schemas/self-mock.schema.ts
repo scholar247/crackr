@@ -41,6 +41,24 @@ export const CreateSelfMockSchema = z
   );
 export type CreateSelfMockInput = z.infer<typeof CreateSelfMockSchema>;
 
+// "Open" mock — published to every subject of the exam at once (see
+// assessmentRepository.createOpenMock), not a hand-picked subset. There's no `sections`
+// field here on purpose: a client can't cherry-pick which subjects are included, the
+// server always builds one section per subject from the exam's own syllabus tree.
+export const CreateOpenMockSchema = z.object({
+  title: z.string().min(3).max(160),
+  description: z.string().max(2000).optional(),
+  examId: z.uuid(),
+  questionsPerSubject: z.number().int().min(ASSESSMENT_LIMITS.MIN_QUESTIONS_PER_SECTION).max(ASSESSMENT_LIMITS.MAX_QUESTIONS_PER_SECTION),
+  marksPerQuestion: z.number().min(0).max(ASSESSMENT_LIMITS.MAX_MARKS),
+  negativeMarksPerQuestion: z.number().min(0).max(ASSESSMENT_LIMITS.MAX_MARKS),
+  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD', 'EXPERT']).optional(),
+  durationMinutes: z.number().int().min(ASSESSMENT_LIMITS.MIN_DURATION_MINUTES).max(ASSESSMENT_LIMITS.MAX_DURATION_MINUTES),
+  maxAttempts: z.number().int().min(1).max(ASSESSMENT_LIMITS.MAX_ATTEMPTS_CAP).optional(),
+  ...AssessmentMetadataFields,
+});
+export type CreateOpenMockInput = z.infer<typeof CreateOpenMockSchema>;
+
 // Chosen right before an attempt starts, not at assessment-creation time — see
 // assessment.repository.ts's countsTowardProgress comment.
 export const StartAttemptSchema = z.object({

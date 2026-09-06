@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   CreateArticleSchema,
   ARTICLE_STATUS_VALUES,
@@ -44,6 +45,7 @@ interface ArticleRecord {
   status: (typeof ARTICLE_STATUS_VALUES)[number];
   visibility: (typeof ARTICLE_VISIBILITY_VALUES)[number];
   articleType: (typeof ARTICLE_TYPE_VALUES)[number];
+  isFeatured: boolean;
   metaTitle: string | null;
   metaDescription: string | null;
   keywords: string[] | null;
@@ -112,6 +114,7 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
       status: initial?.status ?? 'DRAFT',
       visibility: initial?.visibility ?? 'PRIVATE',
       articleType: initial?.articleType ?? 'GENERAL',
+      isFeatured: initial?.isFeatured ?? false,
       ogImage: initial?.ogImage ?? '',
     },
   });
@@ -330,6 +333,18 @@ export function BlogForm({ mode, initial }: BlogFormProps) {
             )}
           />
         </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-md border border-border p-4">
+        <div>
+          <Label htmlFor="is-featured">Featured</Label>
+          <p className="text-xs text-muted-foreground">Pinned to the front of homepage &amp; exam reading carousels.</p>
+        </div>
+        <Controller
+          control={form.control}
+          name="isFeatured"
+          render={({ field }) => <Switch id="is-featured" checked={field.value} onCheckedChange={field.onChange} />}
+        />
       </div>
 
       <div className="space-y-4 rounded-md border border-border p-4">

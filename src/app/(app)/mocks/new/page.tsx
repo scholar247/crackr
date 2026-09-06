@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Clock, Users, Swords } from 'lucide-react';
+import { Clock, Users, Swords, Globe2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MODES = [
@@ -24,6 +24,13 @@ const MODES = [
     description: 'Go head-to-head with another user on the same test and compare results when you’re both done.',
     enabled: true,
   },
+  {
+    href: '/mocks/new/open',
+    icon: Globe2,
+    title: 'Open Mock',
+    description: 'Covers every subject of the exam automatically. Open to any student targeting this exam — no invite list needed.',
+    enabled: true,
+  },
 ] as const;
 
 export default function NewMockPage() {
@@ -32,7 +39,7 @@ export default function NewMockPage() {
       <h1 className="text-2xl font-semibold text-foreground">Create a mock, test, or challenge</h1>
       <p className="mt-1.5 text-sm text-muted-foreground">Choose how you want to set this up.</p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {MODES.map((mode) => {
           const Icon = mode.icon;
           const content = (

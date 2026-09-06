@@ -16,6 +16,7 @@ export interface QuestionInput {
   tags?: string[];
   nodeId?: string;
   examIds: string[];
+  status?: 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 }
 
 export interface ListQuestionsFilters {
@@ -180,6 +181,7 @@ async function update(id: number, input: Partial<QuestionInput>, editorId: strin
     if (input.explanation !== undefined) patch.explanation = input.explanation;
     if (input.difficulty !== undefined) patch.difficulty = input.difficulty;
     if (input.tags !== undefined) patch.tags = input.tags;
+    if (input.status !== undefined) patch.status = input.status;
     await tx.update(questions).set(patch).where(eq(questions.id, id));
 
     if (input.nodeId !== undefined) await setNodeTag(tx, id, input.nodeId);

@@ -14,6 +14,7 @@ export const CreateArticleSchema = z.object({
   status: z.enum(ARTICLE_STATUS_VALUES).default('DRAFT'),
   visibility: z.enum(ARTICLE_VISIBILITY_VALUES).default('PRIVATE'),
   articleType: z.enum(ARTICLE_TYPE_VALUES).default('GENERAL'),
+  isFeatured: z.boolean().default(false),
   metaTitle: z.string().max(160).optional(),
   metaDescription: z.string().max(320).optional(),
   keywords: z.array(z.string().max(60)).max(20).optional(),

@@ -49,3 +49,5 @@ feed_data/
 
 # Local media storage (LocalFileStorageProvider) — see docs/media-module.md
 /storage/
+
+data/*

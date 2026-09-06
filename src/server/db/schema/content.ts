@@ -1,4 +1,4 @@
-import { mysqlTable, mysqlEnum, varchar, text, json, bigint, timestamp, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { mysqlTable, mysqlEnum, varchar, text, json, bigint, boolean, timestamp, uniqueIndex } from 'drizzle-orm/mysql-core';
 import { randomUUID } from 'crypto';
 import { users } from './identity';
 import { curriculumNodes, exams } from './taxonomy';
@@ -62,6 +62,9 @@ export const articles = mysqlTable(
     status: mysqlEnum('status', CONTENT_STATUSES).notNull().default('DRAFT'),
     visibility: mysqlEnum('visibility', CONTENT_VISIBILITIES).notNull().default('PRIVATE'),
     articleType: mysqlEnum('article_type', ARTICLE_TYPES).notNull().default('GENERAL'),
+    // Editorial pin, not a computed metric — homepage "Fresh Reading" carousels a mix of
+    // latest + featured (see article.repository.ts's findPublishedByExam).
+    isFeatured: boolean('is_featured').notNull().default(false),
     // SEO metadata — all optional, independent of title/summary so editors can override
     // what search engines/social previews see without changing the on-page copy.
     metaTitle: varchar('meta_title', { length: 160 }),

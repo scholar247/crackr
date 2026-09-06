@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Check, X, Info, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,7 +44,11 @@ interface PracticeBrowserProps {
 export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn }: PracticeBrowserProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [subjectId, setSubjectId] = useState('');
+  // Deep-link entry point — e.g. the homepage's "jump to this subject" shortcuts link here
+  // with ?subject=<nodeId>. Only read once on mount; this isn't meant to react to further
+  // client-side URL changes, just to seed where the browser opens.
+  const searchParams = useSearchParams();
+  const [subjectId, setSubjectId] = useState(() => searchParams.get('subject') ?? '');
   const [chapterId, setChapterId] = useState('');
   const [topicId, setTopicId] = useState('');
   const [subtopicId, setSubtopicId] = useState('');

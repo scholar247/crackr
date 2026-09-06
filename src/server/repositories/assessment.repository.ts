@@ -16,9 +16,12 @@ import {
   contentNodeMap,
   curriculumNodes,
   exams,
+  userExamTargets,
 } from '@/server/db/schema';
 import type { QuestionOption } from '@/server/db/schema/content';
 import { questionRepository } from './question.repository';
+import { taxonomyRepository } from './taxonomy.repository';
+import { ASSESSMENT_LIMITS } from '@/lib/assessment-limits';
 import type { UserRole } from '@/lib/roles';
 import { isAdmin } from '@/lib/roles';
 
@@ -135,7 +138,7 @@ export function stripAnswers(snapshot: QuestionSnapshot) {
 // in one transaction. Used by createSelfMock now; createGroupTest/createChallenge (later
 // phases) call the same function with type TEST/CHALLENGE.
 async function createAssessmentWithSections(input: {
-  type: 'MOCK' | 'TEST' | 'CHALLENGE';
+  type: 'MOCK' | 'TEST' | 'CHALLENGE' | 'OFFICIAL';
   title: string;
   description?: string;
   creatorUserId: string;
@@ -220,6 +223,59 @@ async function createSelfMock(input: {
   bannerImage?: string;
 }) {
   return createAssessmentWithSections({ ...input, type: 'MOCK', visibility: 'PRIVATE' });
+}
+
+// "Open" mock — every subject of the exam gets its own section automatically (built from
+// the exam's own syllabus tree, never from client input, so a caller can't cherry-pick a
+// subset), published PUBLIC, and open to anyone with this exam in their user_exam_targets
+// rather than a hand-picked invite list. See checkAccess's PUBLIC branch for the actual
+// eligibility gate enforced when someone tries to start it.
+async function createOpenMock(input: {
+  title: string;
+  description?: string;
+  examId: string;
+  questionsPerSubject: number;
+  marksPerQuestion: number;
+  negativeMarksPerQuestion: number;
+  difficulty?: 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
+  durationSeconds: number;
+  maxAttempts?: number | null;
+  creatorUserId: string;
+  studentInstructions?: string;
+  tags?: string[];
+  bannerImage?: string;
+}) {
+  const subjects = await taxonomyRepository.getSyllabusTree(input.examId);
+  if (subjects.length === 0) throw new Error('EXAM_HAS_NO_SUBJECTS');
+  if (subjects.length > ASSESSMENT_LIMITS.MAX_SECTIONS) throw new Error('TOO_MANY_SUBJECTS_FOR_ONE_MOCK');
+
+  const sections: SectionInput[] = subjects.map((subject) => ({
+    title: subject.name,
+    nodeId: subject.id,
+    questionCount: input.questionsPerSubject,
+    difficulty: input.difficulty,
+    marks: input.marksPerQuestion,
+    negativeMarks: input.negativeMarksPerQuestion,
+  }));
+
+  const created = await createAssessmentWithSections({
+    type: 'OFFICIAL',
+    title: input.title,
+    description: input.description,
+    creatorUserId: input.creatorUserId,
+    visibility: 'PUBLIC',
+    examId: input.examId,
+    sections,
+    durationSeconds: input.durationSeconds,
+    maxAttempts: input.maxAttempts,
+    studentInstructions: input.studentInstructions,
+    tags: input.tags,
+    bannerImage: input.bannerImage,
+  });
+
+  await db.insert(assessmentAccess).values({ id: randomUUID(), assessmentId: created!.assessment.id, accessType: 'PUBLIC' });
+
+  return created;
 }
 
 // ── Group tests: invites, participants ──────────────────────────────────────
@@ -570,7 +626,7 @@ async function checkAccess(assessmentId: string, userId: string, role: UserRole)
   if (assessment.creatorUserId === userId) return true;
 
   const [direct] = await db
-    .select({ id: assessmentAccess.id })
+    .select({ id: assessmentAccess.id, accessType: assessmentAccess.accessType })
     .from(assessmentAccess)
     .where(
       and(
@@ -582,7 +638,20 @@ async function checkAccess(assessmentId: string, userId: string, role: UserRole)
       )
     )
     .limit(1);
-  if (direct) return true;
+  if (direct) {
+    // "Open to all" (createOpenMock) means open to everyone actually targeting this exam,
+    // not literally anyone with the link — a direct USER grant (a specific invite) skips
+    // this check same as always, only the PUBLIC grant carries it.
+    if (direct.accessType === 'PUBLIC' && assessment.examId) {
+      const [target] = await db
+        .select({ userId: userExamTargets.userId })
+        .from(userExamTargets)
+        .where(and(eq(userExamTargets.userId, userId), eq(userExamTargets.examId, assessment.examId)))
+        .limit(1);
+      return Boolean(target);
+    }
+    return true;
+  }
 
   const [viaAudience] = await db
     .select({ id: assessmentAccess.id })
@@ -651,6 +720,26 @@ async function findVisibleToUser(userId: string, role: UserRole, filters: { type
   const conditions = filters.type ? [visibilityCondition, eq(assessments.type, filters.type as 'MOCK' | 'TEST' | 'CHALLENGE' | 'OFFICIAL')] : [visibilityCondition];
 
   return db.select().from(assessments).where(and(...conditions)).orderBy(desc(assessments.createdAt));
+}
+
+// Publicly discoverable mocks/tests for one exam — distinct from findVisibleToUser, which
+// answers "what is *this specific viewer* entitled to see" (their own + directly
+// shared/assigned). This answers "what's out there for this exam that anyone can start,"
+// which is what the homepage's exam-scoped mocks section actually needs.
+async function findPublicByExam(examId: string, limit = 4) {
+  return db
+    .select()
+    .from(assessments)
+    .where(
+      and(
+        eq(assessments.examId, examId),
+        inArray(assessments.type, ['MOCK', 'TEST']),
+        eq(assessments.status, 'PUBLISHED'),
+        eq(assessments.visibility, 'PUBLIC')
+      )
+    )
+    .orderBy(desc(assessments.createdAt))
+    .limit(limit);
 }
 
 // ── Attempt lifecycle ────────────────────────────────────────────────────────
@@ -1203,6 +1292,27 @@ async function listMyAttempts(userId: string, filters: { countsTowardProgress?: 
     .orderBy(desc(assessmentAttempts.startedAt));
 }
 
+// Open mocks (createOpenMock) across every exam a user targets — not just their primary
+// one, per the homepage's "any of the exams the user has opted into" requirement. Callers
+// already have listMyAttempts for "have I attempted this" (reuse it, don't re-query), and
+// should only call getAssessmentReport per-mock for the small subset actually attempted.
+async function findOpenMocksForExams(examIds: string[], limit = 5) {
+  if (examIds.length === 0) return [];
+  return db
+    .select()
+    .from(assessments)
+    .where(
+      and(
+        inArray(assessments.examId, examIds),
+        eq(assessments.type, 'OFFICIAL'),
+        eq(assessments.status, 'PUBLISHED'),
+        eq(assessments.visibility, 'PUBLIC')
+      )
+    )
+    .orderBy(desc(assessments.createdAt))
+    .limit(limit);
+}
+
 // ── Pending-invite claim (called from user.repository.ts on new-account creation) ──
 
 async function claimPendingInvitesForEmail(userId: string, email: string) {
@@ -1385,6 +1495,7 @@ async function getUserProgress(userId: string, type: 'exam' | 'subject' | 'chapt
 
 export const assessmentRepository = {
   createSelfMock,
+  createOpenMock,
   createAssessmentWithSections,
   createGroupTest,
   grantGroupTestAccess,
@@ -1403,6 +1514,8 @@ export const assessmentRepository = {
   deleteOrArchive,
   checkAccess,
   findVisibleToUser,
+  findPublicByExam,
+  findOpenMocksForExams,
   findInProgressAttempt,
   findLatestCompletedAttempt,
   startAttempt,

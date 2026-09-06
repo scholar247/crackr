@@ -162,14 +162,18 @@ async function update(id: string, input: UpdateUserInput) {
 
 // Never read back until now — user_exam_targets is written once at onboarding and
 // otherwise dead data. Joins to exams + programs so the profile page can show real
-// names, not just ids.
+// names, not just ids. Excludes exams that have since been archived — a target on an
+// archived exam is treated the same as having no target at all (homepage's
+// incomplete-profile branch, see prd/homepage-session-aware-revamp.md Section 11), and
+// Settings shouldn't display a re-selectable target for an exam that no longer exists
+// in the active catalog either.
 async function findExamTargetsByUserId(userId: string) {
   return db
     .select({ examId: exams.id, examName: exams.name, examSlug: exams.slug, programName: programs.name, isPrimary: userExamTargets.isPrimary })
     .from(userExamTargets)
     .innerJoin(exams, eq(userExamTargets.examId, exams.id))
     .innerJoin(programs, eq(exams.programId, programs.id))
-    .where(eq(userExamTargets.userId, userId));
+    .where(and(eq(userExamTargets.userId, userId), eq(exams.status, 'ACTIVE')));
 }
 
 /**

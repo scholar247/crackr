@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, Clock, Users, Swords } from 'lucide-react';
+import { Plus, Clock, Users, Swords, Globe2 } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { assessmentRepository } from '@/server/repositories/assessment.repository';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ const TYPE_META: Record<string, { label: string; icon: typeof Clock }> = {
   MOCK: { label: 'Self Mock', icon: Clock },
   TEST: { label: 'Group Test', icon: Users },
   CHALLENGE: { label: 'Challenge', icon: Swords },
+  OFFICIAL: { label: 'Open Mock', icon: Globe2 },
 };
 
 type ComputedStatus = 'DRAFT' | 'UPCOMING' | 'LIVE' | 'COMPLETED' | 'ARCHIVED';

@@ -29,7 +29,9 @@ export const CreateQuestionSchema = z.object({
 });
 export type CreateQuestionInput = z.infer<typeof CreateQuestionSchema>;
 
-export const UpdateQuestionSchema = CreateQuestionSchema.partial();
+export const UpdateQuestionSchema = CreateQuestionSchema.partial().extend({
+  status: z.enum(CONTENT_STATUSES).optional(),
+});
 export type UpdateQuestionInput = z.infer<typeof UpdateQuestionSchema>;
 
 // Bulk import — unlike CreateQuestionSchema's single `nodeId` (one leaf node, ancestors

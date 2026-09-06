@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
-import { Search, Check } from 'lucide-react';
+import { Search, Check, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,17 +11,34 @@ import { defaultDashboardPath, type UserRole } from '@/lib/roles';
 import { PREP_LEVELS, PREP_LEVEL_LABELS, type PrepLevel } from '@/lib/prep-level';
 import { cn } from '@/lib/utils';
 
+interface ProgramOption {
+  id: string;
+  name: string;
+}
+
 interface ExamOption {
   id: string;
   name: string;
+  programId: string;
   programName: string;
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
 const TARGET_YEARS = Array.from({ length: 6 }, (_, i) => CURRENT_YEAR + i);
 
-export function OnboardingClient({ name, role, exams }: { name: string; role: UserRole; exams: ExamOption[] }) {
+export function OnboardingClient({
+  name,
+  role,
+  exams,
+  programs,
+}: {
+  name: string;
+  role: UserRole;
+  exams: ExamOption[];
+  programs: ProgramOption[];
+}) {
   const { update } = useSession();
+  const [programId, setProgramId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [primaryId, setPrimaryId] = useState<string | null>(null);
@@ -29,14 +46,23 @@ export function OnboardingClient({ name, role, exams }: { name: string; role: Us
   const [level, setLevel] = useState<PrepLevel | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const examsByProgram = useMemo(() => {
+  const selectedProgram = programs.find((p) => p.id === programId);
+
+  // Once a program is picked, the exam list is scoped to it — no more picking an exam
+  // from a program you didn't choose, and no need to re-show the program-name group
+  // headers since there's only ever one program's worth of exams here at a time.
+  const examsInProgram = useMemo(() => exams.filter((e) => e.programId === programId), [exams, programId]);
+  const filteredExams = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const filtered = q ? exams.filter((e) => e.name.toLowerCase().includes(q)) : exams;
-    return filtered.reduce<Record<string, ExamOption[]>>((acc, exam) => {
-      (acc[exam.programName] ??= []).push(exam);
-      return acc;
-    }, {});
-  }, [exams, search]);
+    return q ? examsInProgram.filter((e) => e.name.toLowerCase().includes(q)) : examsInProgram;
+  }, [examsInProgram, search]);
+
+  function chooseProgram(id: string) {
+    setProgramId(id);
+    setSearch('');
+    setSelectedIds([]);
+    setPrimaryId(null);
+  }
 
   const selectedExams = selectedIds.map((id) => exams.find((e) => e.id === id)!).filter(Boolean);
   const canSubmit = selectedIds.length > 0 && primaryId !== null && level !== null;
@@ -94,49 +120,72 @@ export function OnboardingClient({ name, role, exams }: { name: string; role: Us
       </p>
 
       <section className="mt-8">
-        <p className="text-label-caps uppercase text-muted-foreground">Which exams are you preparing for?</p>
-
-        <div className="relative mt-2">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search exams…"
-            className="pl-9"
-          />
-        </div>
-
-        <div className="mt-3 max-h-72 space-y-4 overflow-y-auto rounded-lg border border-border p-3">
-          {Object.keys(examsByProgram).length === 0 ? (
-            <p className="text-body-sm p-2 text-muted-foreground">No exams match your search.</p>
-          ) : (
-            Object.entries(examsByProgram).map(([programName, programExams]) => (
-              <div key={programName}>
-                <p className="text-label-caps px-1 uppercase text-muted-foreground">{programName}</p>
-                <div className="mt-1.5 space-y-1.5">
-                  {programExams.map((exam) => {
-                    const selected = selectedIds.includes(exam.id);
-                    return (
-                      <button
-                        key={exam.id}
-                        type="button"
-                        onClick={() => toggleExam(exam.id)}
-                        className={cn(
-                          'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-body-sm transition-colors',
-                          selected ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border text-foreground hover:bg-accent'
-                        )}
-                      >
-                        {exam.name}
-                        {selected && <Check className="h-4 w-4 shrink-0 text-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          )}
+        <p className="text-label-caps uppercase text-muted-foreground">Which program are you preparing for?</p>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {programs.map((program) => (
+            <button
+              key={program.id}
+              type="button"
+              onClick={() => chooseProgram(program.id)}
+              className={cn(
+                'rounded-lg border px-4 py-3 text-left text-body-sm font-medium transition-colors',
+                programId === program.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground hover:bg-accent'
+              )}
+            >
+              {program.name}
+            </button>
+          ))}
         </div>
       </section>
+
+      {programId && (
+        <section className="mt-8">
+          <div className="flex items-center justify-between">
+            <p className="text-label-caps uppercase text-muted-foreground">Which exam, within {selectedProgram?.name}?</p>
+            <button
+              type="button"
+              onClick={() => chooseProgram('')}
+              className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" /> Change program
+            </button>
+          </div>
+
+          <div className="relative mt-2">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search exams…"
+              className="pl-9"
+            />
+          </div>
+
+          <div className="mt-3 max-h-72 space-y-1.5 overflow-y-auto rounded-lg border border-border p-3">
+            {filteredExams.length === 0 ? (
+              <p className="text-body-sm p-2 text-muted-foreground">No exams match your search.</p>
+            ) : (
+              filteredExams.map((exam) => {
+                const selected = selectedIds.includes(exam.id);
+                return (
+                  <button
+                    key={exam.id}
+                    type="button"
+                    onClick={() => toggleExam(exam.id)}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-body-sm transition-colors',
+                      selected ? 'border-primary/40 bg-primary/10 text-foreground' : 'border-border text-foreground hover:bg-accent'
+                    )}
+                  >
+                    {exam.name}
+                    {selected && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </section>
+      )}
 
       {selectedExams.length > 0 && (
         <section className="mt-6">
