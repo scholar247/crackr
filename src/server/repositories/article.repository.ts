@@ -251,6 +251,12 @@ async function create(input: CreateArticleInput, authorId: string | null) {
 
 async function update(id: number, input: UpdateArticleInput, editorId: string | null = null) {
   const { nodeId, ...rest } = input;
+
+  if (rest.status === 'DELETED') {
+    await deleteOne(id);
+    return null;
+  }
+
   const patch: Partial<typeof articles.$inferInsert> = { ...rest, updatedAt: new Date(), updatedBy: editorId ?? undefined };
 
   if (input.slug || input.title) {
@@ -271,8 +277,29 @@ async function update(id: number, input: UpdateArticleInput, editorId: string | 
   return findById(id);
 }
 
+async function deleteOne(id: number) {
+  await db.transaction(async (tx) => {
+    await tx.delete(contentNodeMap).where(and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, id)));
+    await tx.delete(articles).where(eq(articles.id, id));
+  });
+}
+
+async function deleteMany(ids: number[]) {
+  if (ids.length === 0) return;
+  await db.transaction(async (tx) => {
+    await tx.delete(contentNodeMap).where(and(eq(contentNodeMap.contentType, 'ARTICLE'), inArray(contentNodeMap.contentId, ids)));
+    await tx.delete(articles).where(inArray(articles.id, ids));
+  });
+}
+
 async function setStatusMany(ids: number[], status: (typeof ARTICLE_STATUS_VALUES)[number], editorId: string | null = null) {
   if (ids.length === 0) return [];
+
+  if (status === 'DELETED') {
+    await deleteMany(ids);
+    return [];
+  }
+
   await db
     .update(articles)
     .set({ status, updatedAt: new Date(), updatedBy: editorId ?? undefined })
@@ -296,5 +323,7 @@ export const articleRepository = {
   findRelatedPublished,
   create,
   update,
+  deleteOne,
+  deleteMany,
   setStatusMany,
 };
