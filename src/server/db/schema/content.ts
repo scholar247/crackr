@@ -6,7 +6,7 @@ import { curriculumNodes, exams } from './taxonomy';
 // Shared across every content-bearing entity — this is the mechanism for "public vs
 // private content": public routes only ever query status=PUBLISHED AND visibility=PUBLIC.
 export const CONTENT_TYPES = ['QUESTION', 'ARTICLE'] as const;
-export const CONTENT_STATUSES = ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED'] as const;
+export const CONTENT_STATUSES = ['DRAFT', 'IN_REVIEW', 'PUBLISHED', 'ARCHIVED', 'DELETED'] as const;
 const CONTENT_VISIBILITIES = ['PUBLIC', 'PRIVATE', 'AUDIENCE_RESTRICTED'] as const;
 const CONTENT_RELATION_TYPES = ['PRIMARY', 'SUPPLEMENTARY', 'PRACTICE'] as const;
 
@@ -54,8 +54,8 @@ export const articles = mysqlTable(
   'articles',
   {
     id: bigint('id', { mode: 'number', unsigned: true }).autoincrement().primaryKey(),
-    title: varchar('title', { length: 160 }).notNull(),
-    slug: varchar('slug', { length: 200 }).notNull(),
+    title: varchar('title', { length: 300 }).notNull(),
+    slug: varchar('slug', { length: 300 }).notNull(),
     summary: text('summary'),
     body: text('body').notNull(), // markdown, rendered by src/components/blog/blog-content.tsx
     language: varchar('language', { length: 10 }).notNull().default('en'),
@@ -67,8 +67,8 @@ export const articles = mysqlTable(
     isFeatured: boolean('is_featured').notNull().default(false),
     // SEO metadata — all optional, independent of title/summary so editors can override
     // what search engines/social previews see without changing the on-page copy.
-    metaTitle: varchar('meta_title', { length: 160 }),
-    metaDescription: varchar('meta_description', { length: 320 }),
+    metaTitle: varchar('meta_title', { length: 300 }),
+    metaDescription: varchar('meta_description', { length: 500 }),
     keywords: json('keywords').$type<string[]>(),
     ogImage: varchar('og_image', { length: 2048 }),
     authorId: varchar('author_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),

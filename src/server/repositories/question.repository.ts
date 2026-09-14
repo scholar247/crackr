@@ -8,6 +8,8 @@ import { taxonomyRepository } from './taxonomy.repository';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+type ContentStatus = (typeof CONTENT_STATUSES)[number];
+
 export interface QuestionInput {
   stem: string;
   options: QuestionOption[];
@@ -16,12 +18,12 @@ export interface QuestionInput {
   tags?: string[];
   nodeId?: string;
   examIds: string[];
-  status?: 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
+  status?: ContentStatus;
 }
 
 export interface ListQuestionsFilters {
   examId?: string;
-  status?: 'DRAFT' | 'IN_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
+  status?: ContentStatus;
   difficulty?: 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT';
   search?: string;
   limit?: number;
