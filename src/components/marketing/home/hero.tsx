@@ -1,65 +1,87 @@
 import Link from 'next/link';
-import { Flame } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { LiveDot } from '@/components/marketing/live-dot';
-import { PerformanceOverviewCard } from '@/components/marketing/home/performance-overview-card';
+import { ArrowRight, BookOpenCheck, FileCheck2, GraduationCap, ListChecks, Newspaper, Sparkles } from 'lucide-react';
+import type { PlatformStats } from '@/server/repositories/exam-spotlight.repository';
 
-// Real, verifiable facts about the exams themselves — not platform usage stats — so this
-// stays true regardless of how much content is seeded yet. See the audit note on
-// performance-overview-card.tsx for why we stopped leading with invented usage numbers.
-const STATS = [
-  { value: '4', label: 'Exams: NIMCET, GATE-CSE, CUET-UG, CBSE' },
-  { value: '30+', label: 'NITs via NIMCET alone' },
-];
+interface HeroProps {
+  /** Active exam names, in display order — used to name the exams in the subheadline. */
+  examNames: string[];
+  stats: PlatformStats;
+}
 
-export function Hero() {
+function joinNames(names: string[]) {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+export function Hero({ examNames, stats }: HeroProps) {
+  const named = examNames.slice(0, 4);
+  const statItems = [
+    { icon: GraduationCap, tone: 'text-primary', value: stats.exams, label: 'Exams covered' },
+    { icon: ListChecks, tone: 'text-secondary', value: stats.mcqs, label: 'Practice MCQs' },
+    { icon: FileCheck2, tone: 'text-tertiary', value: stats.mockTests, label: 'Mock tests' },
+    { icon: Newspaper, tone: 'text-primary', value: stats.articles, label: 'Concept articles' },
+  ].filter((s) => s.value > 0);
+
   return (
-    <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-20" aria-hidden="true">
-        <div className="absolute right-1/4 top-0 h-[800px] w-[800px] animate-pulse rounded-full bg-primary/20 blur-[120px]" />
-        <div
-          className="absolute bottom-0 left-1/3 h-[600px] w-[600px] animate-pulse rounded-full bg-secondary/15 blur-[100px]"
-          style={{ animationDelay: '2s' }}
-        />
-      </div>
+    <section className="relative overflow-hidden bg-background">
+      <div
+        className="pointer-events-none absolute -top-40 left-1/2 h-[450px] w-[900px] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/25 via-secondary/20 to-tertiary/20 opacity-70 blur-3xl"
+        aria-hidden="true"
+      />
 
-      <div className="relative z-10 mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8 lg:py-28">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-container-high/60 px-4 py-2 backdrop-blur-md">
-            <Flame className="h-4 w-4 text-secondary" />
-            <LiveDot />
-            <span className="text-label-caps uppercase tracking-wider text-foreground">Built by exam-crackers, not marketers</span>
+      <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pt-20">
+        <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 shadow-sm">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Sparkles className="h-3 w-3" />
+            </span>
+            <span className="text-label-caps text-muted-foreground">The 3-stage preparation framework</span>
           </div>
 
-          <h1 className="text-headline-xl mt-6 tracking-tighter text-foreground lg:text-[64px] lg:leading-[72px]">
-            Built by People Who&apos;ve <span className="text-gradient-brand">Actually Cracked These Exams</span>
+          <h1 className="text-headline-xl mt-6 tracking-tight text-foreground sm:text-5xl lg:text-[56px] lg:leading-[64px]">
+            Learn Concepts. Practice Daily. <br className="hidden sm:inline" />
+            <span className="text-gradient-brand">Benchmark Your Rank.</span>
           </h1>
 
-          <p className="text-body-lg mt-6 max-w-xl leading-relaxed text-muted-foreground">
-            We got tired of scattered PDFs and no way to tell if we were ready — so we built the structured theory,
-            practice, and mock tests we wished we&apos;d had, hosted by us and by verified tutors.
+          <p className="text-body-lg mt-5 max-w-2xl text-muted-foreground">
+            Structured, active preparation
+            {named.length > 0 ? ` for ${joinNames(named)} aspirants` : ' for competitive exam aspirants'}. Theory,
+            practice and mock tests built by people who&apos;ve taken these exams.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button size="lg" className="text-label-caps rounded-full uppercase tracking-wider" asChild>
-              <Link href="/exams">Explore Exams</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="text-label-caps rounded-full uppercase tracking-wider" asChild>
-              <Link href="/sign-in">Start Practicing</Link>
-            </Button>
+          <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+            <Link
+              href="/exams"
+              className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-8 py-3.5 text-base font-semibold text-primary-foreground shadow-md transition-shadow hover:shadow-xl sm:w-auto"
+            >
+              Explore exams
+              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </Link>
+            <Link
+              href="#exam-explorer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 py-3.5 text-base font-semibold text-foreground shadow-sm transition-colors hover:bg-muted/50 sm:w-auto"
+            >
+              <BookOpenCheck className="h-5 w-5 text-primary" />
+              Browse exam syllabi
+            </Link>
           </div>
 
-          <div className="mt-10 flex flex-wrap items-center gap-x-10 gap-y-4">
-            {STATS.map((stat) => (
-              <div key={stat.label}>
-                <p className="text-headline-md text-foreground">{stat.value}</p>
-                <p className="text-body-sm text-muted-foreground">{stat.label}</p>
+          {statItems.length > 0 && (
+            <div className="mt-10 w-full rounded-2xl border border-border bg-card px-6 py-4 shadow-sm">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                {statItems.map(({ icon: Icon, tone, value, label }) => (
+                  <div key={label} className="flex items-center justify-center gap-2.5">
+                    <Icon className={`h-5 w-5 shrink-0 ${tone}`} />
+                    <div className="text-left">
+                      <p className="text-base font-semibold leading-tight text-foreground">{value.toLocaleString('en-IN')}</p>
+                      <p className="text-label-caps text-muted-foreground">{label}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
-
-        <PerformanceOverviewCard />
       </div>
     </section>
   );

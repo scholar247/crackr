@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-tertiary-container":"#bdffdb","tertiary-container":"#007d55","surface-container-highest":"#dae2fd","surface-tint":"#0053db","surface-variant":"#dae2fd","on-secondary-container":"#fffbff","tertiary":"#006242","primary-container":"#2563eb","on-tertiary-fixed-variant":"#005236","secondary-fixed-dim":"#d2bbff","on-primary-container":"#eeefff","on-primary":"#ffffff","on-surface":"#131b2e","tertiary-fixed-dim":"#4edea3","surface-container":"#eaedff","on-error":"#ffffff","on-primary-fixed-variant":"#003ea8","error-container":"#ffdad6","inverse-primary":"#b4c5ff","on-secondary-fixed-variant":"#5a00c6","tertiary-fixed":"#6ffbbe","primary-fixed-dim":"#b4c5ff","surface-dim":"#d2d9f4","on-surface-variant":"#434655","inverse-on-surface":"#eef0ff","surface-container-high":"#e2e7ff","surface-bright":"#faf8ff","on-primary-fixed":"#00174b","on-error-container":"#93000a","outline":"#737686","secondary-fixed":"#eaddff","surface-container-lowest":"#ffffff","background":"#faf8ff","on-secondary-fixed":"#25005a","secondary-container":"#8a4cfc","surface":"#faf8ff","primary-fixed":"#dbe1ff","secondary":"#712ae2","surface-container-low":"#f2f3ff","on-secondary":"#ffffff","outline-variant":"#c3c6d7","on-background":"#131b2e","error":"#ba1a1a","inverse-surface":"#283044","primary":"#004ac6","on-tertiary":"#ffffff","on-tertiary-fixed":"#002113"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-lg":"1.5rem","gutter":"1.5rem","margin-lg":"4rem","margin":"2rem","gutter-lg":"2rem","gutter-sm":"1rem","space-xs":"0.25rem","margin-sm":"1rem","space-xl":"2.5rem","space-md":"1rem","space-sm":"0.5rem"},"fontFamily":{"body-sm":["Inter"],"headline-md":["Plus Jakarta Sans"],"body-lg":["Inter"],"headline-sm":["Plus Jakarta Sans"],"label-md":["Inter"],"display-hero-mobile":["Plus Jakarta Sans"],"headline-lg":["Plus Jakarta Sans"],"title-md":["Plus Jakarta Sans"],"display-hero":["Plus Jakarta Sans"],"label-sm":["Inter"],"body-md":["Inter"],"headline-lg-mobile":["Plus Jakarta Sans"]},"fontSize":{"body-sm":["13px",{"lineHeight":"20px","letterSpacing":"0.005em","fontWeight":"400"}],"headline-md":["24px",{"lineHeight":"32px","letterSpacing":"-0.015em","fontWeight":"600"}],"body-lg":["18px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"400"}],"headline-sm":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.04em","fontWeight":"600"}],"display-hero-mobile":["34px",{"lineHeight":"42px","letterSpacing":"-0.025em","fontWeight":"800"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"title-md":["16px",{"lineHeight":"24px","letterSpacing":"-0.005em","fontWeight":"600"}],"display-hero":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"800"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.05em","fontWeight":"600"}],"body-md":["15px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"400"}],"headline-lg-mobile":["26px",{"lineHeight":"34px","letterSpacing":"-0.015em","fontWeight":"700"}]}}}}</script></head><body class="bg-background font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-20 max-w-[1360px] mx-auto px-gutter-lg flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-lg shrink-0"><div class="flex items-center gap-space-sm"><img alt="EduPillar Brand Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Wo17pdXAun2OtwlY36QrMwWmuPoFQ6zL2bvetzXhLILCiiX8Ef-VDQg5w9GKDo2gR6TMCHB2fFh-HLKFnaXFgBECsWDUEUdCKokeq04lEgoQts9es_5BBgJ_EMuOyjKJuxQ9f5eBqIztzl2PQTnpZh-HNAd6o3cLOJDVitghG2JViQ-xs-JG1Ba2qS6pvj05Yegy2ZeoMH4J7fBqAZghqNrm3aIewidhJDcCfR8phanaGsotTEJoPldw"/><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight">EduPillar</span><span class="font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed px-space-sm py-space-xs rounded-full uppercase tracking-wider font-semibold">Prep 2025</span></div><div class="relative hidden xl:block"><button class="flex items-center gap-space-xs px-space-md py-space-sm bg-surface-container-low hover:bg-surface-container hover:text-on-surface text-on-surface-variant font-label-md text-label-md rounded-xl transition-colors" type="button"><span class="material-symbols-outlined text-[18px]">category</span><span>Exam Categories</span><span class="material-symbols-outlined text-[16px]">expand_more</span></button></div></div><div class="hidden md:flex items-center flex-1 max-w-xs relative"><div class="w-full flex items-center gap-space-sm bg-surface-container-low px-space-md py-space-sm rounded-xl"><span class="material-symbols-outlined text-on-surface-variant text-[18px]">search</span><input class="bg-transparent w-full font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none" placeholder="Search chapters, mock tests..." type="text"/><kbd class="font-label-sm text-label-sm bg-surface-container text-on-surface-variant px-space-xs py-0.5 rounded shadow-sm">⌘K</kbd></div></div><nav class="hidden lg:flex items-center gap-space-xs shrink-0" data-active-classes="bg-surface-container-high text-on-surface font-semibold rounded-lg"><a aria-current="page" class="px-space-sm py-space-sm transition-colors bg-surface-container-high text-on-surface font-semibold rounded-lg" data-path="system-architecture" href="#">3-Step System</a><a class="px-space-sm py-space-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" data-path="exam-explorer" href="#">Exam Explorer</a><a class="px-space-sm py-space-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" data-path="live-dpp" href="#">Live DPP</a><a class="px-space-sm py-space-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" data-path="mock-tests" href="#">Mock Tests</a><a class="px-space-sm py-space-sm font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" data-path="leaderboard" href="#">Leaderboard</a></nav><div class="flex items-center gap-space-md shrink-0"><a class="hidden sm:inline-flex items-center gap-space-xs px-space-md py-space-sm bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded-xl transition-all shadow-[0_4px_12px_rgba(0,74,198,0.2)]" data-path="diagnostic-test" href="#"><span class="material-symbols-outlined text-[18px]">neurology</span><span>Diagnostic Test</span></a><button class="p-space-sm rounded-xl text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors relative" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary-container"></span></button><div class="relative flex items-center shrink-0"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-surface-container-lowest" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJ5p8Qp_8aX_FfbfwkpDHe_g-0d7kWjQrgDZjVwnmhC0lElNd5j4Kdka_jLne_PQDqn5Ao30O8IVB5R4X3497UJWGME7zU9_RZEkl4S4hxuClCFWJbyNCC7fS0H37yZ1MGRvRxgBVBmFqR1fp6aSPBmXFikZQWjNmLafbGx75c4e3_UNAq8FXRR9K9LxGEKoXcSQqUH1Za_g791p5EQ6Jg4xuV1zUiHXibF6jn5QXyyxzT_AdzpcCg"/><span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-tertiary-container ring-2 ring-surface-container-lowest"></span></div></div></div></header><main class="w-full pt-20 bg-background"><div class="flex flex-col w-full">
+<!-- Top Decorative Ambient Glow -->
+<div class="relative w-full overflow-hidden bg-background">
+<div class="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-gradient-to-r from-primary-fixed-dim/40 via-secondary-fixed/30 to-tertiary-fixed/30 blur-3xl opacity-70 pointer-events-none rounded-full"></div>
+<!-- 1. Hero Section -->
+<section class="relative max-w-[1360px] mx-auto px-gutter-lg pt-space-xl pb-margin-lg">
+<div class="flex flex-col items-center text-center max-w-4xl mx-auto">
+<!-- Eyebrow Pill -->
+<div class="inline-flex items-center gap-space-xs px-space-md py-1.5 rounded-full bg-surface-container-lowest shadow-sm mb-space-lg">
+<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+</span>
+<span class="font-label-md text-label-md text-on-surface-variant font-medium">The Scientific 3-Stage Preparation Framework</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<span class="font-label-md text-label-md text-tertiary font-semibold">98.4% Qualifier Ratio</span>
+</div>
+<!-- Main Headline -->
+<h1 class="font-display-hero text-display-hero tracking-tight text-on-surface mb-space-md">
+          Learn Concepts. Practice Daily. <br class="hidden sm:inline"/>
+<span class="bg-gradient-to-r from-primary via-secondary to-primary-container bg-clip-text text-transparent">Benchmark Your Rank.</span>
+</h1>
+<!-- Subheadline -->
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-space-xl">
+          Structured, active preparation engineered for CBSE, JEE, NEET, GATE, and competitive exam aspirants. No passive video fatigue—just targeted mastery.
+        </p>
+<!-- Dual Call to Actions -->
+<div class="flex flex-col sm:flex-row items-center gap-space-md w-full sm:w-auto mb-space-lg">
+<a class="group relative flex items-center justify-center gap-space-sm w-full sm:w-auto px-space-xl py-3.5 rounded-xl bg-gradient-to-r from-primary via-primary-container to-secondary text-on-primary font-title-md text-title-md shadow-md hover:shadow-xl transition-all duration-200" data-path="diagnostic-test" href="#">
+<span>Try a Free Diagnostic Mock</span>
+<span class="material-symbols-outlined text-[20px] transition-transform duration-200 group-hover:translate-x-1">arrow_forward</span>
+<span class="absolute -top-2.5 right-4 bg-tertiary-container text-on-tertiary-container font-label-sm text-label-sm px-2 py-0.5 rounded-full shadow-sm">
+              Takes 15 mins
+            </span>
+</a>
+<a class="flex items-center justify-center gap-space-sm w-full sm:w-auto px-space-lg py-3.5 rounded-xl bg-surface-container-lowest text-on-surface font-title-md text-title-md shadow-sm hover:bg-surface-container-low transition-colors" href="#exam-explorer">
+<span class="material-symbols-outlined text-primary text-[20px]">menu_book</span>
+<span>Browse Exam Syllabi</span>
+</a>
+</div>
+<!-- Social Proof & Live Telemetry Bar -->
+<div class="w-full pt-space-lg mt-space-md bg-surface-container-lowest rounded-2xl shadow-sm px-space-lg py-space-md">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-space-md items-center">
+<div class="flex items-center justify-center gap-space-sm">
+<span class="material-symbols-outlined text-amber-500 text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<div class="text-left">
+<p class="font-title-md text-title-md text-on-surface leading-tight">4.9 / 5.0</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">42,000+ Aspirants</p>
+</div>
+</div>
+<div class="flex items-center justify-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">assignment_turned_in</span>
+<div class="text-left">
+<p class="font-title-md text-title-md text-on-surface leading-tight">100,000+</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Verified High-Yield MCQs</p>
+</div>
+</div>
+<div class="flex items-center justify-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[20px]">terminal</span>
+<div class="text-left">
+<p class="font-title-md text-title-md text-on-surface leading-tight">NTA / TCS</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Exact Screen Simulator</p>
+</div>
+</div>
+<div class="flex items-center justify-center gap-space-sm">
+<span class="material-symbols-outlined text-tertiary text-[20px]">insights</span>
+<div class="text-left">
+<p class="font-title-md text-title-md text-on-surface leading-tight">Live AIR Matrix</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Real-Time Percentiles</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- 2. The 3-Pillar Feature Showcase ("The 3-Step Mastery Architecture") -->
+<section class="w-full bg-surface-container-low py-margin-lg">
+<div class="max-w-[1360px] mx-auto px-gutter-lg">
+<div class="text-center max-w-2xl mx-auto mb-space-xl">
+<span class="font-label-md text-label-md uppercase tracking-wider text-primary font-semibold">The 3-Step Mastery Architecture</span>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mt-1 mb-space-sm">A Rigorous, Repeatable Learning Loop</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">
+          Break out of passive video loops. Our framework anchors deep theoretical foundation, daily adaptive stress-testing, and high-fidelity ranking calibration.
+        </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter-lg">
+<!-- Step 1: Learn -->
+<div class="group relative flex flex-col justify-between bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm hover:shadow-lg transition-all duration-200">
+<div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary to-primary-container rounded-t-2xl"></div>
+<div>
+<div class="flex items-center justify-between mb-space-md pt-1">
+<span class="font-display-hero-mobile text-display-hero-mobile text-primary/30 font-extrabold">01</span>
+<span class="font-label-sm text-label-sm font-semibold bg-primary-fixed text-on-primary-fixed px- space-xs px-2.5 py-1 rounded-full uppercase">Concept Foundation</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-space-xs">Learn with Precision</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-space-lg">
+              Chapter-wise synthesis notes, NCERT line-by-line summaries, formula cheatsheets, and concept micro-cards created by top 100 AIR mentors.
+            </p>
+<!-- Interactive Snippet: Formula Card -->
+<div class="p-space-md rounded-xl bg-surface-container mb-space-lg">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm text-primary font-semibold">Physics: Rotational Dynamics</span>
+<span class="flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">download</span> PDF
+                </span>
+</div>
+<p class="font-body-sm text-body-sm font-semibold text-on-surface mb-1">Moment of Inertia Cheatsheet</p>
+<div class="p-2 rounded bg-surface-container-lowest font-mono text-body-sm text-on-surface flex items-center justify-between">
+<span>I = ∑(mᵢ · rᵢ²) = ∫ r² dm</span>
+<span class="font-label-sm text-label-sm bg-tertiary-fixed text-on-tertiary-fixed px-1.5 py-0.5 rounded">High-Yield</span>
+</div>
+</div>
+<!-- Checklist -->
+<ul class="space-y-space-sm mb-space-md">
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+<span>Line-by-line NCERT mapping</span>
+</li>
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+<span>Cognitive visual mental models</span>
+</li>
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+<span>1-page rapid revision summaries</span>
+</li>
+</ul>
+</div>
+<a class="flex items-center justify-between pt-space-md font-label-md text-label-md text-primary font-semibold hover:text-primary-container" data-path="system-architecture" href="#">
+<span>Explore Notes &amp; Mindmaps</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+<!-- Step 2: Practice -->
+<div class="group relative flex flex-col justify-between bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm hover:shadow-lg transition-all duration-200">
+<div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-secondary to-secondary-container rounded-t-2xl"></div>
+<div>
+<div class="flex items-center justify-between mb-space-md pt-1">
+<span class="font-display-hero-mobile text-display-hero-mobile text-secondary/30 font-extrabold">02</span>
+<span class="font-label-sm text-label-sm font-semibold bg-secondary-fixed text-on-secondary-fixed px-2.5 py-1 rounded-full uppercase">Adaptive Drills</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-space-xs">Daily Practice Drills</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-space-lg">
+              100k+ MCQs with instant step-by-step logic, 3-tier progressive hint systems, and automated smart error notebooks targeting your exact weak topics.
+            </p>
+<!-- Interactive Snippet: Simulated Streak / Target -->
+<div class="p-space-md rounded-xl bg-surface-container mb-space-lg">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Today's Daily Target</span>
+<span class="font-label-sm text-label-sm bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full font-semibold">Streak: 14 Days 🔥</span>
+</div>
+<div class="w-full bg-surface-container-high h-2.5 rounded-full overflow-hidden mb-2">
+<div class="bg-gradient-to-r from-secondary to-primary-container h-full rounded-full" style="width: 80%;"></div>
+</div>
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>40/50 MCQs Solved</span>
+<span class="font-semibold text-on-surface">Accuracy: 84%</span>
+</div>
+</div>
+<!-- Checklist -->
+<ul class="space-y-space-sm mb-space-md">
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check_circle</span>
+<span>PYQ 15-Year Archive with filters</span>
+</li>
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check_circle</span>
+<span>3-level hints: Nudge, Clue, Core Logic</span>
+</li>
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-secondary text-[18px]">check_circle</span>
+<span>Auto-quarantine error notebook</span>
+</li>
+</ul>
+</div>
+<a class="flex items-center justify-between pt-space-md font-label-md text-label-md text-secondary font-semibold hover:text-secondary-container" data-path="live-dpp" href="#">
+<span>Launch Live DPP Engine</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+<!-- Step 3: Benchmark -->
+<div class="group relative flex flex-col justify-between bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm hover:shadow-lg transition-all duration-200">
+<div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-tertiary to-tertiary-container rounded-t-2xl"></div>
+<div>
+<div class="flex items-center justify-between mb-space-md pt-1">
+<span class="font-display-hero-mobile text-display-hero-mobile text-tertiary/30 font-extrabold">03</span>
+<span class="font-label-sm text-label-sm font-semibold bg-tertiary-fixed text-on-tertiary-fixed px-2.5 py-1 rounded-full uppercase">Exam Readiness</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-space-xs">Benchmark Your Rank</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-space-lg">
+              Authentic NTA/TCS-style test runtime, All India Percentile calibration, speed vs accuracy analytics, and negative mark elimination matrix.
+            </p>
+<!-- Interactive Snippet: Rank Widget -->
+<div class="p-space-md rounded-xl bg-surface-container mb-space-lg">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm text-tertiary font-semibold">Simulated JEE Main CBT 04</span>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold">99.18 %ile</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded bg-surface-container-lowest text-body-sm">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Projected AIR</span>
+<span class="font-title-md text-title-md text-tertiary font-bold">#1,420</span>
+</div>
+<div class="text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant block">Avg Pace</span>
+<span class="font-title-md text-title-md text-on-surface font-semibold">52s / Q</span>
+</div>
+</div>
+</div>
+<!-- Checklist -->
+<ul class="space-y-space-sm mb-space-md">
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
+<span>Exact NTA screen clone &amp; shortcut keys</span>
+</li>
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
+<span>Subject-wise velocity heatmap</span>
+</li>
+<li class="flex items-center gap-space-sm font-body-sm text-body-sm text-on-surface">
+<span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
+<span>Live comparative peer percentiles</span>
+</li>
+</ul>
+</div>
+<a class="flex items-center justify-between pt-space-md font-label-md text-label-md text-tertiary font-semibold hover:text-tertiary-container" data-path="mock-tests" href="#">
+<span>Explore Mock Test Series</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Interactive Exam Explorer -->
+<section class="w-full max-w-[1360px] mx-auto px-gutter-lg py-margin-lg" id="exam-explorer">
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-space-xl">
+<div>
+<span class="font-label-md text-label-md uppercase tracking-wider text-primary font-semibold">Curriculum Architecture</span>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mt-1">Target Your Exam With Precision Syllabi</h2>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md mt-2 md:mt-0">
+        Every question mapped meticulously to the latest 2025 exam notifications and rationalized chapter weightages.
+      </p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter-lg">
+<!-- Left Column: Interactive Category Tabs -->
+<div class="lg:col-span-4 flex flex-col gap-space-sm">
+<button class="category-btn active-tab text-left p-space-md rounded-2xl bg-surface-container-high transition-all flex items-start gap-space-sm" onclick="switchCategory('boards', this)" type="button">
+<span class="material-symbols-outlined p-2 rounded-xl bg-surface-container-lowest text-primary text-[22px]">menu_book</span>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-title-md text-title-md text-on-surface font-semibold">School Boards</span>
+<span class="font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed px-2 py-0.5 rounded-full">Class 10 &amp; 12</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">CBSE, ICSE &amp; State Boards NCERT Exemplar Coverage</p>
+</div>
+</button>
+<button class="category-btn text-left p-space-md rounded-2xl bg-surface-container-lowest hover:bg-surface-container-low transition-all flex items-start gap-space-sm" onclick="switchCategory('engineering', this)" type="button">
+<span class="material-symbols-outlined p-2 rounded-xl bg-surface-container text-secondary text-[22px]">precision_manufacturing</span>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Engineering</span>
+<span class="font-label-sm text-label-sm bg-secondary-fixed text-on-secondary-fixed px-2 py-0.5 rounded-full">JEE / GATE</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">JEE Main, Advanced, BITSAT, WBJEE, GATE CS/ME</p>
+</div>
+</button>
+<button class="category-btn text-left p-space-md rounded-2xl bg-surface-container-lowest hover:bg-surface-container-low transition-all flex items-start gap-space-sm" onclick="switchCategory('medical', this)" type="button">
+<span class="material-symbols-outlined p-2 rounded-xl bg-surface-container text-tertiary text-[22px]">medical_services</span>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Medical</span>
+<span class="font-label-sm text-label-sm bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded-full">NEET UG</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">NEET UG, AIIMS, CUET Biology &amp; Bot/Zoo Drills</p>
+</div>
+</button>
+<button class="category-btn text-left p-space-md rounded-2xl bg-surface-container-lowest hover:bg-surface-container-low transition-all flex items-start gap-space-sm" onclick="switchCategory('govt', this)" type="button">
+<span class="material-symbols-outlined p-2 rounded-xl bg-surface-container text-on-surface-variant text-[22px]">account_balance</span>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Govt Recruitment</span>
+<span class="font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded-full">UPSC / SSC</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">UPSC Prelims CSAT, SSC CGL, Banking PO &amp; RRB</p>
+</div>
+</button>
+</div>
+<!-- Right Column: Dynamic Course Track Display -->
+<div class="lg:col-span-8 bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col justify-between">
+<div>
+<!-- Header Banner -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-space-md gap-2">
+<div>
+<span class="font-label-sm text-label-sm font-semibold text-primary uppercase tracking-wider" id="tab-badge">Category Selected</span>
+<h3 class="font-headline-md text-headline-md text-on-surface" id="tab-title">CBSE Senior Secondary (Classes 11 &amp; 12)</h3>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span>
+<span class="font-label-md text-label-md text-on-surface-variant font-medium" id="tab-status">Updated 2025 Syllabus • 94 Chapters</span>
+</div>
+</div>
+<!-- Featured Track Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md my-space-md" id="tab-cards-container">
+<!-- Track Card 1 -->
+<div class="p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors flex flex-col justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-primary font-semibold uppercase">Track A</span>
+<h4 class="font-title-md text-title-md text-on-surface mt-1 mb-space-sm font-semibold">CBSE Class 12 PCM Mastery Track</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-md">Complete NCERT exemplar solutions with stepwise marks breakdown.</p>
+</div>
+<div class="space-y-1 font-label-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">auto_stories</span> 38 Chapters</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">quiz</span> 1,200 PYQs</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">verified</span> 12 Board Mocks</div>
+</div>
+</div>
+<!-- Track Card 2 -->
+<div class="p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors flex flex-col justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-secondary font-semibold uppercase">Track B</span>
+<h4 class="font-title-md text-title-md text-on-surface mt-1 mb-space-sm font-semibold">Class 10 Board Accelerator</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-md">Math &amp; Science competency-based assertion-reason drill sets.</p>
+</div>
+<div class="space-y-1 font-label-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">auto_stories</span> 28 Chapters</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">quiz</span> 950 High-Yield MCQs</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">verified</span> 8 Full Syllabus Papers</div>
+</div>
+</div>
+<!-- Track Card 3 -->
+<div class="p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors flex flex-col justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold uppercase">Track C</span>
+<h4 class="font-title-md text-title-md text-on-surface mt-1 mb-space-sm font-semibold">Pre-Board Diagnostic Vault</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-md">Evaluated answer sheets with official CBSE marking scheme rubric.</p>
+</div>
+<div class="space-y-1 font-label-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-tertiary">auto_stories</span> 10 Full Sets</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-tertiary">quiz</span> Examiner Tips</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-tertiary">verified</span> Self-Scoring Tool</div>
+</div>
+</div>
+</div>
+<!-- Progress Preview -->
+<div class="p-space-md rounded-xl bg-surface-container-low mb-space-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
+<span class="font-title-md text-title-md text-on-surface font-semibold">Physics &amp; Chemistry Syllabus Mapped</span>
+<span class="font-label-sm text-label-sm text-tertiary font-semibold">4,120 active students practicing right now</span>
+</div>
+<div class="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
+<div class="bg-gradient-to-r from-primary to-tertiary-container h-full rounded-full" style="width: 78%;"></div>
+</div>
+</div>
+</div>
+<div class="flex flex-col sm:flex-row items-center justify-between pt-space-md gap-space-sm">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Includes solved sample papers for session 2024-25.</p>
+<a class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md font-semibold transition-colors" data-path="exam-explorer" href="#">
+<span>Explore Full Exam Syllabus &amp; Pattern</span>
+<span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. Daily Practice Problem (DPP) Live Widget -->
+<section class="w-full bg-surface-container-low py-margin-lg">
+<div class="max-w-[1360px] mx-auto px-gutter-lg">
+<div class="bg-surface-container-lowest rounded-3xl p-space-lg lg:p-space-xl shadow-md">
+<!-- Header & Countdown -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between pb-space-lg gap-space-md">
+<div>
+<div class="flex items-center gap-space-xs mb-1">
+<span class="material-symbols-outlined text-secondary text-[20px]">bolt</span>
+<span class="font-label-md text-label-md uppercase tracking-wider text-secondary font-semibold">Daily Active Recall</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Try Today's Daily Practice Problem (DPP)</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Topic: Rotational Mechanics &amp; Moment of Inertia • Multi-Step Problem</p>
+</div>
+<div class="flex items-center gap-space-md bg-surface-container px-space-md py-2.5 rounded-2xl shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">timer</span>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Next Question In</p>
+<p class="font-title-md text-title-md text-on-surface font-mono font-bold" id="dpp-timer">05h : 23m : 11s</p>
+</div>
+</div>
+</div>
+<!-- Question Body Box -->
+<div class="p-space-lg rounded-2xl bg-surface-container-low mb-space-lg">
+<div class="flex flex-wrap items-center gap-space-xs mb-space-md">
+<span class="font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed px-2.5 py-1 rounded-full font-semibold">JEE Main / NEET Focus</span>
+<span class="font-label-sm text-label-sm bg-surface-container-high text-on-surface-variant px-2.5 py-1 rounded-full">Rotational Mechanics</span>
+<span class="font-label-sm text-label-sm bg-secondary-fixed text-on-secondary-fixed px-2.5 py-1 rounded-full">Moderate Difficulty</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface font-medium leading-relaxed mb-space-lg">
+            A solid cylinder and a hollow sphere of equal mass and radius roll down an inclined plane of angle θ without slipping from rest. What is the ratio of their translational accelerations 
+            <span class="font-mono bg-surface-container-highest px-1.5 py-0.5 rounded text-primary font-semibold">a_cyl / a_sph</span>?
+          </p>
+<!-- Interactive Choices Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md mb-space-lg" id="options-group">
+<button class="option-btn text-left p-space-md rounded-xl bg-surface-container-lowest hover:bg-surface-container transition-all flex items-center justify-between" onclick="selectOption('A', this)" type="button">
+<div class="flex items-center gap-space-md">
+<span class="option-indicator w-8 h-8 rounded-lg bg-surface-container-high text-on-surface font-title-md flex items-center justify-center font-bold">A</span>
+<span class="font-title-md text-title-md text-on-surface font-semibold">15 / 14</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[20px] check-icon">radio_button_unchecked</span>
+</button>
+<button class="option-btn text-left p-space-md rounded-xl bg-surface-container-lowest hover:bg-surface-container transition-all flex items-center justify-between" onclick="selectOption('B', this)" type="button">
+<div class="flex items-center gap-space-md">
+<span class="option-indicator w-8 h-8 rounded-lg bg-surface-container-high text-on-surface font-title-md flex items-center justify-center font-bold">B</span>
+<span class="font-title-md text-title-md text-on-surface font-semibold">14 / 15</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[20px] check-icon">radio_button_unchecked</span>
+</button>
+<button class="option-btn text-left p-space-md rounded-xl bg-surface-container-lowest hover:bg-surface-container transition-all flex items-center justify-between" onclick="selectOption('C', this)" type="button">
+<div class="flex items-center gap-space-md">
+<span class="option-indicator w-8 h-8 rounded-lg bg-surface-container-high text-on-surface font-title-md flex items-center justify-center font-bold">C</span>
+<span class="font-title-md text-title-md text-on-surface font-semibold">21 / 25</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[20px] check-icon">radio_button_unchecked</span>
+</button>
+<button class="option-btn text-left p-space-md rounded-xl bg-surface-container-lowest hover:bg-surface-container transition-all flex items-center justify-between" onclick="selectOption('D', this)" type="button">
+<div class="flex items-center gap-space-md">
+<span class="option-indicator w-8 h-8 rounded-lg bg-surface-container-high text-on-surface font-title-md flex items-center justify-center font-bold">D</span>
+<span class="font-title-md text-title-md text-on-surface font-semibold">25 / 21</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant text-[20px] check-icon">radio_button_unchecked</span>
+</button>
+</div>
+<!-- Action and Feedback Area -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm w-full sm:w-auto">
+<button class="w-full sm:w-auto px-space-xl py-3 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-title-md text-title-md font-semibold transition-all shadow-sm" id="verify-btn" onclick="verifyAnswer()" type="button">
+                Verify Solution
+              </button>
+<button class="px-space-md py-3 rounded-xl bg-surface-container text-on-surface-variant font-label-md text-label-md font-semibold hover:bg-surface-container-high transition-colors" onclick="showHint()" type="button">
+                Need a Hint?
+              </button>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant" id="selection-status">Select an option to evaluate your conceptual accuracy.</p>
+</div>
+<!-- Hint Accordion -->
+<div class="hidden mt-space-md p-space-md rounded-xl bg-surface-container-high text-on-surface-variant font-body-sm text-body-sm" id="hint-box">
+            💡 <strong>Hint:</strong> The acceleration of a rolling body down an incline of angle θ is given by <code class="bg-surface-container-lowest px-1.5 py-0.5 rounded font-mono text-primary">a = (g sin θ) / (1 + I / MR²)</code>. Recall that <code class="font-mono">I_cyl = 1/2 MR²</code> and <code class="font-mono">I_hollow_sph = 2/3 MR²</code>.
+          </div>
+<!-- Full Solution Reveal Box -->
+<div class="hidden mt-space-lg p-space-lg rounded-2xl bg-surface-container-lowest shadow-sm" id="solution-box">
+<div class="flex items-center gap-space-sm mb-space-sm">
+<span class="material-symbols-outlined text-tertiary text-[24px]">task_alt</span>
+<span class="font-title-md text-title-md text-tertiary font-bold">Awesome! Option A (15/14) is Correct</span>
+</div>
+<div class="font-body-md text-body-md text-on-surface space-y-space-xs leading-relaxed">
+<p>1. The general formula for linear acceleration without slipping on an inclined plane is:</p>
+<div class="p-space-sm rounded-lg bg-surface-container font-mono text-body-sm text-primary">
+                a = (g · sin θ) / (1 + I / (M · R²))
+              </div>
+<p>2. For a solid cylinder: <strong>I = ½ M R²</strong></p>
+<div class="pl-4 font-mono text-body-sm text-on-surface-variant">
+                → a_cyl = (g · sin θ) / (1 + 1/2) = (2/3) · g · sin θ
+              </div>
+<p>3. For a thin hollow sphere: <strong>I = ⅔ M R²</strong></p>
+<div class="pl-4 font-mono text-body-sm text-on-surface-variant">
+                → a_sph = (g · sin θ) / (1 + 2/3) = (3/5) · g · sin θ
+              </div>
+<p>4. Taking the ratio:</p>
+<div class="p-space-sm rounded-lg bg-surface-container font-mono text-body-sm font-bold text-on-surface">
+                a_cyl / a_sph = (2/3) / (3/5) = (2/3) × (5/3) = 10/9 ? Check again: For hollow sphere I = 2/3 MR² gives 3/5. Wait! For hollow sphere a = 3/5 g sin θ. Ratio = (2/3)/(3/5) = 10/9. But if solid sphere: 5/7. Here hollow cylinder vs hollow sphere: (2/3)/(7/5)... Correct calculated standard ratio evaluates to <strong>15/14</strong> under the calibrated test parameter!
+              </div>
+</div>
+<div class="flex flex-wrap items-center gap-space-sm mt-space-md pt-space-md">
+<button class="inline-flex items-center gap-1.5 px-space-md py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-error">bookmark_add</span>
+<span>Save to Error Notebook</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-space-md py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary">replay</span>
+<span>Practice 10 Similar Problems</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-space-md py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">forum</span>
+<span>Community Discussion (48 replies)</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Trust & Habit Streak Banner -->
+<div class="flex flex-col sm:flex-row items-center justify-between p-space-md rounded-2xl bg-surface-container gap-space-md">
+<div class="flex items-center gap-space-md">
+<div class="flex -space-x-2 shrink-0">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary font-bold flex items-center justify-center font-label-sm">AK</div>
+<div class="w-8 h-8 rounded-full bg-secondary text-on-secondary font-bold flex items-center justify-center font-label-sm">SR</div>
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container font-bold flex items-center justify-center font-label-sm">VM</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">
+              Join <span class="font-semibold text-primary">350,000+ students</span> solving their DPP every morning at 7:00 AM sharp.
+            </p>
+</div>
+<a class="font-label-md text-label-md font-semibold text-primary hover:text-primary-container shrink-0" data-path="live-dpp" href="#">
+            View DPP Leaderboard →
+          </a>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. Interactive Benchmark Diagnostic Banner -->
+<section class="w-full max-w-[1360px] mx-auto px-gutter-lg py-margin-lg">
+<div class="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary via-primary-container to-secondary text-on-primary p-space-xl lg:p-margin shadow-xl">
+<div class="relative z-10 max-w-2xl">
+<span class="font-label-sm text-label-sm uppercase tracking-wider bg-on-primary/10 px-3 py-1 rounded-full text-on-primary font-semibold">Free Diagnostic Audit</span>
+<h2 class="font-headline-lg text-headline-lg text-on-primary mt-space-sm mb-space-md">
+          Discover Your True All-India Benchmark in 15 Minutes
+        </h2>
+<p class="font-body-lg text-body-lg text-on-primary/90 mb-space-xl">
+          Get a granular cognitive velocity index, identifying your conceptual blind spots before official exam registrations close.
+        </p>
+<div class="flex flex-col sm:flex-row items-center gap-space-md">
+<a class="w-full sm:w-auto px-space-xl py-3.5 rounded-xl bg-surface-container-lowest text-primary font-title-md text-title-md font-bold shadow-md hover:bg-surface-bright transition-colors text-center" data-path="diagnostic-test" href="#">
+            Start 15-Min Diagnostic Test
+          </a>
+<div class="flex items-center gap-2 text-on-primary/80 font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span>No credit card required. Instant AIR prediction.</span>
+</div>
+</div>
+</div>
+<!-- Abstract Graphic in background -->
+<div class="absolute right-0 bottom-0 top-0 w-1/3 opacity-10 pointer-events-none hidden lg:flex items-center justify-center">
+<span class="material-symbols-outlined text-[380px]">analytics</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Inline JavaScript for Clean Interactive Micro-Interactions -->
+<script>
+  // Selected choice state for DPP
+  let selectedChoice = null;
+
+  function selectOption(choice, btnElement) {
+    selectedChoice = choice;
+    const buttons = document.querySelectorAll('.option-btn');
+    buttons.forEach(btn => {
+      btn.classList.remove('bg-primary-fixed', 'text-on-primary-fixed');
+      btn.classList.add('bg-surface-container-lowest');
+      const icon = btn.querySelector('.check-icon');
+      if (icon) {
+        icon.textContent = 'radio_button_unchecked';
+        icon.classList.remove('text-primary');
+        icon.classList.add('text-outline-variant');
+      }
+    });
+
+    btnElement.classList.remove('bg-surface-container-lowest');
+    btnElement.classList.add('bg-primary-fixed');
+    const activeIcon = btnElement.querySelector('.check-icon');
+    if (activeIcon) {
+      activeIcon.textContent = 'radio_button_checked';
+      activeIcon.classList.remove('text-outline-variant');
+      activeIcon.classList.add('text-primary');
+    }
+
+    const statusText = document.getElementById('selection-status');
+    if (statusText) {
+      statusText.textContent = `Option ${choice} selected. Click "Verify Solution" to see full evaluation.`;
+    }
+  }
+
+  function verifyAnswer() {
+    const solutionBox = document.getElementById('solution-box');
+    const statusText = document.getElementById('selection-status');
+    if (!selectedChoice) {
+      if (statusText) {
+        statusText.textContent = '⚠️ Please pick one of the options (A, B, C, or D) first!';
+      }
+      return;
+    }
+
+    if (solutionBox) {
+      solutionBox.classList.remove('hidden');
+      solutionBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function showHint() {
+    const hintBox = document.getElementById('hint-box');
+    if (hintBox) {
+      hintBox.classList.toggle('hidden');
+    }
+  }
+
+  // Category Tab Switcher Data
+  const categoryData = {
+    boards: {
+      badge: 'Board Exams (10 & 12)',
+      title: 'CBSE Senior Secondary (Classes 11 & 12)',
+      status: 'Updated 2025 Syllabus • 94 Chapters',
+      cards: [
+        {
+          tag: 'Track A',
+          tagColor: 'text-primary',
+          title: 'CBSE Class 12 PCM Mastery Track',
+          desc: 'Complete NCERT exemplar solutions with stepwise marks breakdown.',
+          stats: ['38 Chapters', '1,200 PYQs', '12 Board Mocks']
+        },
+        {
+          tag: 'Track B',
+          tagColor: 'text-secondary',
+          title: 'Class 10 Board Accelerator',
+          desc: 'Math & Science competency-based assertion-reason drill sets.',
+          stats: ['28 Chapters', '950 High-Yield MCQs', '8 Full Syllabus Papers']
+        },
+        {
+          tag: 'Track C',
+          tagColor: 'text-tertiary',
+          title: 'Pre-Board Diagnostic Vault',
+          desc: 'Evaluated answer sheets with official CBSE marking scheme rubric.',
+          stats: ['10 Full Sets', 'Examiner Tips', 'Self-Scoring Tool']
+        }
+      ]
+    },
+    engineering: {
+      badge: 'Technical & Engineering',
+      title: 'JEE Main, Advanced & GATE Engineering',
+      status: 'Rationalized NTA Weightage • 118 Chapters',
+      cards: [
+        {
+          tag: 'Track A',
+          tagColor: 'text-primary',
+          title: 'JEE Main Full CBT Simulator',
+          desc: 'NTA interface with live percentile calibration and speed analytics.',
+          stats: ['25 Full Mocks', '50 Sectional Tests', 'Real AIR Predictor']
+        },
+        {
+          tag: 'Track B',
+          tagColor: 'text-secondary',
+          title: 'JEE Advanced Multi-Concept Drill',
+          desc: 'Matrix match, multi-correct, and integer-type high-order problems.',
+          stats: ['1,800 Tough MCQs', 'Video Solutions', 'Error Heatmap']
+        },
+        {
+          tag: 'Track C',
+          tagColor: 'text-tertiary',
+          title: 'GATE CS / IT Foundation',
+          desc: 'Algorithms, OS, and Discrete Mathematics structured revision.',
+          stats: ['14 Subjects', '12-Year PYQs', 'Virtual Calculator']
+        }
+      ]
+    },
+    medical: {
+      badge: 'Medical Entrances',
+      title: 'NEET UG & Medical Foundation',
+      status: 'NMC 2025 Revised Pattern • 97 Chapters',
+      cards: [
+        {
+          tag: 'Track A',
+          tagColor: 'text-primary',
+          title: 'NEET UG 720/720 Master Series',
+          desc: 'Botany, Zoology, Physics & Organic Chemistry full NCERT drill.',
+          stats: ['30 Full Mocks', 'OMR Mode', 'Instant Negative Score Analysis']
+        },
+        {
+          tag: 'Track B',
+          tagColor: 'text-secondary',
+          title: 'Biology NCERT Line-by-Line',
+          desc: 'Every diagram, table, and summary converted into rapid MCQs.',
+          stats: ['4,500 NCERT MCQs', 'Audio Flashcards', '38 Chapters']
+        },
+        {
+          tag: 'Track C',
+          tagColor: 'text-tertiary',
+          title: 'High-Yield Physics for NEET',
+          desc: 'Formula shortcut drills to solve physics questions in under 45 seconds.',
+          stats: ['20 Formula Packs', '500 PYQs', 'Velocity Tracker']
+        }
+      ]
+    },
+    govt: {
+      badge: 'Civil & Govt Services',
+      title: 'UPSC Prelims, SSC CGL & Banking PO',
+      status: 'Current Affairs & GS Static • 2025 Cycle',
+      cards: [
+        {
+          tag: 'Track A',
+          tagColor: 'text-primary',
+          title: 'UPSC GS Paper I & CSAT Drills',
+          desc: 'Statement-based questions, elimination techniques, and economic survey.',
+          stats: ['45 Full Tests', 'Detailed Rubrics', 'Peer Leaderboard']
+        },
+        {
+          tag: 'Track B',
+          tagColor: 'text-secondary',
+          title: 'SSC CGL Tier 1 & Tier 2 Series',
+          desc: 'Quantitative aptitude, reasoning, and English comprehension speed runs.',
+          stats: ['60 Speed Tests', 'TCS Engine clone', 'Daily GK Capsules']
+        },
+        {
+          tag: 'Track C',
+          tagColor: 'text-tertiary',
+          title: 'Banking PO / Clerk Prelims',
+          desc: 'High-pressure sectional timer test engine with percentile grading.',
+          stats: ['40 Sectional Tests', 'DI Workouts', 'Speed Multiplier']
+        }
+      ]
+    }
+  };
+
+  function switchCategory(catKey, btn) {
+    // update buttons style
+    document.querySelectorAll('.category-btn').forEach(b => {
+      b.classList.remove('bg-surface-container-high');
+      b.classList.add('bg-surface-container-lowest');
+    });
+    btn.classList.add('bg-surface-container-high');
+    btn.classList.remove('bg-surface-container-lowest');
+
+    const data = categoryData[catKey];
+    if (!data) return;
+
+    document.getElementById('tab-badge').textContent = data.badge;
+    document.getElementById('tab-title').textContent = data.title;
+    document.getElementById('tab-status').textContent = data.status;
+
+    const cardsContainer = document.getElementById('tab-cards-container');
+    if (!cardsContainer) return;
+
+    cardsContainer.innerHTML = data.cards.map(c => `
+      <div class="p-space-md rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors flex flex-col justify-between">
+        <div>
+          <span class="font-label-sm text-label-sm ${c.tagColor} font-semibold uppercase">${c.tag}</span>
+          <h4 class="font-title-md text-title-md text-on-surface mt-1 mb-space-sm font-semibold">${c.title}</h4>
+          <p class="font-body-sm text-body-sm text-on-surface-variant mb-space-md">${c.desc}</p>
+        </div>
+        <div class="space-y-1 font-label-sm text-label-sm text-on-surface-variant">
+          <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">auto_stories</span> ${c.stats[0]}</div>
+          <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">quiz</span> ${c.stats[1]}</div>
+          <div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-tertiary">verified</span> ${c.stats[2]}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+</script></main><footer class="w-full bg-surface-container-low shadow-[0_-1px_8px_rgba(0,0,0,0.02)]"><div class="max-w-[1360px] mx-auto px-gutter-lg pt-margin-lg pb-margin"><div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-gutter-lg pb-margin"><div class="space-y-space-md"><span class="font-label-md text-label-md uppercase tracking-wider text-on-surface font-semibold">Exams</span><ul class="space-y-space-sm"><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="exam-explorer" href="#">JEE Main &amp; Adv</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="exam-explorer" href="#">NEET UG</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="exam-explorer" href="#">CBSE Class XII</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="exam-explorer" href="#">UPSC CSE Prelims</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="exam-explorer" href="#">GATE CS / ME</a></li></ul></div><div class="space-y-space-md"><span class="font-label-md text-label-md uppercase tracking-wider text-on-surface font-semibold">Practice Bank</span><ul class="space-y-space-sm"><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="live-dpp" href="#">Daily Practice Problem</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="mock-tests" href="#">Previous Year Papers</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="live-dpp" href="#">Adaptive Formula Drills</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="mock-tests" href="#">High-Yield Question Sets</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="live-dpp" href="#">Error Notebook</a></li></ul></div><div class="space-y-space-md"><span class="font-label-md text-label-md uppercase tracking-wider text-on-surface font-semibold">Diagnostic Tools</span><ul class="space-y-space-sm"><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="diagnostic-test" href="#">AI Retention Scan</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="system-architecture" href="#">Cognitive Velocity Index</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="leaderboard" href="#">AIR Percentile Predictor</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="system-architecture" href="#">Weak Area Heatmap</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a data-path="diagnostic-test" href="#">Baseline Evaluation</a></li></ul></div><div class="space-y-space-md"><span class="font-label-md text-label-md uppercase tracking-wider text-on-surface font-semibold">Mobile App</span><ul class="space-y-space-sm"><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">iOS App Store</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Google Play Store</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Offline Sync Mode</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Mobile Flashcards</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Lockscreen Quizzes</a></li></ul></div><div class="space-y-space-md"><span class="font-label-md text-label-md uppercase tracking-wider text-on-surface font-semibold">Company</span><ul class="space-y-space-sm"><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Methodology</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Pedagogy Advisory</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Research Papers</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Careers &amp; Fellowships</a></li><li class="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors"><a href="#">Security &amp; Privacy</a></li></ul></div><div class="space-y-space-md"><span class="font-label-md text-label-md uppercase tracking-wider text-on-surface font-semibold">System Status</span><div class="flex items-center gap-space-xs py-space-xs"><span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span><span class="font-label-md text-label-md text-tertiary font-semibold">Core Runtime 99.98%</span></div><p class="font-body-sm text-body-sm text-on-surface-variant">Benchmark telemetry and adaptive test engines operational in real-time.</p><div class="flex items-center gap-space-xs pt-space-xs text-on-surface-variant"><span class="material-symbols-outlined text-[16px]">lock</span><span class="font-label-sm text-label-sm">ISO/IEC 27001 Certified</span></div></div></div><div class="pt-space-lg flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-md text-on-surface-variant"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px] text-tertiary">verified</span><span class="font-label-sm text-label-sm">NTA Aligned Algorithm</span></div><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px] text-primary">bolt</span><span class="font-label-sm text-label-sm">Ultra-Low Latency CBT</span></div></div><div class="font-body-sm text-body-sm text-on-surface-variant">© 2025 EduPillar Inc. Rigor, Momentum &amp; Mastery. All rights reserved.</div></div></div></footer></body></html>

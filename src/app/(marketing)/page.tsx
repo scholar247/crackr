@@ -7,10 +7,12 @@ import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
 import { EXAM_STATS, DEFAULT_EXAM_STATS, computeExamInitials } from '@/lib/exam-stats';
 import type { ExamCardData } from '@/lib/exam-stats';
 import { PRIMARY_EXAM_SLUGS, FEATURED_ANONYMOUS_EXAM_SLUG } from '@/lib/primary-exams';
+import { pageCardRepository } from '@/server/repositories/page-card.repository';
+import { examSpotlightRepository } from '@/server/repositories/exam-spotlight.repository';
+import { LearningLoop } from '@/components/marketing/home/learning-loop';
+import { ExamExplorer, type ExplorerProgram } from '@/components/marketing/home/exam-explorer';
 import { Hero } from '@/components/marketing/home/hero';
-import { FeatureStrip } from '@/components/marketing/home/feature-strip';
 import { ExploreExams } from '@/components/marketing/home/explore-exams';
-import { MasterConcepts } from '@/components/marketing/home/master-concepts';
 import { PracticeShowcase } from '@/components/marketing/home/practice-showcase';
 import { FrameworkSteps } from '@/components/marketing/home/framework-steps';
 import { Team } from '@/components/marketing/home/team';
@@ -73,18 +75,55 @@ async function getFeaturedExams(limit = 5): Promise<ExamCardData[]> {
   }));
 }
 
+// Programs → exams for the "Target your exam" explorer, plus the first exam's real stats and
+// daily problem so the section renders fully populated on first paint. Programs with no
+// active exams are dropped; the featured exam (if present) is preselected.
+async function getExamExplorerData() {
+  const [programRows, examRows] = await Promise.all([
+    taxonomyRepository.listPublicPrograms(),
+    taxonomyRepository.listPublicExams(),
+  ]);
+
+  const programs: ExplorerProgram[] = programRows
+    .map((program) => ({
+      id: program.id,
+      name: program.name,
+      description: program.description,
+      exams: examRows
+        .filter(({ exam }) => exam.programId === program.id)
+        .map(({ exam }) => ({ id: exam.id, slug: exam.slug, name: exam.name, description: exam.description })),
+    }))
+    .filter((program) => program.exams.length > 0);
+  if (programs.length === 0) return null;
+
+  const allExams = programs.flatMap((p) => p.exams);
+  const initialExam = allExams.find((e) => e.slug === FEATURED_ANONYMOUS_EXAM_SLUG) ?? allExams[0];
+  const initialProgram = programs.find((p) => p.exams.some((e) => e.slug === initialExam.slug)) ?? programs[0];
+  const [initialSpotlight, initialProgramStats] = await Promise.all([
+    examSpotlightRepository.getSpotlight(initialExam.id),
+    examSpotlightRepository.getProgramStats(initialProgram.id),
+  ]);
+
+  return { programs, initialExamSlug: initialExam.slug, initialSpotlight, initialProgramId: initialProgram.id, initialProgramStats };
+}
+
 // Anonymous homepage — also the fallback for a logged-in user whose session no longer
 // resolves to a real account (deleted/disabled mid-session), so this page never crashes
 // on a stale session. See prd/homepage-session-aware-revamp.md Section 11.
-function AnonymousHome({ exams }: { exams: ExamCardData[] }) {
+async function AnonymousHome() {
+  const [loopCards, explorer, platformStats] = await Promise.all([
+    pageCardRepository.listActive('home', 'learning-loop'),
+    getExamExplorerData(),
+    examSpotlightRepository.getPlatformStats(),
+  ]);
+  const examNames = explorer?.programs.flatMap((p) => p.exams.map((e) => e.name)) ?? [];
+
   return (
     <main>
-      <Hero />
-      <FeatureStrip />
-      <ExploreExams exams={exams} trendingSlug={FEATURED_ANONYMOUS_EXAM_SLUG} />
-      <MasterConcepts />
+      <Hero examNames={examNames} stats={platformStats} />
+      <LearningLoop cards={loopCards} />
+      {explorer && <ExamExplorer {...explorer} />}
       <PracticeShowcase />
-      <FrameworkSteps />
       <Team />
       <CtaBand />
     </main>
@@ -246,7 +285,7 @@ export default async function HomePage() {
   const session = await auth();
 
   if (!session?.user) {
-    return <AnonymousHome exams={await getFeaturedExams()} />;
+    return <AnonymousHome />;
   }
 
   const [snapshot, examTargets] = await Promise.all([
@@ -257,7 +296,7 @@ export default async function HomePage() {
   // A session cookie can outlive the account it points at (deleted/disabled mid-session) —
   // treat that the same as anonymous rather than crash on a null snapshot.
   if (!snapshot) {
-    return <AnonymousHome exams={await getFeaturedExams()} />;
+    return <AnonymousHome />;
   }
 
   const primaryTarget = examTargets.find((t) => t.isPrimary) ?? null;
