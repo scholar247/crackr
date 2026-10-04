@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 // today, so this stays a prompt rather than a pre-configured deep link.
 export function MockPromptCard() {
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-page px-4 pb-4 sm:px-6 lg:px-8">
       <Card className="border-primary/20 bg-primary/5 transition-all duration-200 hover:shadow-md">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div className="flex items-center gap-2.5">

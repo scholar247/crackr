@@ -33,7 +33,7 @@ export default async function CommunityDetailPage({ params }: { params: Promise<
   const initialPosts = posts.map((p) => ({ ...p, createdAt: p.createdAt.toISOString(), myVote: votes.get(p.id) ?? null }));
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-page">
       <div className="flex items-center gap-2">
         {community.kind === 'OFFICIAL' && (
           <Badge variant="secondary">

@@ -17,7 +17,7 @@ interface HeroProgram {
 export function Hero({ exam, program }: { exam: HeroExam; program: HeroProgram | null }) {
   return (
     <>
-      <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 pt-8 sm:px-6 lg:px-8">
         <nav className="flex flex-wrap items-center gap-1.5 text-body-sm text-muted-foreground" aria-label="Breadcrumb">
           <Link href="/" className="hover:text-foreground">
             Home
@@ -37,7 +37,7 @@ export function Hero({ exam, program }: { exam: HeroExam; program: HeroProgram |
         </nav>
       </div>
 
-      <section className="mx-auto grid max-w-6xl gap-12 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8 lg:py-14">
+      <section className="mx-auto grid max-w-page gap-12 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8 lg:py-14">
         <div>
           <span className="text-label-caps inline-flex items-center rounded-full border border-border bg-card px-4 py-2 uppercase text-secondary">
             Entrance Examination

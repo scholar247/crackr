@@ -11,7 +11,7 @@ export function TargetedExamPractice({ exams }: { exams: TargetedExam[] }) {
 
   return (
     <section className="bg-muted/40 py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <div className="flex items-end justify-between">
           <div>
             <h2 className="text-headline-lg text-foreground">Targeted Exam Practice</h2>

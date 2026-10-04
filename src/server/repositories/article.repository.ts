@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { articles, users, contentNodeMap, examNodeMap } from '@/server/db/schema';
+import { articles, users, contentNodeMap, curriculumNodes, examNodeMap } from '@/server/db/schema';
 import { slugify } from '@/lib/utils';
 import { taxonomyRepository } from './taxonomy.repository';
 import type { ARTICLE_STATUS_VALUES, CreateArticleInput, UpdateArticleInput } from '@/schemas/article.schema';
@@ -111,11 +111,12 @@ async function findPublishedByAuthor(authorId: string, limit = 6) {
 // every ancestor (SUPPLEMENTARY, for "topic and everything under it" queries). Tags the
 // article so the public detail page can find a matching concept-check question and
 // suggested articles that share curriculum ground.
-async function setNodeTags(tx: Tx, articleId: number, nodeId: string | undefined) {
+// `precomputedAncestorIds` lets bulk callers resolve the ancestor chain once for many articles.
+async function setNodeTags(tx: Tx, articleId: number, nodeId: string | undefined, precomputedAncestorIds?: Set<string>) {
   await tx.delete(contentNodeMap).where(and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articleId)));
   if (!nodeId) return;
 
-  const ancestorIds = await taxonomyRepository.getAncestorIds(nodeId);
+  const ancestorIds = precomputedAncestorIds ?? (await taxonomyRepository.getAncestorIds(nodeId));
   await tx.insert(contentNodeMap).values({ id: randomUUID(), contentType: 'ARTICLE', contentId: articleId, nodeId, relationType: 'PRIMARY' });
   if (ancestorIds.size > 0) {
     await tx.insert(contentNodeMap).values(
@@ -128,6 +129,46 @@ async function setNodeTags(tx: Tx, articleId: number, nodeId: string | undefined
       }))
     );
   }
+}
+
+// Every non-deleted article with the node it is currently mapped to (PRIMARY), for the admin
+// bulk-mapping screen — light fields only, since this lists the whole library.
+async function listForNodeMapping() {
+  return db
+    .select({
+      id: articles.id,
+      title: articles.title,
+      slug: articles.slug,
+      status: articles.status,
+      nodeId: contentNodeMap.nodeId,
+      nodeName: curriculumNodes.name,
+    })
+    .from(articles)
+    .leftJoin(
+      contentNodeMap,
+      and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articles.id), eq(contentNodeMap.relationType, 'PRIMARY'))
+    )
+    .leftJoin(curriculumNodes, eq(curriculumNodes.id, contentNodeMap.nodeId))
+    .where(ne(articles.status, 'DELETED'))
+    .orderBy(desc(articles.updatedAt));
+}
+
+// Maps many articles to one node (or clears their mapping when nodeId is null). Each article
+// gets the same tags a single-article edit gives it: the node itself plus every ancestor up
+// to the root. Replaces whatever the article was mapped to before. All-or-nothing.
+async function mapManyToNode(ids: number[], nodeId: string | null) {
+  const existing = await db
+    .select({ id: articles.id })
+    .from(articles)
+    .where(and(inArray(articles.id, ids), ne(articles.status, 'DELETED')));
+  const targetIds = existing.map((r) => r.id);
+  if (targetIds.length === 0) return 0;
+
+  const ancestorIds = nodeId ? await taxonomyRepository.getAncestorIds(nodeId) : undefined;
+  await db.transaction(async (tx) => {
+    for (const id of targetIds) await setNodeTags(tx, id, nodeId ?? undefined, ancestorIds);
+  });
+  return targetIds.length;
 }
 
 async function findNodeForArticle(articleId: number) {
@@ -318,6 +359,8 @@ export const articleRepository = {
   findPublishedBySlugWithAuthor,
   findPublishedByAuthor,
   findPublishedByExam,
+  listForNodeMapping,
+  mapManyToNode,
   findNodeForArticle,
   findNodeIdsForArticle,
   findRelatedPublished,

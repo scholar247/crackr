@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Link2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -138,11 +138,20 @@ export function BlogListClient({ role }: { role: UserRole }) {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Blog</h1>
-        <Button asChild size="sm" className="gap-1.5">
-          <Link href="/admin/blog/new">
-            <Plus className="h-4 w-4" /> New article
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {canBulkEdit && (
+            <Button asChild size="sm" variant="outline" className="gap-1.5">
+              <Link href="/admin/blog/node-mapping">
+                <Link2 className="h-4 w-4" /> Map to curriculum
+              </Link>
+            </Button>
+          )}
+          <Button asChild size="sm" className="gap-1.5">
+            <Link href="/admin/blog/new">
+              <Plus className="h-4 w-4" /> New article
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">

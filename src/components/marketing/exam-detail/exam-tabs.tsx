@@ -28,7 +28,7 @@ export function ExamTabs({ defaultTab, overview, subjects }: ExamTabsProps) {
   return (
     <Tabs defaultValue={initial} className="w-full">
       <div className="border-b border-border bg-card">
-        <TabsList className="mx-auto h-auto w-full max-w-6xl justify-start gap-6 overflow-x-auto rounded-none bg-transparent px-4 py-0 sm:px-6 lg:px-8">
+        <TabsList className="mx-auto h-auto w-full max-w-page justify-start gap-6 overflow-x-auto rounded-none bg-transparent px-4 py-0 sm:px-6 lg:px-8">
           {TAB_LIST.map((tab) => (
             <TabsTrigger
               key={tab.value}
@@ -44,7 +44,7 @@ export function ExamTabs({ defaultTab, overview, subjects }: ExamTabsProps) {
         </TabsList>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 py-12 sm:px-6 lg:px-8">
         <TabsContent value="overview" className="mt-0 space-y-10">
           {overview}
         </TabsContent>

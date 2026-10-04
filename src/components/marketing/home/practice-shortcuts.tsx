@@ -26,7 +26,7 @@ export function PracticeShortcuts({ examSlug, subjects, exams }: PracticeShortcu
 
   return (
     <section className="bg-background py-14">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <h2 className="text-headline-lg text-foreground">Jump Into Practice</h2>
         <p className="text-body-md mt-1 text-muted-foreground">Pick a subject, or go straight to an exam&apos;s full question pool.</p>
 

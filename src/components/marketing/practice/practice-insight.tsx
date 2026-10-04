@@ -37,7 +37,7 @@ function HeatmapMockup() {
 export function PracticeInsight() {
   return (
     <section className="bg-background py-20">
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
+      <div className="mx-auto grid max-w-page gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
         <div>
           <h2 className="text-headline-lg text-foreground">
             Beyond mere repetition.

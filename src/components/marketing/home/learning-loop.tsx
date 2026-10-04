@@ -58,7 +58,7 @@ export function LearningLoop({ cards }: { cards: PageCard[] }) {
 
   return (
     <section className="bg-muted/40 py-16 lg:py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-label-caps uppercase tracking-wider text-primary">The preparation loop</p>
           <h2 className="text-headline-lg mt-2 text-foreground">Learn it. Drill it. Test it.</h2>

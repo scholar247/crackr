@@ -226,7 +226,7 @@ export function ExamRoomClient({
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_280px]">
+      <div className="mx-auto grid max-w-page grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_280px]">
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold text-primary">{index + 1}</span>

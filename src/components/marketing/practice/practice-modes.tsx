@@ -13,7 +13,7 @@ const MODES = [
 export function PracticeModes() {
   return (
     <section className="bg-background py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <h2 className="text-headline-lg text-foreground">Explore Practice Modes</h2>
         <p className="text-body-md mt-1 text-muted-foreground">Select a format that fits your current study objective.</p>
 

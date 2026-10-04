@@ -39,7 +39,7 @@ export function TopicExplorer({ subjects, topics, examSlug, loggedIn }: TopicExp
 
   return (
     <section className="bg-background py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <h2 className="text-headline-lg text-foreground">Topic Explorer</h2>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">

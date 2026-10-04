@@ -9,11 +9,11 @@ import type { ExamCardData } from '@/lib/exam-stats';
 import { PRIMARY_EXAM_SLUGS, FEATURED_ANONYMOUS_EXAM_SLUG } from '@/lib/primary-exams';
 import { pageCardRepository } from '@/server/repositories/page-card.repository';
 import { examSpotlightRepository } from '@/server/repositories/exam-spotlight.repository';
+import { getExamExplorerData, getHeroSearchData } from '@/server/services/exam-explorer-data';
 import { LearningLoop } from '@/components/marketing/home/learning-loop';
-import { ExamExplorer, type ExplorerProgram } from '@/components/marketing/home/exam-explorer';
+import { ExamExplorer } from '@/components/marketing/home/exam-explorer';
 import { Hero } from '@/components/marketing/home/hero';
 import { ExploreExams } from '@/components/marketing/home/explore-exams';
-import { PracticeShowcase } from '@/components/marketing/home/practice-showcase';
 import { FrameworkSteps } from '@/components/marketing/home/framework-steps';
 import { Team } from '@/components/marketing/home/team';
 import { CtaBand } from '@/components/marketing/home/cta-band';
@@ -75,38 +75,6 @@ async function getFeaturedExams(limit = 5): Promise<ExamCardData[]> {
   }));
 }
 
-// Programs → exams for the "Target your exam" explorer, plus the first exam's real stats and
-// daily problem so the section renders fully populated on first paint. Programs with no
-// active exams are dropped; the featured exam (if present) is preselected.
-async function getExamExplorerData() {
-  const [programRows, examRows] = await Promise.all([
-    taxonomyRepository.listPublicPrograms(),
-    taxonomyRepository.listPublicExams(),
-  ]);
-
-  const programs: ExplorerProgram[] = programRows
-    .map((program) => ({
-      id: program.id,
-      name: program.name,
-      description: program.description,
-      exams: examRows
-        .filter(({ exam }) => exam.programId === program.id)
-        .map(({ exam }) => ({ id: exam.id, slug: exam.slug, name: exam.name, description: exam.description })),
-    }))
-    .filter((program) => program.exams.length > 0);
-  if (programs.length === 0) return null;
-
-  const allExams = programs.flatMap((p) => p.exams);
-  const initialExam = allExams.find((e) => e.slug === FEATURED_ANONYMOUS_EXAM_SLUG) ?? allExams[0];
-  const initialProgram = programs.find((p) => p.exams.some((e) => e.slug === initialExam.slug)) ?? programs[0];
-  const [initialSpotlight, initialProgramStats] = await Promise.all([
-    examSpotlightRepository.getSpotlight(initialExam.id),
-    examSpotlightRepository.getProgramStats(initialProgram.id),
-  ]);
-
-  return { programs, initialExamSlug: initialExam.slug, initialSpotlight, initialProgramId: initialProgram.id, initialProgramStats };
-}
-
 // Anonymous homepage — also the fallback for a logged-in user whose session no longer
 // resolves to a real account (deleted/disabled mid-session), so this page never crashes
 // on a stale session. See prd/homepage-session-aware-revamp.md Section 11.
@@ -117,13 +85,13 @@ async function AnonymousHome() {
     examSpotlightRepository.getPlatformStats(),
   ]);
   const examNames = explorer?.programs.flatMap((p) => p.exams.map((e) => e.name)) ?? [];
+  const { searchExams, searchPrograms, popularExams } = getHeroSearchData(explorer?.programs ?? []);
 
   return (
     <main>
-      <Hero examNames={examNames} stats={platformStats} />
+      <Hero examNames={examNames} stats={platformStats} searchExams={searchExams} searchPrograms={searchPrograms} popularExams={popularExams} />
       <LearningLoop cards={loopCards} />
       {explorer && <ExamExplorer {...explorer} />}
-      <PracticeShowcase />
       <Team />
       <CtaBand />
     </main>
@@ -143,7 +111,7 @@ function IncompleteProfileHome({
   return (
     <main>
       <section className="bg-background py-12">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
           <h1 className="text-headline-lg text-foreground">Welcome, {firstName} — let&apos;s find your exam.</h1>
         </div>
       </section>
@@ -247,7 +215,7 @@ async function PersonalizedHome({
       />
 
       {inProgressRow && (
-        <div className="mx-auto max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-page px-4 pb-8 sm:px-6 lg:px-8">
           <ContinueMockCard
             assessmentId={inProgressRow.assessment.id}
             title={inProgressRow.assessment.title}

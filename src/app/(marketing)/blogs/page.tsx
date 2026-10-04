@@ -10,7 +10,7 @@ export default async function BlogsPage() {
   const articles = await articleRepository.findPublished();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
+    <main className="mx-auto max-w-page px-4 py-16 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold tracking-tight text-foreground">Blog</h1>
       <p className="mt-2 text-muted-foreground">Guides and explanations to go along with your exam prep.</p>
 

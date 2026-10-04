@@ -90,61 +90,64 @@ export function DailyPractice({ examName, examSlug, problem, loading }: DailyPra
         <Countdown until={problem.nextRefreshAt} />
       </div>
 
-      <div className="mt-4 rounded-xl bg-muted/40 p-4 sm:p-5">
-        <Badge className={cn(DIFFICULTY_COLORS[problem.difficulty])}>{problem.difficulty}</Badge>
-
-        <div className="mt-3 text-sm font-medium text-foreground">
-          <BlogContent content={problem.stem} />
+      <div className="mt-5 grid gap-6 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/20 via-primary/10 to-muted/60 p-4 sm:p-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10">
+        <div>
+          <Badge className={cn(DIFFICULTY_COLORS[problem.difficulty])}>{problem.difficulty}</Badge>
+          <div className="mt-3 text-base font-medium text-foreground">
+            <BlogContent content={problem.stem} />
+          </div>
         </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          {problem.options.map((option) => {
-            const isPicked = current.picked === option.key;
-            return (
-              <button
-                key={option.key}
-                type="button"
-                disabled={current.verified}
-                onClick={() => setState({ problemId: problem.id, picked: option.key, verified: false })}
-                className={cn(
-                  'flex items-center gap-2.5 rounded-lg border bg-card px-3.5 py-2.5 text-left text-sm transition-colors',
-                  !current.verified && !isPicked && 'border-border hover:border-primary/40',
-                  !current.verified && isPicked && 'border-primary bg-primary/5',
-                  current.verified && option.isCorrect && 'border-emerald-500/50 bg-emerald-500/10',
-                  current.verified && isPicked && !option.isCorrect && 'border-destructive/50 bg-destructive/10',
-                  current.verified && !isPicked && !option.isCorrect && 'border-border opacity-60'
-                )}
-              >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current text-[11px] font-medium">
-                  {option.key}
-                </span>
-                <InlineMarkdown content={option.text} className="flex-1 text-foreground" />
-                {current.verified && option.isCorrect && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
-                {current.verified && isPicked && !option.isCorrect && <X className="h-4 w-4 shrink-0 text-destructive" />}
-              </button>
-            );
-          })}
-        </div>
+        <div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {problem.options.map((option) => {
+              const isPicked = current.picked === option.key;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  disabled={current.verified}
+                  onClick={() => setState({ problemId: problem.id, picked: option.key, verified: false })}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-lg border bg-card px-3.5 py-3 text-left text-sm transition-colors',
+                    !current.verified && !isPicked && 'border-border hover:border-primary/40',
+                    !current.verified && isPicked && 'border-primary bg-primary/5',
+                    current.verified && option.isCorrect && 'border-emerald-500/50 bg-emerald-500/10',
+                    current.verified && isPicked && !option.isCorrect && 'border-destructive/50 bg-destructive/10',
+                    current.verified && !isPicked && !option.isCorrect && 'border-border opacity-60',
+                  )}
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current text-[11px] font-medium">
+                    {option.key}
+                  </span>
+                  <InlineMarkdown content={option.text} className="flex-1 text-foreground" />
+                  {current.verified && option.isCorrect && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
+                  {current.verified && isPicked && !option.isCorrect && <X className="h-4 w-4 shrink-0 text-destructive" />}
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button
-            className="rounded-full"
-            disabled={!current.picked || current.verified}
-            onClick={() => setState({ ...current, verified: true })}
-          >
-            Verify solution
-          </Button>
-          <p className="text-body-sm text-muted-foreground">
-            {current.verified
-              ? gotItRight
-                ? 'Correct — nice work.'
-                : `Not quite — the answer is ${correct?.key}.`
-              : 'Select an option to check your understanding.'}
-          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button
+              className="rounded-full"
+              disabled={!current.picked || current.verified}
+              onClick={() => setState({ ...current, verified: true })}
+            >
+              Verify solution
+            </Button>
+            <p className="text-body-sm text-muted-foreground">
+              {current.verified
+                ? gotItRight
+                  ? 'Correct — nice work.'
+                  : `Not quite — the answer is ${correct?.key}.`
+                : 'Select an option to check your understanding.'}
+            </p>
+          </div>
         </div>
 
         {current.verified && problem.explanation && (
-          <div className="mt-4 rounded-lg bg-card p-3 text-sm text-muted-foreground">
+          <div className="rounded-lg bg-card p-4 text-sm text-muted-foreground lg:col-span-2">
             <BlogContent content={problem.explanation} />
           </div>
         )}

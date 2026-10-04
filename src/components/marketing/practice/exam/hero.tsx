@@ -24,7 +24,7 @@ export async function Hero({ examName, examSlug, questionCount, topicCount }: He
 
   return (
     <section className="bg-gradient-to-b from-secondary/10 via-background to-background py-16">
-      <div className="mx-auto grid max-w-6xl gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_320px] lg:items-start lg:px-8">
+      <div className="mx-auto grid max-w-page gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_320px] lg:items-start lg:px-8">
         <div>
           <span className="text-label-caps inline-flex items-center rounded-full border border-border bg-card px-4 py-2 uppercase text-secondary">
             {examName} {new Date().getFullYear()}

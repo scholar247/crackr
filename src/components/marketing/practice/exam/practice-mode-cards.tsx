@@ -11,7 +11,7 @@ const MODES = [
 export function PracticeModeCards({ examSlug }: { examSlug: string }) {
   return (
     <section className="bg-background py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <h2 className="text-headline-lg text-foreground">Select Practice Mode</h2>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

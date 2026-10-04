@@ -96,7 +96,7 @@ export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn
   return (
     <div className="bg-background">
       <div className="border-b border-border bg-muted/30">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-page items-center justify-between px-4 py-3">
           <span className="text-body-sm font-medium text-foreground">{examName} Practice</span>
           <Link
             href={`/practice/exams/${examSlug}`}
@@ -109,7 +109,7 @@ export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn
 
       {!loggedIn && (
         <div className="border-b border-border bg-secondary/5">
-          <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5">
+          <div className="mx-auto flex max-w-page items-center gap-2 px-4 py-2.5">
             <Info className="h-4 w-4 shrink-0 text-secondary" />
             <p className="text-body-sm text-muted-foreground">
               Practicing as a guest — your answers won&apos;t be saved.{' '}
@@ -122,7 +122,7 @@ export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn
         </div>
       )}
 
-      <div className="mx-auto max-w-6xl px-4 py-6">
+      <div className="mx-auto max-w-page px-4 py-6">
         <div className="flex gap-6">
           <aside className={cn('shrink-0 transition-all duration-200', sidebarOpen ? 'w-72' : 'w-0 overflow-hidden')}>
             <div className="w-72 space-y-5 rounded-xl border border-border bg-card p-5">

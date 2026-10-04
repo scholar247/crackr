@@ -26,7 +26,7 @@ export function LoggedInHero({ firstName, examName, examSlug, progress }: Logged
 
   return (
     <section className="bg-background py-12">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-headline-lg text-foreground">Welcome back, {firstName}</h1>
           <Badge variant="info">{examName}</Badge>

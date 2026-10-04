@@ -31,7 +31,7 @@ export default async function BlogPreviewPage({ params }: { params: Promise<{ id
   const headings = extractHeadings(article.body);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
+    <main className="mx-auto max-w-page px-4 py-8">
       <div className="mx-auto mb-8 flex max-w-3xl items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-2.5 text-sm text-muted-foreground">
         <Badge className={STATUS_COLORS[article.status]}>{article.status.replace('_', ' ')}</Badge>
         Preview only — this is how the article will look once published. It isn&apos;t the live URL.

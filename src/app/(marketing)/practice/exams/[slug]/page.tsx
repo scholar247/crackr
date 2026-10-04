@@ -81,7 +81,7 @@ export default async function PracticeExamLandingPage({ params }: { params: Prom
       <SubjectsProgress subjects={subjects} />
 
       <section className="bg-muted/40 py-16">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_320px] lg:px-8">
+        <div className="mx-auto grid max-w-page gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_320px] lg:px-8">
           <div>
             <h2 className="text-headline-lg text-foreground">Question Preview</h2>
             <p className="text-body-md mt-1 text-muted-foreground">A sample of what you&apos;ll practice with.</p>

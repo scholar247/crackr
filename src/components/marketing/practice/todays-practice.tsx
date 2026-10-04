@@ -19,7 +19,7 @@ export async function TodaysPractice() {
 
   return (
     <section className="bg-muted/40 py-16">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <h2 className="text-headline-lg text-foreground">Today&apos;s Practice</h2>
         <p className="text-body-md mt-1 text-muted-foreground">Your performance metrics for the current session.</p>
 

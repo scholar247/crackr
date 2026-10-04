@@ -55,8 +55,8 @@ async function getStats(examId: string): Promise<ExamSpotlightStats> {
           eq(contentExamMap.examId, examId),
           eq(questions.status, 'PUBLISHED'),
           eq(questions.visibility, 'PUBLIC'),
-          sql`json_contains(${questions.tags}, '"pyq"')`
-        )
+          sql`json_contains(${questions.tags}, '"pyq"')`,
+        ),
       ),
     db
       .select({ n: sql<number>`count(*)` })
@@ -66,8 +66,8 @@ async function getStats(examId: string): Promise<ExamSpotlightStats> {
           eq(assessments.examId, examId),
           eq(assessments.status, 'PUBLISHED'),
           eq(assessments.visibility, 'PUBLIC'),
-          inArray(assessments.type, ['OFFICIAL', 'MOCK', 'TEST'])
-        )
+          inArray(assessments.type, ['OFFICIAL', 'MOCK', 'TEST']),
+        ),
       ),
     db
       .select({ n: sql<number>`count(distinct ${articles.id})` })
@@ -96,8 +96,8 @@ async function getStats(examId: string): Promise<ExamSpotlightStats> {
           eq(contentNodeMap.contentType, 'QUESTION'),
           inArray(contentNodeMap.nodeId, [...chapterIds]),
           eq(questions.status, 'PUBLISHED'),
-          eq(questions.visibility, 'PUBLIC')
-        )
+          eq(questions.visibility, 'PUBLIC'),
+        ),
       );
     chaptersWithMcqs = Number(row?.n ?? 0);
   }
@@ -146,12 +146,19 @@ async function getSpotlight(examId: string) {
 
 // Platform-wide totals for the homepage hero — all real counts, public content only.
 async function getPlatformStats() {
-  const [[examRow], [mcqRow], [mockRow], [articleRow]] = await Promise.all([
-    db.select({ n: sql<number>`count(*)` }).from(exams).where(eq(exams.status, 'ACTIVE')),
+  const [[examRow], [mcqRow], [pyqRow], [mockRow], [articleRow]] = await Promise.all([
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(exams)
+      .where(eq(exams.status, 'ACTIVE')),
     db
       .select({ n: sql<number>`count(*)` })
       .from(questions)
       .where(and(eq(questions.status, 'PUBLISHED'), eq(questions.visibility, 'PUBLIC'))),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(questions)
+      .where(and(eq(questions.status, 'PUBLISHED'), eq(questions.visibility, 'PUBLIC'), sql`json_contains(${questions.tags}, '"pyq"')`)),
     db
       .select({ n: sql<number>`count(*)` })
       .from(assessments)
@@ -159,8 +166,8 @@ async function getPlatformStats() {
         and(
           eq(assessments.status, 'PUBLISHED'),
           eq(assessments.visibility, 'PUBLIC'),
-          inArray(assessments.type, ['OFFICIAL', 'MOCK', 'TEST'])
-        )
+          inArray(assessments.type, ['OFFICIAL', 'MOCK', 'TEST']),
+        ),
       ),
     db
       .select({ n: sql<number>`count(*)` })
@@ -170,6 +177,7 @@ async function getPlatformStats() {
   return {
     exams: Number(examRow?.n ?? 0),
     mcqs: Number(mcqRow?.n ?? 0),
+    pyqs: Number(pyqRow?.n ?? 0),
     mockTests: Number(mockRow?.n ?? 0),
     articles: Number(articleRow?.n ?? 0),
   };
@@ -185,6 +193,64 @@ async function getProgramStats(programId: string): Promise<Record<string, ExamSp
   return Object.fromEntries(entries);
 }
 
+export interface ExamSummaryStats {
+  chapters: number;
+  mcqs: number;
+  pyqs: number;
+  mockTests: number;
+}
+
+// Content counts for EVERY active exam in a fixed number of grouped queries (not a handful
+// per exam), for the /exams directory. Keyed by exam id; exams with no content are absent.
+async function getAllExamSummaries(): Promise<Record<string, ExamSummaryStats>> {
+  const [mcqRows, pyqRows, mockRows, [chapterRows]] = await Promise.all([
+    db
+      .select({ examId: contentExamMap.examId, n: sql<number>`count(distinct ${questions.id})` })
+      .from(questions)
+      .innerJoin(contentExamMap, and(eq(contentExamMap.contentType, 'QUESTION'), eq(contentExamMap.contentId, questions.id)))
+      .where(and(eq(questions.status, 'PUBLISHED'), eq(questions.visibility, 'PUBLIC')))
+      .groupBy(contentExamMap.examId),
+    db
+      .select({ examId: contentExamMap.examId, n: sql<number>`count(distinct ${questions.id})` })
+      .from(questions)
+      .innerJoin(contentExamMap, and(eq(contentExamMap.contentType, 'QUESTION'), eq(contentExamMap.contentId, questions.id)))
+      .where(and(eq(questions.status, 'PUBLISHED'), eq(questions.visibility, 'PUBLIC'), sql`json_contains(${questions.tags}, '"pyq"')`))
+      .groupBy(contentExamMap.examId),
+    db
+      .select({ examId: assessments.examId, n: sql<number>`count(*)` })
+      .from(assessments)
+      .where(
+        and(
+          eq(assessments.status, 'PUBLISHED'),
+          eq(assessments.visibility, 'PUBLIC'),
+          inArray(assessments.type, ['OFFICIAL', 'MOCK', 'TEST']),
+        ),
+      )
+      .groupBy(assessments.examId),
+    // Chapters reachable from each exam's syllabus roots (same traversal as getSyllabusTree).
+    db.execute(sql`
+      WITH RECURSIVE reachable AS (
+        SELECT exam_id, node_id AS id FROM exam_node_map
+        UNION
+        SELECT r.exam_id, edge.child_node_id FROM curriculum_edges edge
+        INNER JOIN reachable r ON r.id = edge.parent_node_id
+      )
+      SELECT r.exam_id AS examId, COUNT(*) AS n
+      FROM reachable r
+      INNER JOIN curriculum_nodes cn ON cn.id = r.id AND cn.node_type = 'CHAPTER'
+      GROUP BY r.exam_id
+    `) as unknown as Promise<[{ examId: string; n: number }[], unknown]>,
+  ]);
+
+  const out: Record<string, ExamSummaryStats> = {};
+  const entry = (id: string) => (out[id] ??= { chapters: 0, mcqs: 0, pyqs: 0, mockTests: 0 });
+  for (const r of chapterRows) entry(r.examId).chapters = Number(r.n);
+  for (const r of mcqRows) entry(r.examId).mcqs = Number(r.n);
+  for (const r of pyqRows) entry(r.examId).pyqs = Number(r.n);
+  for (const r of mockRows) if (r.examId) entry(r.examId).mockTests = Number(r.n);
+  return out;
+}
+
 async function findActiveExamIdBySlug(slug: string) {
   const [row] = await db
     .select({ id: exams.id })
@@ -197,4 +263,11 @@ async function findActiveExamIdBySlug(slug: string) {
 export type PlatformStats = Awaited<ReturnType<typeof getPlatformStats>>;
 export type ExamSpotlight = Awaited<ReturnType<typeof getSpotlight>>;
 
-export const examSpotlightRepository = { getSpotlight, getProgramStats, getPlatformStats, findActiveExamIdBySlug };
+export const examSpotlightRepository = {
+  getSpotlight,
+  getStats,
+  getAllExamSummaries,
+  getProgramStats,
+  getPlatformStats,
+  findActiveExamIdBySlug,
+};

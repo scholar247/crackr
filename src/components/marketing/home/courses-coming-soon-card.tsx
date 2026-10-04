@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 export function CoursesComingSoonCard({ examName }: { examName: string }) {
   return (
     <section className="bg-surface-container-lowest py-14">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <Card className="border-dashed">
           <CardHeader className="flex-row items-center gap-4 space-y-0 border-b-0">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">

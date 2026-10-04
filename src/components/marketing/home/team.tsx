@@ -29,7 +29,7 @@ const TEAM = [
 export function Team() {
   return (
     <section className="bg-background py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <span className="text-label-caps uppercase tracking-wider text-primary">Who&apos;s Building This</span>
           <h2 className="text-headline-lg mt-2 text-foreground">Founders &amp; Team</h2>

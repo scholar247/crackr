@@ -1,11 +1,18 @@
 import Link from 'next/link';
 import { ArrowRight, BookOpenCheck, FileCheck2, GraduationCap, ListChecks, Newspaper, Sparkles } from 'lucide-react';
+import { ExamSearchBox, type ExamSearchBoxProps } from '@/components/marketing/exam-search-box';
+import { CountUp } from '@/components/marketing/home/count-up';
 import type { PlatformStats } from '@/server/repositories/exam-spotlight.repository';
 
 interface HeroProps {
   /** Active exam names, in display order — used to name the exams in the subheadline. */
   examNames: string[];
   stats: PlatformStats;
+  /** Everything the hero search can match — the same list the explorer below is built from. */
+  searchExams: ExamSearchBoxProps['exams'];
+  searchPrograms: ExamSearchBoxProps['programs'];
+  /** Quick-jump chips straight to an exam page. */
+  popularExams: { slug: string; name: string }[];
 }
 
 function joinNames(names: string[]) {
@@ -13,7 +20,7 @@ function joinNames(names: string[]) {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
-export function Hero({ examNames, stats }: HeroProps) {
+export function Hero({ examNames, stats, searchExams, searchPrograms, popularExams }: HeroProps) {
   const named = examNames.slice(0, 4);
   const statItems = [
     { icon: GraduationCap, tone: 'text-primary', value: stats.exams, label: 'Exams covered' },
@@ -29,7 +36,7 @@ export function Hero({ examNames, stats }: HeroProps) {
         aria-hidden="true"
       />
 
-      <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pt-20">
+      <div className="relative mx-auto max-w-page px-4 pb-16 pt-14 sm:px-6 lg:px-8 lg:pt-20">
         <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 shadow-sm">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -48,6 +55,25 @@ export function Hero({ examNames, stats }: HeroProps) {
             {named.length > 0 ? ` for ${joinNames(named)} aspirants` : ' for competitive exam aspirants'}. Theory,
             practice and mock tests built by people who&apos;ve taken these exams.
           </p>
+
+          <div className="mt-8 w-full">
+            <ExamSearchBox exams={searchExams} programs={searchPrograms} className="max-w-2xl" />
+
+            {popularExams.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <span className="text-body-sm text-muted-foreground">Popular:</span>
+                {popularExams.map((exam) => (
+                  <Link
+                    key={exam.slug}
+                    href={`/exams/${exam.slug}`}
+                    className="text-label-caps rounded-full border border-border bg-card px-3 py-1 uppercase text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                  >
+                    {exam.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="mt-8 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
             <Link
@@ -73,7 +99,7 @@ export function Hero({ examNames, stats }: HeroProps) {
                   <div key={label} className="flex items-center justify-center gap-2.5">
                     <Icon className={`h-5 w-5 shrink-0 ${tone}`} />
                     <div className="text-left">
-                      <p className="text-base font-semibold leading-tight text-foreground">{value.toLocaleString('en-IN')}</p>
+                      <p className="text-base font-semibold leading-tight text-foreground"><CountUp value={value} /></p>
                       <p className="text-label-caps text-muted-foreground">{label}</p>
                     </div>
                   </div>

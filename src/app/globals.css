@@ -4,6 +4,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Page content width — the one place to tune how wide marketing/community pages run (and
+ * so how much side space they leave). Matches the design's 1360px container; used as
+ * `max-w-page` by every page container, the navbar and the footer so their edges align. */
+@theme {
+  --container-page: 85rem; /* 1360px */
+}
+
 @theme inline {
   /* Base colors */
   --color-background: var(--background);

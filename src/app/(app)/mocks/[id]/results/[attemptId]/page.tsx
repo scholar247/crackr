@@ -109,7 +109,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
     : null;
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-page">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="font-headline-lg text-headline-lg text-foreground">Assessment Summary</h1>
