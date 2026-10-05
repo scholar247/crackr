@@ -28,6 +28,10 @@ export const CreateArticleSchema = z.object({
   // CreateQuestionSchema.nodeId. Drives concept-check/suggested-article matching on the
   // public blog detail page.
   nodeId: z.uuid().optional(),
+  // The exact chain to attach to, ordered root → leaf (the leaf is the tag, the rest are its
+  // parents on that chain). Needed whenever the leaf sits under more than one parent;
+  // `null` clears the mapping. Takes precedence over `nodeId`.
+  nodePath: z.array(z.uuid()).min(1).max(12).nullable().optional(),
 });
 export type CreateArticleInput = z.infer<typeof CreateArticleSchema>;
 

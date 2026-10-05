@@ -21,7 +21,7 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
     redirect('/admin/blog');
   }
 
-  const node = await articleRepository.findNodeForArticle(article.id);
+  const [node, nodeIds] = await Promise.all([articleRepository.findNodeForArticle(article.id), articleRepository.findTaggedNodeIds(article.id)]);
 
   return (
     <div>
@@ -44,6 +44,7 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
             keywords: article.keywords,
             ogImage: article.ogImage,
             nodeId: node?.nodeId,
+            nodeIds,
             updatedAt: article.updatedAt.toISOString(),
           }}
         />

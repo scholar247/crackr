@@ -408,7 +408,121 @@ async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
   return roots;
 }
 
+// ── Root paths (a node can sit under several parents) ───────────────────────
+
+/** Thrown for an invalid or ambiguous curriculum selection — callers map it to a 400. */
+export class NodePathError extends Error {}
+
+/**
+ * Every distinct chain from a root down to `nodeId`, each ordered root → node. A node with
+ * one parent chain has one path; "Trigonometry" under both "Mathematics" and "Mathematics
+ * (Class 10)" has two. Capped so a pathological graph can't explode.
+ */
+async function listRootPaths(nodeId: string, max = 50): Promise<string[][]> {
+  const ancestors = await getAncestorIds(nodeId);
+  const ids = [nodeId, ...ancestors];
+  const edgeRows = await db
+    .select({ child: curriculumEdges.childNodeId, parent: curriculumEdges.parentNodeId })
+    .from(curriculumEdges)
+    .where(inArray(curriculumEdges.childNodeId, ids));
+
+  const parentsOf = new Map<string, string[]>();
+  for (const e of edgeRows) parentsOf.set(e.child, [...(parentsOf.get(e.child) ?? []), e.parent]);
+
+  const paths: string[][] = [];
+  const walk = (id: string, suffix: string[]) => {
+    if (paths.length >= max || suffix.includes(id)) return;
+    const parents = parentsOf.get(id) ?? [];
+    if (parents.length === 0) {
+      paths.push([id, ...suffix]);
+      return;
+    }
+    for (const parent of parents) walk(parent, [id, ...suffix]);
+  };
+  walk(nodeId, []);
+  return paths;
+}
+
+/** A selection is one root → leaf chain: real active nodes, each the parent of the next, starting at a root. */
+async function validateNodePath(path: string[]): Promise<void> {
+  if (path.length === 0 || path.length > 12 || new Set(path).size !== path.length) {
+    throw new NodePathError('Invalid curriculum selection');
+  }
+
+  const nodes = await db.select({ id: curriculumNodes.id, status: curriculumNodes.status }).from(curriculumNodes).where(inArray(curriculumNodes.id, path));
+  if (nodes.length !== path.length || nodes.some((n) => n.status !== 'ACTIVE')) {
+    throw new NodePathError('Curriculum node not found or archived');
+  }
+
+  const edges = await db
+    .select({ child: curriculumEdges.childNodeId, parent: curriculumEdges.parentNodeId })
+    .from(curriculumEdges)
+    .where(inArray(curriculumEdges.childNodeId, path));
+  const hasEdge = (parent: string, child: string) => edges.some((e) => e.parent === parent && e.child === child);
+
+  for (let i = 0; i < path.length - 1; i++) {
+    if (!hasEdge(path[i], path[i + 1])) throw new NodePathError('Selection is not a connected chain of parent → child nodes');
+  }
+  if (edges.some((e) => e.child === path[0])) throw new NodePathError('Selection must start at a top-level node');
+}
+
+/**
+ * Turns whatever a caller sent into the one chain to store:
+ *  - `nodePath` array → validated as-is
+ *  - `nodePath: null`  → null (clear the mapping)
+ *  - only `nodeId`     → its single root path; if the node has several parents the caller
+ *                        must say which chain, so this throws instead of guessing (guessing
+ *                        is how an article tagged "Trigonometry" ended up on every exam)
+ *  - neither           → undefined (leave the mapping untouched)
+ */
+async function resolveNodePath(input: { nodePath?: string[] | null; nodeId?: string }): Promise<string[] | null | undefined> {
+  if (input.nodePath === null) return null;
+  if (input.nodePath) {
+    await validateNodePath(input.nodePath);
+    return input.nodePath;
+  }
+  if (!input.nodeId) return undefined;
+
+  const paths = await listRootPaths(input.nodeId);
+  if (paths.length === 0) throw new NodePathError('Curriculum node not found');
+  if (paths.length > 1) throw new NodePathError('This node sits under more than one parent — choose which chain to attach to');
+  await validateNodePath(paths[0]);
+  return paths[0];
+}
+
+// For the blog pickers: the whole (small) curriculum graph in one payload — parent ids per
+// node, plus the exams each node is directly mapped to — so the client can offer every
+// distinct root → node chain without a request per search.
+async function listPublicNodesWithGraph() {
+  const [nodes, edgeRows, examRows] = await Promise.all([
+    db.select().from(curriculumNodes).where(eq(curriculumNodes.status, 'ACTIVE')).orderBy(asc(curriculumNodes.name)),
+    db.select({ child: curriculumEdges.childNodeId, parent: curriculumEdges.parentNodeId }).from(curriculumEdges),
+    db
+      .select({ nodeId: examNodeMap.nodeId, examName: exams.name })
+      .from(examNodeMap)
+      .innerJoin(exams, and(eq(exams.id, examNodeMap.examId), eq(exams.status, 'ACTIVE'))),
+  ]);
+
+  const parentsOf = new Map<string, string[]>();
+  for (const e of edgeRows) parentsOf.set(e.child, [...(parentsOf.get(e.child) ?? []), e.parent]);
+  const examsOf = new Map<string, string[]>();
+  for (const r of examRows) examsOf.set(r.nodeId, [...(examsOf.get(r.nodeId) ?? []), r.examName]);
+
+  return nodes.map((n) => ({
+    id: n.id,
+    name: n.name,
+    nodeType: n.nodeType,
+    slug: n.slug,
+    parentIds: parentsOf.get(n.id) ?? [],
+    exams: examsOf.get(n.id) ?? [],
+  }));
+}
+
 export const taxonomyRepository = {
+  listRootPaths,
+  validateNodePath,
+  resolveNodePath,
+  listPublicNodesWithGraph,
   listPrograms,
   listPublicPrograms,
   findProgramBySlug,

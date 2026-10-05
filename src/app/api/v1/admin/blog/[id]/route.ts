@@ -1,5 +1,6 @@
 import { requireAuth, DEFAULT_CONTENT_AUTHOR_ID } from '@/server/auth/require-auth';
 import { articleRepository } from '@/server/repositories/article.repository';
+import { NodePathError } from '@/server/repositories/taxonomy.repository';
 import { UpdateArticleSchema } from '@/schemas/article.schema';
 import { isAdmin } from '@/lib/roles';
 import { apiError, apiSuccess, parseContentId } from '@/lib/utils';
@@ -38,6 +39,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Invalid input', 400);
 
   const editorId = isServiceKey ? DEFAULT_CONTENT_AUTHOR_ID : session!.user.id;
-  const updated = await articleRepository.update(articleId, parsed.data, editorId);
-  return apiSuccess(updated);
+  try {
+    const updated = await articleRepository.update(articleId, parsed.data, editorId);
+    return apiSuccess(updated);
+  } catch (e) {
+    if (e instanceof NodePathError) return apiError(e.message, 400);
+    throw e;
+  }
 }

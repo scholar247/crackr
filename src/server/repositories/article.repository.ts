@@ -199,20 +199,22 @@ async function findPublishedByAuthor(authorId: string, limit = 6) {
     .limit(limit);
 }
 
-// Same shape as question.repository's setNodeTag: one explicit leaf node (PRIMARY) plus
-// every ancestor (SUPPLEMENTARY, for "topic and everything under it" queries). Tags the
-// article so the public detail page can find a matching concept-check question and
-// suggested articles that share curriculum ground.
-// `precomputedAncestorIds` lets bulk callers resolve the ancestor chain once for many articles.
-async function setNodeTags(tx: Tx, articleId: number, nodeId: string | undefined, precomputedAncestorIds?: Set<string>) {
+// Stores ONE chain: the leaf is the explicit tag (PRIMARY) and every node above it on that
+// same chain is SUPPLEMENTARY, so "everything under Mathematics" still finds the article. The
+// chain is chosen by the author, not discovered: a node can sit under several parents
+// (Trigonometry under both "Mathematics" and "Mathematics (Class 10)"), and walking all of
+// them used to attach the article to every exam that maps any of those branches.
+// Replaces whatever the article was tagged with; an empty/undefined path just clears it.
+async function setNodeTags(tx: Tx, articleId: number, path: string[] | undefined) {
   await tx.delete(contentNodeMap).where(and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articleId)));
-  if (!nodeId) return;
+  if (!path || path.length === 0) return;
 
-  const ancestorIds = precomputedAncestorIds ?? (await taxonomyRepository.getAncestorIds(nodeId));
-  await tx.insert(contentNodeMap).values({ id: randomUUID(), contentType: 'ARTICLE', contentId: articleId, nodeId, relationType: 'PRIMARY' });
-  if (ancestorIds.size > 0) {
+  const leaf = path[path.length - 1];
+  await tx.insert(contentNodeMap).values({ id: randomUUID(), contentType: 'ARTICLE', contentId: articleId, nodeId: leaf, relationType: 'PRIMARY' });
+  const above = path.slice(0, -1);
+  if (above.length > 0) {
     await tx.insert(contentNodeMap).values(
-      Array.from(ancestorIds).map((id) => ({
+      above.map((id) => ({
         id: randomUUID(),
         contentType: 'ARTICLE' as const,
         contentId: articleId,
@@ -223,10 +225,8 @@ async function setNodeTags(tx: Tx, articleId: number, nodeId: string | undefined
   }
 }
 
-// Every non-deleted article with the node it is currently mapped to (PRIMARY), for the admin
-// bulk-mapping screen — light fields only, since this lists the whole library.
 async function listForNodeMapping() {
-  return db
+  const rows = await db
     .select({
       id: articles.id,
       title: articles.title,
@@ -243,12 +243,20 @@ async function listForNodeMapping() {
     .leftJoin(curriculumNodes, eq(curriculumNodes.id, contentNodeMap.nodeId))
     .where(ne(articles.status, 'DELETED'))
     .orderBy(desc(articles.updatedAt));
+  const tags = await db
+    .select({ contentId: contentNodeMap.contentId, nodeId: contentNodeMap.nodeId })
+    .from(contentNodeMap)
+    .where(eq(contentNodeMap.contentType, 'ARTICLE'));
+  const idsByArticle = new Map<number, string[]>();
+  for (const t of tags) idsByArticle.set(t.contentId, [...(idsByArticle.get(t.contentId) ?? []), t.nodeId]);
+  return rows.map((r) => ({ ...r, nodeIds: idsByArticle.get(r.id) ?? [] }));
 }
 
-// Maps many articles to one node (or clears their mapping when nodeId is null). Each article
-// gets the same tags a single-article edit gives it: the node itself plus every ancestor up
-// to the root. Replaces whatever the article was mapped to before. All-or-nothing.
-async function mapManyToNode(ids: number[], nodeId: string | null) {
+// Maps many articles to one chosen chain (root → leaf), or clears their mapping when path is
+// null. Each article is tagged with exactly that chain — the leaf plus the nodes above it on
+// it, nothing from other branches. Replaces whatever the article was mapped to before.
+// All-or-nothing.
+async function mapManyToNode(ids: number[], path: string[] | null) {
   const existing = await db
     .select({ id: articles.id })
     .from(articles)
@@ -256,11 +264,20 @@ async function mapManyToNode(ids: number[], nodeId: string | null) {
   const targetIds = existing.map((r) => r.id);
   if (targetIds.length === 0) return 0;
 
-  const ancestorIds = nodeId ? await taxonomyRepository.getAncestorIds(nodeId) : undefined;
   await db.transaction(async (tx) => {
-    for (const id of targetIds) await setNodeTags(tx, id, nodeId ?? undefined, ancestorIds);
+    for (const id of targetIds) await setNodeTags(tx, id, path ?? undefined);
   });
   return targetIds.length;
+}
+
+// Every node an article is tagged with (leaf + chain), for the edit form to show what the
+// article is currently attached to.
+async function findTaggedNodeIds(articleId: number): Promise<string[]> {
+  const rows = await db
+    .select({ nodeId: contentNodeMap.nodeId })
+    .from(contentNodeMap)
+    .where(and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.contentId, articleId)));
+  return rows.map((r) => r.nodeId);
 }
 
 async function findNodeForArticle(articleId: number) {
@@ -355,6 +372,7 @@ async function ensureUniqueSlug(base: string, excludeId?: number) {
 }
 
 async function create(input: CreateArticleInput, authorId: string | null) {
+  const nodePath = await taxonomyRepository.resolveNodePath(input);
   const baseSlug = slugify(input.slug || input.title);
   const slug = await ensureUniqueSlug(baseSlug);
 
@@ -376,14 +394,15 @@ async function create(input: CreateArticleInput, authorId: string | null) {
       authorId,
     });
     id = result.insertId;
-    if (input.nodeId) await setNodeTags(tx, id, input.nodeId);
+    if (nodePath) await setNodeTags(tx, id, nodePath);
   });
 
   return findById(id);
 }
 
 async function update(id: number, input: UpdateArticleInput, editorId: string | null = null) {
-  const { nodeId, ...rest } = input;
+  const { nodeId, nodePath: requestedPath, ...rest } = input;
+  const nodePath = await taxonomyRepository.resolveNodePath({ nodeId, nodePath: requestedPath });
 
   if (rest.status === 'DELETED') {
     await deleteOne(id);
@@ -405,7 +424,7 @@ async function update(id: number, input: UpdateArticleInput, editorId: string | 
 
   await db.transaction(async (tx) => {
     await tx.update(articles).set(patch).where(eq(articles.id, id));
-    if (nodeId !== undefined) await setNodeTags(tx, id, nodeId);
+    if (nodePath !== undefined) await setNodeTags(tx, id, nodePath ?? undefined);
   });
   return findById(id);
 }
@@ -457,6 +476,7 @@ export const articleRepository = {
   listForNodeMapping,
   mapManyToNode,
   findNodeForArticle,
+  findTaggedNodeIds,
   findNodeIdsForArticle,
   findRelatedPublished,
   create,
