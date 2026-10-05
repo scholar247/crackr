@@ -2,6 +2,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import '@/lib/katex-setup';
 
 // Answer options are short strings (often a formula, a code token, or a couple of
 // words) laid out inline next to the option-key badge — BlogContent's block-level

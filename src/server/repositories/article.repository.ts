@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { articles, users, contentNodeMap, curriculumNodes, examNodeMap } from '@/server/db/schema';
+import { articles, users, contentNodeMap, contentExamMap, curriculumNodes, examNodeMap } from '@/server/db/schema';
 import { slugify } from '@/lib/utils';
 import { taxonomyRepository } from './taxonomy.repository';
 import type { ARTICLE_STATUS_VALUES, CreateArticleInput, UpdateArticleInput } from '@/schemas/article.schema';
@@ -74,6 +74,98 @@ async function findPublished() {
     .from(articles)
     .where(and(eq(articles.status, 'PUBLISHED'), eq(articles.visibility, 'PUBLIC')))
     .orderBy(desc(articles.updatedAt));
+}
+
+export type BlogListSort = 'latest' | 'oldest' | 'title';
+
+export interface ListPublishedPageOptions {
+  /** Only articles belonging to this exam (tagged to any of its syllabus nodes, or directly to the exam). */
+  examId?: string;
+  /** Only articles tagged to this curriculum node. Ancestors are tagged too, so a parent node includes everything under it. */
+  nodeId?: string;
+  sort?: BlogListSort;
+  page?: number;
+  pageSize?: number;
+}
+
+const PUBLISHED_PUBLIC = () => and(eq(articles.status, 'PUBLISHED'), eq(articles.visibility, 'PUBLIC'));
+
+// Paginated public listing for /blogs and its exam/subject/topic drill-down pages. "Latest"
+// is by creation time (an edit shouldn't bump an old post back to the top), id as tiebreak so
+// pagination is stable when timestamps tie.
+async function listPublishedPage({ examId, nodeId, sort = 'latest', page = 1, pageSize = 10 }: ListPublishedPageOptions = {}) {
+  const conditions = [PUBLISHED_PUBLIC()];
+
+  if (examId) {
+    conditions.push(
+      sql`(${articles.id} IN (
+          SELECT ${contentNodeMap.contentId} FROM ${contentNodeMap}
+          INNER JOIN ${examNodeMap} ON ${examNodeMap.nodeId} = ${contentNodeMap.nodeId}
+          WHERE ${contentNodeMap.contentType} = 'ARTICLE' AND ${examNodeMap.examId} = ${examId}
+        ) OR ${articles.id} IN (
+          SELECT ${contentExamMap.contentId} FROM ${contentExamMap}
+          WHERE ${contentExamMap.contentType} = 'ARTICLE' AND ${contentExamMap.examId} = ${examId}
+        ))`
+    );
+  }
+  if (nodeId) {
+    conditions.push(
+      inArray(
+        articles.id,
+        db
+          .select({ id: contentNodeMap.contentId })
+          .from(contentNodeMap)
+          .where(and(eq(contentNodeMap.contentType, 'ARTICLE'), eq(contentNodeMap.nodeId, nodeId)))
+      )
+    );
+  }
+  const where = and(...conditions);
+
+  const orderBy =
+    sort === 'oldest' ? [asc(articles.createdAt), asc(articles.id)] : sort === 'title' ? [asc(articles.title), asc(articles.id)] : [desc(articles.createdAt), desc(articles.id)];
+
+  const [[countRow], items] = await Promise.all([
+    db.select({ n: sql<number>`count(*)` }).from(articles).where(where),
+    db
+      .select()
+      .from(articles)
+      .where(where)
+      .orderBy(...orderBy)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+  ]);
+
+  return { items, total: Number(countRow?.n ?? 0) };
+}
+
+// Published-article counts per curriculum node (a node's count includes everything tagged
+// beneath it, since ancestors are tagged too) — for the drill-down tables' badges.
+async function countPublishedByNode(): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ nodeId: contentNodeMap.nodeId, n: sql<number>`count(distinct ${contentNodeMap.contentId})` })
+    .from(contentNodeMap)
+    .innerJoin(articles, eq(articles.id, contentNodeMap.contentId))
+    .where(and(eq(contentNodeMap.contentType, 'ARTICLE'), PUBLISHED_PUBLIC()))
+    .groupBy(contentNodeMap.nodeId);
+  return new Map(rows.map((r) => [r.nodeId, Number(r.n)]));
+}
+
+// Published-article counts per exam, same membership rule as the exam filter above.
+async function countPublishedByExam(): Promise<Map<string, number>> {
+  const [rows] = (await db.execute(sql`
+    SELECT x.exam_id AS examId, COUNT(DISTINCT x.article_id) AS n
+    FROM (
+      SELECT enm.exam_id AS exam_id, cnm.content_id AS article_id
+      FROM ${contentNodeMap} cnm
+      INNER JOIN ${examNodeMap} enm ON enm.node_id = cnm.node_id
+      WHERE cnm.content_type = 'ARTICLE'
+      UNION ALL
+      SELECT cem.exam_id, cem.content_id FROM ${contentExamMap} cem WHERE cem.content_type = 'ARTICLE'
+    ) x
+    INNER JOIN ${articles} a ON a.id = x.article_id AND a.status = 'PUBLISHED' AND a.visibility = 'PUBLIC'
+    GROUP BY x.exam_id
+  `)) as unknown as [{ examId: string; n: number }[], unknown];
+  return new Map(rows.map((r) => [r.examId, Number(r.n)]));
 }
 
 async function findPublishedBySlug(slug: string) {
@@ -356,6 +448,9 @@ export const articleRepository = {
   findByIdWithAuthor,
   findPublished,
   findPublishedBySlug,
+  listPublishedPage,
+  countPublishedByNode,
+  countPublishedByExam,
   findPublishedBySlugWithAuthor,
   findPublishedByAuthor,
   findPublishedByExam,

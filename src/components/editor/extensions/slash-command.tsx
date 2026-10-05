@@ -24,6 +24,9 @@ import {
   AlertTriangle,
   Lightbulb,
   OctagonAlert,
+  Sigma,
+  SquareSigma,
+  FlaskConical,
 } from 'lucide-react';
 import type { CalloutVariant } from './callout';
 
@@ -126,6 +129,25 @@ const COMMAND_ITEMS: CommandItem[] = [
     description: 'Horizontal rule',
     icon: Minus,
     command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+  },
+  {
+    title: 'Inline formula',
+    description: 'LaTeX math inside a line — $x^2$',
+    icon: Sigma,
+    command: ({ editor, range }) => editor.chain().focus().deleteRange(range).insertInlineMath().run(),
+  },
+  {
+    title: 'Block formula',
+    description: 'Centered display equation — $$…$$',
+    icon: SquareSigma,
+    command: ({ editor, range }) => editor.chain().focus().deleteRange(range).insertBlockMath().run(),
+  },
+  {
+    title: 'Chemistry formula',
+    description: 'Reaction or compound — \\ce{H2O}',
+    icon: FlaskConical,
+    command: ({ editor, range }) =>
+      editor.chain().focus().deleteRange(range).insertContent({ type: 'mathInline', attrs: { latex: '\\ce{}' } }).run(),
   },
   ...CALLOUT_ITEMS,
 ];

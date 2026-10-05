@@ -1,51 +1,18 @@
 'use client';
 
-import { useState, isValidElement, type ComponentPropsWithoutRef, type ReactNode, type ComponentType } from 'react';
+import { useState, isValidElement, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkDirective from 'remark-directive';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { visit } from 'unist-util-visit';
-import { Info, AlertTriangle, Lightbulb, OctagonAlert, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import type { CalloutVariant } from '@/components/editor/extensions/callout';
+import { CALLOUT_META } from '@/components/blog/callout-meta';
 import { extractHeadings } from '@/lib/toc';
-
-const LANG_DISPLAY: Record<string, string> = {
-  js: 'JavaScript',
-  javascript: 'JavaScript',
-  ts: 'TypeScript',
-  typescript: 'TypeScript',
-  py: 'Python',
-  python: 'Python',
-  java: 'Java',
-  cpp: 'C++',
-  c: 'C',
-  go: 'Go',
-  rust: 'Rust',
-  sql: 'SQL',
-  bash: 'Bash',
-  sh: 'Shell',
-  json: 'JSON',
-  html: 'HTML',
-  css: 'CSS',
-  yaml: 'YAML',
-  xml: 'XML',
-  kotlin: 'Kotlin',
-  swift: 'Swift',
-  cs: 'C#',
-  php: 'PHP',
-  ruby: 'Ruby',
-  scala: 'Scala',
-  r: 'R',
-};
-
-const CALLOUT_META: Record<CalloutVariant, { icon: ComponentType<{ className?: string }>; label: string }> = {
-  info: { icon: Info, label: 'Info' },
-  warning: { icon: AlertTriangle, label: 'Warning' },
-  tip: { icon: Lightbulb, label: 'Tip' },
-  danger: { icon: OctagonAlert, label: 'Danger' },
-};
+import { LANG_DISPLAY } from '@/lib/code-languages';
+import '@/lib/katex-setup';
 
 /** Converts remark-directive's `:::info ... :::` containers into styled callout divs. */
 function remarkCallouts() {
@@ -60,6 +27,37 @@ function remarkCallouts() {
         hName: 'div',
         hProperties: { className: ['callout', `callout-${variant}`], 'data-callout': variant },
       };
+    });
+  };
+}
+
+/**
+ * The editor serialises superscript/subscript as inline `<sup>…</sup>` / `<sub>…</sub>`.
+ * Without raw-HTML support react-markdown would print those tags as literal text, so pair
+ * the open/close inline-html nodes and turn them into real sup/sub elements. Only these two
+ * tags are recognised — no raw HTML is ever passed through.
+ */
+function remarkSupSub() {
+  return (tree: Parameters<typeof visit>[0]) => {
+    visit(tree, (node) => {
+      const parent = node as { children?: { type: string; value?: string }[] };
+      if (!parent.children) return;
+      const kids = parent.children;
+      const out: typeof kids = [];
+      for (let i = 0; i < kids.length; i++) {
+        const k = kids[i];
+        if (k.type === 'html' && (k.value === '<sup>' || k.value === '<sub>')) {
+          const tag = k.value.slice(1, 4);
+          const close = kids.findIndex((c, j) => j > i && c.type === 'html' && c.value === `</${tag}>`);
+          if (close > i) {
+            out.push({ type: 'scriptWrapper', data: { hName: tag }, children: kids.slice(i + 1, close) } as unknown as (typeof kids)[number]);
+            i = close;
+            continue;
+          }
+        }
+        out.push(k);
+      }
+      parent.children = out;
     });
   };
 }
@@ -178,7 +176,7 @@ export function BlogContent({ content }: { content: string }) {
   return (
     <article className="blog-content">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkDirective, remarkCallouts, remarkMath]}
+        remarkPlugins={[remarkGfm, remarkDirective, remarkCallouts, remarkSupSub, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={components}
       >
