@@ -18,11 +18,17 @@ function isActive(pathname: string, href: string) {
 }
 
 function NavLinks({ role, pathname, onNavigate }: { role: UserRole; pathname: string; onNavigate?: () => void }) {
+  // Only the most specific match is highlighted, so nested routes like /admin/curriculum/graph
+  // don't also light up /admin/curriculum and /admin.
+  const activeHref = NAV_BY_ROLE[role]
+    .filter((item) => isActive(pathname, item.href))
+    .reduce<string | null>((best, item) => (!best || item.href.length > best.length ? item.href : best), null);
+
   return (
     <nav className="flex flex-col gap-1">
       {NAV_BY_ROLE[role].map((item) => {
         const Icon = item.icon;
-        const active = isActive(pathname, item.href);
+        const active = item.href === activeHref;
         return (
           <Link
             key={item.href}

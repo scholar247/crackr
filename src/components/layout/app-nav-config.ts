@@ -1,4 +1,4 @@
-import { LayoutDashboard, GraduationCap, Newspaper, ListChecks, Users, Dumbbell, ClipboardList, Settings, FolderOpen, TrendingUp, LayoutGrid, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Network, Newspaper, ListChecks, Users, Dumbbell, ClipboardList, Settings, FolderOpen, TrendingUp, LayoutGrid, type LucideIcon } from 'lucide-react';
 import type { UserRole } from '@/lib/roles';
 
 export interface NavItem {
@@ -31,6 +31,7 @@ const TEACHER_NAV: NavItem[] = [
 const ADMIN_NAV: NavItem[] = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/curriculum', label: 'Curriculum & Exams', icon: GraduationCap },
+  { href: '/admin/curriculum/graph', label: 'Syllabus Graph', icon: Network },
   { href: '/admin/questions', label: 'Question Bank', icon: ListChecks },
   { href: '/admin/blog', label: 'Blog', icon: Newspaper },
   { href: '/admin/page-cards', label: 'Page Cards', icon: LayoutGrid },

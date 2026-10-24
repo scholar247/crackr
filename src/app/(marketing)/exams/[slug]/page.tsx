@@ -6,6 +6,8 @@ import { Hero } from '@/components/marketing/exam-detail/hero';
 import { PrepDashboard } from '@/components/marketing/exam-detail/prep-dashboard';
 import { ExamTabs } from '@/components/marketing/exam-detail/exam-tabs';
 import { SubjectsTab } from '@/components/marketing/exam-detail/subjects-tab';
+import { getExamLanding } from '@/components/exam-landing/registry';
+import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +23,11 @@ async function getExam(slug: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const landing = getExamLanding(slug);
+  if (landing) {
+    const exam = await taxonomyRepository.findExamBySlug(slug);
+    return exam && exam.status === 'ACTIVE' ? landing.metadata(exam) : {};
+  }
   const data = await getExam(slug);
   if (!data) return {};
   return { title: data.exam.name, description: data.exam.description ?? undefined };
@@ -65,6 +72,15 @@ interface ExamDetailPageProps {
 
 export default async function ExamDetailPage({ params, searchParams }: ExamDetailPageProps) {
   const [{ slug }, { tab }] = await Promise.all([params, searchParams]);
+
+  // Exams with a purpose-built landing page render it; everything else gets the generic layout below.
+  const landing = getExamLanding(slug);
+  if (landing) {
+    const [exam, session] = await Promise.all([taxonomyRepository.findExamBySlug(slug), auth()]);
+    if (!exam || exam.status !== 'ACTIVE') notFound();
+    return landing.render(exam, { userId: session?.user?.id ?? null });
+  }
+
   const data = await getExam(slug);
   if (!data) notFound();
 

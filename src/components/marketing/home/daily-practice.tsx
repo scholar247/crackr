@@ -46,9 +46,11 @@ interface DailyPracticeProps {
   examSlug: string;
   problem: DailyProblem | null;
   loading?: boolean;
+  /** Where "Practice more" goes — defaults to the exam page; pages that *are* the exam page pass the practice route. */
+  practiceHref?: string;
 }
 
-export function DailyPractice({ examName, examSlug, problem, loading }: DailyPracticeProps) {
+export function DailyPractice({ examName, examSlug, problem, loading, practiceHref }: DailyPracticeProps) {
   // Keyed on the problem id so switching exams starts each problem fresh.
   const [state, setState] = useState<{ problemId: number | null; picked: string | null; verified: boolean }>({
     problemId: null,
@@ -68,8 +70,8 @@ export function DailyPractice({ examName, examSlug, problem, loading }: DailyPra
         <p className="text-body-sm text-muted-foreground">
           Yet, no practice problems are published for {examName}. Check back soon, or browse what&apos;s available.
         </p>
-        <Link href={`/exams/${examSlug}`} className="text-sm font-semibold text-primary hover:underline">
-          View {examName} →
+        <Link href={practiceHref ?? `/exams/${examSlug}`} className="text-sm font-semibold text-primary hover:underline">
+          {practiceHref ? 'Browse practice questions' : `View ${examName}`} →
         </Link>
       </div>
     );
@@ -153,7 +155,7 @@ export function DailyPractice({ examName, examSlug, problem, loading }: DailyPra
         )}
       </div>
 
-      <Link href={`/exams/${examSlug}?tab=subjects`} className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">
+      <Link href={practiceHref ?? `/exams/${examSlug}?tab=subjects`} className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">
         Practice more {examName} MCQs →
       </Link>
     </div>

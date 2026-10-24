@@ -45,11 +45,16 @@ export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Deep-link entry point — e.g. the homepage's "jump to this subject" shortcuts link here
-  // with ?subject=<nodeId>. Only read once on mount; this isn't meant to react to further
-  // client-side URL changes, just to seed where the browser opens.
+  // with ?subject=<nodeId>, and exam landing pages add &chapter=<nodeId>. Only read once on
+  // mount; this isn't meant to react to further client-side URL changes, just to seed where
+  // the browser opens. A chapter that isn't under the given subject is ignored.
   const searchParams = useSearchParams();
   const [subjectId, setSubjectId] = useState(() => searchParams.get('subject') ?? '');
-  const [chapterId, setChapterId] = useState('');
+  const [chapterId, setChapterId] = useState(() => {
+    const chapter = searchParams.get('chapter');
+    const subject = syllabus.find((s) => s.id === searchParams.get('subject'));
+    return chapter && subject?.children.some((c) => c.id === chapter) ? chapter : '';
+  });
   const [topicId, setTopicId] = useState('');
   const [subtopicId, setSubtopicId] = useState('');
   const [difficulty, setDifficulty] = useState<string>('all');

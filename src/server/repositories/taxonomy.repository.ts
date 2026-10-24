@@ -518,7 +518,35 @@ async function listPublicNodesWithGraph() {
   }));
 }
 
+// For the admin syllabus graph's lineage view: the whole curriculum graph (archived rows
+// included) as flat lists, so the client can walk every parent chain and every exam that
+// reaches a node without a request per hop.
+async function getCurriculumGraph() {
+  const [examRows, nodeRows, edgeRows, mapRows] = await Promise.all([
+    db
+      .select({ id: exams.id, name: exams.name, slug: exams.slug, status: exams.status, programName: programs.name })
+      .from(exams)
+      .innerJoin(programs, eq(exams.programId, programs.id))
+      .orderBy(asc(exams.name)),
+    db
+      .select({
+        id: curriculumNodes.id,
+        nodeType: curriculumNodes.nodeType,
+        name: curriculumNodes.name,
+        slug: curriculumNodes.slug,
+        status: curriculumNodes.status,
+      })
+      .from(curriculumNodes)
+      .orderBy(asc(curriculumNodes.name)),
+    db.select({ parentId: curriculumEdges.parentNodeId, childId: curriculumEdges.childNodeId }).from(curriculumEdges),
+    db.select({ examId: examNodeMap.examId, nodeId: examNodeMap.nodeId }).from(examNodeMap),
+  ]);
+
+  return { exams: examRows, nodes: nodeRows, edges: edgeRows, examNodes: mapRows };
+}
+
 export const taxonomyRepository = {
+  getCurriculumGraph,
   listRootPaths,
   validateNodePath,
   resolveNodePath,

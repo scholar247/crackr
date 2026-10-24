@@ -376,6 +376,37 @@ async function findRandomPublishedByNodes(nodeIds: string[]) {
   return findById(chosen.id);
 }
 
+// Published-question counts per curriculum node in one grouped query (a node's count
+// includes everything tagged beneath it, since setNodeTag propagates to ancestors). Use this
+// rather than listPublished(...).length, which is capped at 200 rows. Pass examId to count
+// only that exam's questions — the same examId + nodeId filter the practice browser applies.
+async function countPublishedByNodes(nodeIds: string[], examId?: string): Promise<Map<string, number>> {
+  if (nodeIds.length === 0) return new Map();
+  const rows = await db
+    .select({ nodeId: contentNodeMap.nodeId, n: sql<number>`count(distinct ${questions.id})` })
+    .from(contentNodeMap)
+    .innerJoin(questions, eq(questions.id, contentNodeMap.contentId))
+    .where(
+      and(
+        eq(contentNodeMap.contentType, 'QUESTION'),
+        inArray(contentNodeMap.nodeId, nodeIds),
+        eq(questions.status, 'PUBLISHED'),
+        eq(questions.visibility, 'PUBLIC'),
+        examId
+          ? inArray(
+              questions.id,
+              db
+                .select({ id: contentExamMap.contentId })
+                .from(contentExamMap)
+                .where(and(eq(contentExamMap.contentType, 'QUESTION'), eq(contentExamMap.examId, examId))),
+            )
+          : undefined,
+      ),
+    )
+    .groupBy(contentNodeMap.nodeId);
+  return new Map(rows.map((r) => [r.nodeId, Number(r.n)]));
+}
+
 export const questionRepository = {
   create,
   bulkCreate,
@@ -386,4 +417,5 @@ export const questionRepository = {
   setPublishStatus,
   setStatusMany,
   findRandomPublishedByNodes,
+  countPublishedByNodes,
 };
