@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { articleRepository } from '@/server/repositories/article.repository';
 import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
 import { SITE_URL as BASE_URL } from '@/lib/site-config';
+import { EXAM_LANDINGS } from '@/components/exam-landing/registry';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,6 +27,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // Inner pages of exams with a purpose-built landing (e.g. /exams/nimcet/syllabus), only
+  // for exams that are publicly listed.
+  const listedSlugs = new Set(exams.map(({ exam }) => exam.slug));
+  const examSubpageEntries: MetadataRoute.Sitemap = Object.entries(EXAM_LANDINGS).flatMap(([slug, landing]) =>
+    listedSlugs.has(slug)
+      ? (landing.sitemapPaths?.() ?? []).map((path) => ({
+          url: `${BASE_URL}/exams/${slug}/${path}`,
+          changeFrequency: 'monthly' as const,
+          priority: 0.6,
+        }))
+      : [],
+  );
+
   return [
     { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
     { url: `${BASE_URL}/exams`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
@@ -35,6 +49,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/privacy-policy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
     { url: `${BASE_URL}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
     ...examEntries,
+    ...examSubpageEntries,
     ...articleEntries,
   ];
 }

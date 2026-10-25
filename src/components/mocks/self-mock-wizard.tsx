@@ -21,10 +21,12 @@ interface ExamOption {
 
 const STEPS = ['Exam', 'Sections', 'Review'] as const;
 
-export function SelfMockWizard({ examOptions }: { examOptions: ExamOption[] }) {
+// `initialExamId` pre-selects the exam when the wizard is opened from an exam page
+// (/mocks/new/self?exam=<id>); an id that isn't in the list is ignored.
+export function SelfMockWizard({ examOptions, initialExamId }: { examOptions: ExamOption[]; initialExamId?: string }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [examId, setExamId] = useState('');
+  const [examId, setExamId] = useState(() => (initialExamId && examOptions.some((e) => e.id === initialExamId) ? initialExamId : ''));
   const [sections, setSections] = useState<SectionDraft[]>([emptySection()]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

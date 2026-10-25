@@ -1,5 +1,16 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+// The design system's named font sizes (globals.css `--text-*`). Without registering them,
+// tailwind-merge reads e.g. `text-body-sm` as a text *colour* and silently drops it — or
+// the real colour — whenever both are passed to cn().
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ['display-lg', 'headline-xl', 'headline-lg', 'headline-md', 'body-lg', 'body-md', 'body-sm', 'label-caps', 'code-md'],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

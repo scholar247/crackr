@@ -119,6 +119,20 @@ async function updateExam(
   return findExamById(id);
 }
 
+// Admin bulk activate/deactivate. An ARCHIVED ("inactive") exam drops out of every public
+// surface — listPublicExams, exam pages, public APIs — but stays in admin management.
+async function setExamsStatus(ids: string[], status: 'ACTIVE' | 'ARCHIVED') {
+  if (ids.length === 0) return 0;
+  const [result] = await db.update(exams).set({ status, updatedAt: new Date() }).where(inArray(exams.id, ids));
+  return result.affectedRows;
+}
+
+/** True only for an existing exam that is ACTIVE — the gate for exam-scoped public APIs. */
+async function isExamActive(id: string) {
+  const exam = await findExamById(id);
+  return exam?.status === 'ACTIVE';
+}
+
 // ── Curriculum nodes ────────────────────────────────────────────────────────
 
 async function listNodes() {
@@ -563,6 +577,8 @@ export const taxonomyRepository = {
   findExamById,
   createExam,
   updateExam,
+  setExamsStatus,
+  isExamActive,
   listNodes,
   listPublicNodes,
   listNodesWithParents,

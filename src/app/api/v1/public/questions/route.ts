@@ -1,4 +1,5 @@
 import { questionRepository } from '@/server/repositories/question.repository';
+import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
 import { apiSuccess } from '@/lib/utils';
 
 // No auth — same convention as /api/v1/public/exams: PUBLISHED + PUBLIC content is safe
@@ -10,6 +11,9 @@ export async function GET(req: Request) {
   const nodeId = searchParams.get('nodeId') ?? undefined;
   const difficulty = searchParams.get('difficulty') as 'EASY' | 'MEDIUM' | 'HARD' | 'EXPERT' | null;
   const sort = searchParams.get('sort') as 'newest' | 'oldest' | 'difficulty_asc' | 'difficulty_desc' | null;
+
+  // An inactive exam is hidden everywhere public, including its question set.
+  if (examId && !(await taxonomyRepository.isExamActive(examId))) return apiSuccess([]);
 
   const rows = await questionRepository.listPublished({
     examId,

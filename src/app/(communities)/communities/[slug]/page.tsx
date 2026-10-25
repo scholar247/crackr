@@ -37,7 +37,7 @@ export default async function CommunityDetailPage({ params }: { params: Promise<
       <div className="flex items-center gap-2">
         {community.kind === 'OFFICIAL' && (
           <Badge variant="secondary">
-            <ShieldCheck className="h-3 w-3" /> Official{exam ? ` · ${exam.name}` : ''}
+            <ShieldCheck className="h-3 w-3" /> Official{exam?.status === 'ACTIVE' ? ` · ${exam.name}` : ''}
           </Badge>
         )}
         {community.visibility === 'PRIVATE' && (

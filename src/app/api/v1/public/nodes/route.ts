@@ -14,6 +14,8 @@ export async function GET(req: Request) {
   const nodeTypeParam = searchParams.get('nodeType');
   const nodeType = NODE_TYPES.includes(nodeTypeParam as NodeType) ? (nodeTypeParam as NodeType) : undefined;
   const examId = searchParams.get('examId') ?? undefined;
+  // An inactive exam's syllabus isn't public; return nothing rather than every node.
+  if (examId && !(await taxonomyRepository.isExamActive(examId))) return apiSuccess([]);
 
   const nodes = await taxonomyRepository.listPublicNodes({ nodeType, examId });
   return apiSuccess(nodes);

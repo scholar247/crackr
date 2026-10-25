@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, EyeOff, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -34,6 +35,8 @@ interface Exam {
   status: TaxonomyStatus;
   programId: string;
   programName: string;
+  /** Published, public content counts — returned by the admin exams list only. */
+  content?: { chapters: number; questions: number; mocks: number; articles: number };
 }
 interface NodeItem {
   id: string;
@@ -48,6 +51,8 @@ interface NodeItem {
 
 const NODE_TYPES = ['SUBJECT', 'CHAPTER', 'TOPIC', 'SUBTOPIC'] as const;
 const STATUS_VALUES: TaxonomyStatus[] = ['ACTIVE', 'ARCHIVED'];
+// ARCHIVED is shown as "Inactive": hidden from every public page and API, kept in admin.
+const STATUS_LABEL: Record<TaxonomyStatus, string> = { ACTIVE: 'Active', ARCHIVED: 'Inactive' };
 const STATUS_BADGE: Record<TaxonomyStatus, string> = {
   ACTIVE: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
   ARCHIVED: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500',
@@ -86,7 +91,7 @@ function StatusSelect({ value, onChange }: { value: TaxonomyStatus; onChange: (v
       <SelectContent>
         {STATUS_VALUES.map((s) => (
           <SelectItem key={s} value={s}>
-            {s}
+            {STATUS_LABEL[s]}
           </SelectItem>
         ))}
       </SelectContent>
@@ -279,7 +284,7 @@ function ProgramsTab() {
               {p.description && <p className="mt-0.5 truncate text-xs text-muted-foreground">{p.description}</p>}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Badge className={STATUS_BADGE[p.status]}>{p.status}</Badge>
+              <Badge className={STATUS_BADGE[p.status]}>{STATUS_LABEL[p.status]}</Badge>
               <Button variant="ghost" size="icon-sm" aria-label="Edit program" onClick={() => setEditing(p)}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
@@ -426,6 +431,13 @@ function ExamDialog({
   );
 }
 
+type ExamFilter = 'all' | 'active' | 'inactive' | 'empty';
+
+/** No published questions, mocks or articles — chapters alone don't count as content. */
+function isEmptyExam(e: Exam) {
+  return !!e.content && e.content.questions === 0 && e.content.mocks === 0 && e.content.articles === 0;
+}
+
 function ExamsTab() {
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
@@ -433,8 +445,39 @@ function ExamsTab() {
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [programId, setProgramId] = useState('');
   const [editing, setEditing] = useState<Exam | null>(null);
+  const [filter, setFilter] = useState<ExamFilter>('all');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const { data: programs } = useQuery({ queryKey: ['admin-programs'], queryFn: () => fetchJson<Program[]>('/api/v1/admin/curriculum/programs') });
   const { data: examList, isLoading } = useQuery({ queryKey: ['admin-exams'], queryFn: () => fetchJson<Exam[]>('/api/v1/admin/curriculum/exams') });
+
+  const setStatus = useMutation({
+    mutationFn: ({ ids, status }: { ids: string[]; status: TaxonomyStatus }) => patchJson('/api/v1/admin/curriculum/exams', { ids, status }),
+    onSuccess: (_data, { ids, status }) => {
+      toast.success(`${ids.length} exam${ids.length === 1 ? '' : 's'} marked ${STATUS_LABEL[status].toLowerCase()}`);
+      setSelected(new Set());
+      queryClient.invalidateQueries({ queryKey: ['admin-exams'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const visibleExams = (examList ?? []).filter((e) => {
+    if (filter === 'active') return e.status === 'ACTIVE';
+    if (filter === 'inactive') return e.status === 'ARCHIVED';
+    if (filter === 'empty') return isEmptyExam(e);
+    return true;
+  });
+  const counts = {
+    active: examList?.filter((e) => e.status === 'ACTIVE').length ?? 0,
+    inactive: examList?.filter((e) => e.status === 'ARCHIVED').length ?? 0,
+    emptyActive: examList?.filter((e) => e.status === 'ACTIVE' && isEmptyExam(e)).length ?? 0,
+  };
+  const allVisibleSelected = visibleExams.length > 0 && visibleExams.every((e) => selected.has(e.id));
+  function toggleSelected(id: string, checked: boolean) {
+    const next = new Set(selected);
+    if (checked) next.add(id);
+    else next.delete(id);
+    setSelected(next);
+  }
   const { data: nodes } = useQuery({ queryKey: ['admin-nodes'], queryFn: () => fetchJson<NodeItem[]>('/api/v1/admin/curriculum/nodes') });
 
   const create = useMutation({
@@ -505,28 +548,115 @@ function ExamsTab() {
         </Button>
       </form>
 
-      <div className="divide-y divide-border rounded-lg border border-border">
-        {isLoading && <p className="p-4 text-sm text-muted-foreground">Loading…</p>}
-        {examList?.map((e) => (
-          <div key={e.id} className="flex items-center justify-between gap-4 p-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground">{e.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  /{e.slug} · {e.programName}
-                </span>
-              </div>
-              {e.description && <p className="mt-0.5 truncate text-xs text-muted-foreground">{e.description}</p>}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Badge className={STATUS_BADGE[e.status]}>{e.status}</Badge>
-              <Button variant="ghost" size="icon-sm" aria-label="Edit exam" onClick={() => setEditing(e)}>
-                <Pencil className="h-3.5 w-3.5" />
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={filter} onValueChange={(v) => setFilter(v as ExamFilter)}>
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All exams ({examList?.length ?? 0})</SelectItem>
+                <SelectItem value="active">Active ({counts.active})</SelectItem>
+                <SelectItem value="inactive">Inactive ({counts.inactive})</SelectItem>
+                <SelectItem value="empty">No published content</SelectItem>
+              </SelectContent>
+            </Select>
+            {counts.emptyActive > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFilter('empty');
+                  setSelected(new Set(examList!.filter((e) => e.status === 'ACTIVE' && isEmptyExam(e)).map((e) => e.id)));
+                }}
+              >
+                Select {counts.emptyActive} active exam{counts.emptyActive === 1 ? '' : 's'} with no content
+              </Button>
+            )}
+          </div>
+          {selected.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{selected.size} selected</span>
+              <Button size="sm" variant="outline" className="gap-1.5" disabled={setStatus.isPending} onClick={() => setStatus.mutate({ ids: [...selected], status: 'ACTIVE' })}>
+                <Eye className="h-3.5 w-3.5" /> Mark active
+              </Button>
+              <Button size="sm" className="gap-1.5" disabled={setStatus.isPending} onClick={() => setStatus.mutate({ ids: [...selected], status: 'ARCHIVED' })}>
+                <EyeOff className="h-3.5 w-3.5" /> Mark inactive
               </Button>
             </div>
-          </div>
-        ))}
-        {examList?.length === 0 && <p className="p-4 text-sm text-muted-foreground">No exams yet.</p>}
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Inactive exams are hidden from every public page, list and API (exam pages, practice, blogs, onboarding, sitemap, mock creation). They stay here
+          so you can reactivate them.
+        </p>
+
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {isLoading && <p className="p-4 text-sm text-muted-foreground">Loading…</p>}
+          {visibleExams.length > 0 && (
+            <label className="flex items-center gap-3 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              <Checkbox
+                checked={allVisibleSelected}
+                onCheckedChange={(checked) => {
+                  const next = new Set(selected);
+                  for (const e of visibleExams) {
+                    if (checked) next.add(e.id);
+                    else next.delete(e.id);
+                  }
+                  setSelected(next);
+                }}
+                aria-label="Select all shown exams"
+              />
+              Select all shown
+            </label>
+          )}
+          {visibleExams.map((e) => {
+            const empty = isEmptyExam(e);
+            return (
+              <div key={e.id} className={`flex items-center justify-between gap-4 p-3 ${e.status === 'ARCHIVED' ? 'bg-muted/20' : ''}`}>
+                <div className="flex min-w-0 items-start gap-3">
+                  <Checkbox className="mt-1" checked={selected.has(e.id)} onCheckedChange={(checked) => toggleSelected(e.id, checked === true)} aria-label={`Select ${e.name}`} />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`font-medium ${e.status === 'ARCHIVED' ? 'text-muted-foreground' : 'text-foreground'}`}>{e.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        /{e.slug} · {e.programName}
+                      </span>
+                    </div>
+                    {e.content && (
+                      <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {empty ? (
+                          <span className="font-medium text-warning">No published content</span>
+                        ) : (
+                          <>
+                            <span>{e.content.questions} questions</span>
+                            <span>{e.content.mocks} mocks</span>
+                            <span>{e.content.articles} articles</span>
+                          </>
+                        )}
+                        <span>{e.content.chapters} chapters</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <Badge className={STATUS_BADGE[e.status]}>{STATUS_LABEL[e.status]}</Badge>
+                  <Switch
+                    checked={e.status === 'ACTIVE'}
+                    disabled={setStatus.isPending}
+                    onCheckedChange={(checked) => setStatus.mutate({ ids: [e.id], status: checked ? 'ACTIVE' : 'ARCHIVED' })}
+                    aria-label={`${e.name} is ${STATUS_LABEL[e.status].toLowerCase()}`}
+                  />
+                  <Button variant="ghost" size="icon-sm" aria-label="Edit exam" onClick={() => setEditing(e)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+          {!isLoading && visibleExams.length === 0 && <p className="p-4 text-sm text-muted-foreground">No exams match this filter.</p>}
+        </div>
       </div>
 
       {editing && <ExamDialog exam={editing} programs={programs ?? []} nodes={nodes ?? []} onClose={() => setEditing(null)} />}
@@ -757,7 +887,7 @@ function NodesTab() {
               {n.description && <span className="truncate text-xs text-muted-foreground">— {n.description}</span>}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <Badge className={STATUS_BADGE[n.status]}>{n.status}</Badge>
+              <Badge className={STATUS_BADGE[n.status]}>{STATUS_LABEL[n.status]}</Badge>
               <Button variant="ghost" size="icon-sm" aria-label="Edit node" onClick={() => setEditing(n)}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
