@@ -1,42 +1,24 @@
 import { z } from 'zod';
+import { PREP_LEVELS } from '@/lib/prep-level';
 
-const currentYear = new Date().getFullYear();
-
-export const UpdateProfileSchema = z
-  .object({
-    targetExamIds: z.array(z.string()).min(1, 'Select at least one exam'),
-    primaryExamId: z.string().min(1, 'Select a primary exam'),
-    preparationLevel: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
-    targetYear: z
-      .number()
-      .int()
-      .min(currentYear)
-      .max(currentYear + 5)
-      .optional(),
-    preferredDifficulty: z.enum(['EASY', 'MEDIUM', 'HARD', 'MIXED']),
-    dailyGoalQuestions: z.number().int().min(5).max(200).default(20),
-  })
-  .refine((data) => data.targetExamIds.includes(data.primaryExamId), {
-    message: 'Primary exam must be one of the selected exams',
-    path: ['primaryExamId'],
-  });
-
-export const OnboardingStepOneSchema = z.object({
-  targetExamIds: z.array(z.string()).min(1, 'Select at least one exam'),
-  primaryExamId: z.string().min(1),
-});
-
-export const OnboardingStepTwoSchema = z.object({
-  preparationLevel: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
+// Self-service profile update — deliberately no `email`, `role`, or `status`. Email is
+// the login identity (same immutability rule as UpdateUserSchema); role/status are
+// admin-only fields that must never be reachable from a route a student can call on
+// themselves (unlike UpdateUserSchema, which is fine for the admin route to include them).
+export const UpdateProfileSchema = z.object({
+  name: z.string().max(255).optional(),
+  college: z.string().max(255).optional(),
+  degree: z.string().max(255).optional(),
+  passingYear: z.number().int().min(1950).max(2100).optional(),
   targetYear: z.number().int().optional(),
+  level: z.enum(PREP_LEVELS).optional(),
+  targetProgramId: z.string().uuid().optional(),
+  // Exam targets are updated together: submitting examIds without a primaryExamId (or
+  // vice versa) is rejected below rather than silently leaving the flag inconsistent.
+  examIds: z.array(z.string().uuid()).optional(),
+  primaryExamId: z.string().uuid().optional(),
+}).refine((data) => !(data.examIds && data.examIds.length > 0 && !data.primaryExamId), {
+  message: 'primaryExamId is required when updating examIds',
+  path: ['primaryExamId'],
 });
-
-export const OnboardingStepThreeSchema = z.object({
-  preferredDifficulty: z.enum(['EASY', 'MEDIUM', 'HARD', 'MIXED']),
-  dailyGoalQuestions: z.number().int().min(5).max(200),
-});
-
 export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
-export type OnboardingStepOneInput = z.infer<typeof OnboardingStepOneSchema>;
-export type OnboardingStepTwoInput = z.infer<typeof OnboardingStepTwoSchema>;
-export type OnboardingStepThreeInput = z.infer<typeof OnboardingStepThreeSchema>;

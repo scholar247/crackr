@@ -1,64 +1,55 @@
 import type { MetadataRoute } from 'next';
-import { subjectRepository } from '@/server/repositories/subject.repository';
-import { examRepository } from '@/server/repositories/exam.repository';
-import { pypRepository } from '@/server/repositories/pyp.repository';
+import { articleRepository } from '@/server/repositories/article.repository';
+import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
+import { SITE_URL as BASE_URL } from '@/lib/site-config';
+import { EXAM_LANDINGS } from '@/components/exam-landing/registry';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://scholar247.org';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [subjects, exams, pyps] = await Promise.all([
-    subjectRepository.findAll(true),
-    examRepository.findAll(true),
-    pypRepository.findAll(true),
+  const [articles, exams] = await Promise.all([
+    articleRepository.findPublished(),
+    taxonomyRepository.listPublicExams(),
   ]);
 
-  const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${BASE_URL}/`,              lastModified: new Date(), changeFrequency: 'weekly',  priority: 1 },
-    { url: `${BASE_URL}/exams`,         lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.9 },
-    { url: `${BASE_URL}/subjects`,      lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.9 },
-    { url: `${BASE_URL}/pyp`,           lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
-    { url: `${BASE_URL}/courses`,       lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
-    { url: `${BASE_URL}/about`,         lastModified: new Date(), changeFrequency: 'yearly',  priority: 0.5 },
-    { url: `${BASE_URL}/contact`,       lastModified: new Date(), changeFrequency: 'yearly',  priority: 0.5 },
-    { url: `${BASE_URL}/privacy-policy`,lastModified: new Date(), changeFrequency: 'yearly',  priority: 0.4 },
-    { url: `${BASE_URL}/terms`,         lastModified: new Date(), changeFrequency: 'yearly',  priority: 0.4 },
-  ];
-
-  const subjectRoutes: MetadataRoute.Sitemap = subjects.map((s) => ({
-    url: `${BASE_URL}/subjects/${s.slug}`,
-    lastModified: new Date(s.updatedAt),
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }));
-
-  const examRoutes: MetadataRoute.Sitemap = exams.map((e) => ({
-    url: `${BASE_URL}/exams/${e.slug}`,
-    lastModified: new Date(e.updatedAt),
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }));
-
-  // Group PYPs by exam slug for /pyp/[examSlug] pages
-  const examSlugsInPyp = [...new Set(pyps.map((p) => p.examSlug))];
-  const pypExamRoutes: MetadataRoute.Sitemap = examSlugsInPyp.map((examSlug) => ({
-    url: `${BASE_URL}/pyp/${examSlug}`,
-    lastModified: new Date(),
+  const articleEntries: MetadataRoute.Sitemap = articles.map((article) => ({
+    url: `${BASE_URL}/blogs/${article.slug}`,
+    lastModified: article.updatedAt,
     changeFrequency: 'monthly',
+    priority: 0.6,
+  }));
+
+  const examEntries: MetadataRoute.Sitemap = exams.map(({ exam }) => ({
+    url: `${BASE_URL}/exams/${exam.slug}`,
+    lastModified: exam.updatedAt,
+    changeFrequency: 'weekly',
     priority: 0.7,
   }));
 
-  const pypPaperRoutes: MetadataRoute.Sitemap = pyps.map((p) => ({
-    url: `${BASE_URL}/pyp/${p.examSlug}/${p.slug}`,
-    lastModified: new Date(p.updatedAt),
-    changeFrequency: 'monthly',
-    priority: 0.7,
-  }));
+  // Inner pages of exams with a purpose-built landing (e.g. /exams/nimcet/syllabus), only
+  // for exams that are publicly listed.
+  const listedSlugs = new Set(exams.map(({ exam }) => exam.slug));
+  const examSubpageEntries: MetadataRoute.Sitemap = Object.entries(EXAM_LANDINGS).flatMap(([slug, landing]) =>
+    listedSlugs.has(slug)
+      ? (landing.sitemapPaths?.() ?? []).map((path) => ({
+          url: `${BASE_URL}/exams/${slug}/${path}`,
+          changeFrequency: 'monthly' as const,
+          priority: 0.6,
+        }))
+      : [],
+  );
 
   return [
-    ...staticRoutes,
-    ...subjectRoutes,
-    ...examRoutes,
-    ...pypExamRoutes,
-    ...pypPaperRoutes,
+    { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
+    { url: `${BASE_URL}/exams`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${BASE_URL}/blogs`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${BASE_URL}/about`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.5 },
+    { url: `${BASE_URL}/contact`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.5 },
+    { url: `${BASE_URL}/privacy-policy`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
+    { url: `${BASE_URL}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
+    ...examEntries,
+    ...examSubpageEntries,
+    ...articleEntries,
   ];
 }

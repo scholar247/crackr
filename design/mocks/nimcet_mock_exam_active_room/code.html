@@ -1,0 +1,206 @@
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"error":"#ba1a1a","tertiary-container":"#744800","secondary-fixed":"#dae2fd","outline-variant":"#c7c4d7","outline":"#777586","on-tertiary-fixed":"#2a1700","surface-dim":"#cbdbf5","surface-container-low":"#eff4ff","error-container":"#ffdad6","surface-container-highest":"#d3e4fe","tertiary-fixed":"#ffddb8","inverse-on-surface":"#eaf1ff","on-secondary-container":"#5c647a","surface":"#f8f9ff","on-surface":"#0b1c30","on-tertiary-container":"#ffb759","on-background":"#0b1c30","on-primary-fixed":"#100069","surface-container-high":"#dce9ff","primary":"#2a14b4","on-secondary-fixed":"#131b2e","on-surface-variant":"#464554","background":"#f8f9ff","inverse-surface":"#213145","on-tertiary":"#ffffff","on-primary":"#ffffff","on-primary-container":"#c1beff","surface-tint":"#5148d7","secondary":"#565e74","inverse-primary":"#c3c0ff","tertiary":"#553300","on-error-container":"#93000a","on-primary-fixed-variant":"#372abf","primary-fixed":"#e3dfff","secondary-fixed-dim":"#bec6e0","surface-container-lowest":"#ffffff","surface-variant":"#d3e4fe","primary-container":"#4338ca","surface-container":"#e5eeff","secondary-container":"#dae2fd","primary-fixed-dim":"#c3c0ff","on-secondary":"#ffffff","on-secondary-fixed-variant":"#3f465c","surface-bright":"#f8f9ff","on-error":"#ffffff","tertiary-fixed-dim":"#ffb95f","on-tertiary-fixed-variant":"#653e00"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"margin-mobile":"16px","gutter":"24px","margin-desktop":"40px","focus-padding":"48px","container-max":"1120px","unit":"4px"},"fontFamily":{"headline-sm":["Manrope"],"body-sm":["Inter"],"label-sm":["JetBrains Mono"],"body-md":["Inter"],"body-lg":["Inter"],"label-md":["JetBrains Mono"],"headline-lg":["Manrope"],"headline-md":["Manrope"],"headline-lg-mobile":["Manrope"]},"fontSize":{"headline-sm":["20px",{"lineHeight":"28px","fontWeight":"600"}],"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-sm":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"500"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"label-md":["14px",{"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"500"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-md":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","fontWeight":"700"}]}}}}</script><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-body-md text-on-background"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col shadow-[1px_0_0_0_rgba(0,0,0,0.05)]"><div class="p-gutter mb-6 flex items-center gap-3"><div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center"><span class="material-symbols-outlined text-on-primary-container">school</span></div><span class="font-headline-sm text-headline-sm text-on-surface">Scholar247</span></div><nav class="flex-1 px-4 flex flex-col gap-2" data-active-classes="bg-primary-container text-on-primary-container font-bold"><div class="px-4 py-2 mb-2"><span class="font-label-sm text-label-sm text-outline uppercase">Navigation</span></div><a class="flex items-center px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="exam-setup" href="#"><span class="material-symbols-outlined mr-3">settings_suggest</span>Setup</a><a aria-current="page" class="flex items-center px-4 py-3 rounded-xl transition-all bg-primary-container text-on-primary-container font-bold" data-path="active-exam" href="#"><span class="material-symbols-outlined mr-3">timer</span>Exam Room</a><a class="flex items-center px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="exam-results" href="#"><span class="material-symbols-outlined mr-3">analytics</span>Results</a></nav><div class="p-6 mt-auto border-t border-outline-variant/30"><div class="flex items-center gap-3 p-3 bg-surface-container-low rounded-xl"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex-1 min-w-0"><p class="text-body-sm font-semibold text-on-surface truncate">Student #1402</p><p class="text-label-sm text-on-surface-variant">Candidate ID</p></div></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface/80 backdrop-blur-xl z-40 flex items-center justify-between px-gutter"><div class="flex items-center gap-4"><div class="hidden flex items-center gap-2 px-3 py-1 bg-error-container text-on-error-container rounded-full animate-pulse" id="status-indicator"><span class="material-symbols-outlined text-[16px]">fiber_manual_record</span><span class="font-label-sm text-label-sm">EXAM IN PROGRESS</span></div></div><div class="flex items-center gap-6"><div class="flex items-center gap-2 text-on-surface-variant hover:text-on-surface cursor-pointer"><span class="material-symbols-outlined">help_outline</span><span class="font-label-md text-label-md">Support</span></div><div class="w-[1px] h-6 bg-outline-variant/50"></div><button class="flex items-center gap-2 bg-inverse-surface text-inverse-on-surface px-4 py-2 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity">EXIT SESSION</button></div></header><main class="relative pt-16 bg-background min-h-screen"><div class="flex flex-col w-full relative">
+<!-- Top Progress Track -->
+<div class="w-full h-1 bg-surface-variant fixed top-16 left-72 right-0 z-50">
+<div class="h-full bg-primary transition-all duration-500 ease-in-out w-[15%]"></div>
+</div>
+<!-- Secondary Timer Header -->
+<div class="sticky top-16 z-40 bg-surface-container-lowest/95 backdrop-blur-md shadow-sm px-gutter py-4 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Current Section</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Advanced Physics</span>
+</div>
+<div class="w-1 h-8 bg-surface-variant rounded-full"></div>
+<div class="flex items-center gap-2 bg-surface-container-high px-4 py-2 rounded-lg">
+<span class="material-symbols-outlined text-on-surface-variant">schedule</span>
+<span class="font-label-md text-label-md text-on-surface tracking-widest" id="countdown-timer">02:45:12</span>
+</div>
+</div>
+<button class="bg-error text-on-error px-6 py-2 rounded-lg font-label-md text-label-md hover:bg-error/90 transition-colors shadow-sm">
+      SUBMIT EXAM
+    </button>
+</div>
+<!-- Main Layout -->
+<div class="flex flex-1 items-start w-full relative">
+<!-- Question Workspace -->
+<div class="flex-1 flex flex-col p-margin-mobile md:p-margin-desktop items-center">
+<div class="w-full max-w-container-max flex flex-col gap-8">
+<!-- Question Meta -->
+<div class="flex items-center justify-between bg-surface-container px-6 py-3 rounded-xl shadow-sm">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-primary-container text-on-primary-container rounded-lg flex items-center justify-center font-headline-sm text-headline-sm">
+              12
+            </div>
+<span class="font-label-md text-label-md text-on-surface-variant">Question Type: <strong class="text-on-surface">Multiple Choice</strong></span>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-surface-variant px-3 py-1 rounded text-on-surface-variant font-label-sm text-label-sm">
+              +4 Marks / -1 Penalty
+            </div>
+<button class="text-on-surface-variant hover:text-error transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">flag</span>
+<span class="font-label-sm text-label-sm">Report</span>
+</button>
+</div>
+</div>
+<!-- Question Content -->
+<div class="bg-surface-container-lowest shadow-md rounded-2xl p-focus-padding flex flex-col gap-6 relative overflow-hidden">
+<!-- Subtle Decorative gradient -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-primary/5 to-transparent rounded-bl-full pointer-events-none"></div>
+<div class="font-body-lg text-body-lg text-on-surface leading-relaxed">
+<p class="mb-4">A uniform solid cylinder of mass <span class="font-label-md text-label-md bg-surface-variant px-1 rounded">M = 2.0 kg</span> and radius <span class="font-label-md text-label-md bg-surface-variant px-1 rounded">R = 15 cm</span> rolls without slipping down an inclined plane of angle <span class="font-label-md text-label-md bg-surface-variant px-1 rounded">θ = 30°</span>. The coefficient of static friction is <span class="font-label-md text-label-md bg-surface-variant px-1 rounded">μ<sub>s</sub> = 0.4</span>.</p>
+<p>Determine the translational acceleration of the center of mass of the cylinder after it has traveled <span class="font-label-md text-label-md bg-surface-variant px-1 rounded">2.0 m</span> down the incline. Assume <span class="font-label-md text-label-md bg-surface-variant px-1 rounded">g = 9.8 m/s²</span>.</p>
+</div>
+<!-- Supporting Image -->
+<div class="w-full max-w-md my-4 rounded-xl overflow-hidden shadow-sm bg-surface-variant">
+<div class="bg-cover bg-center w-full h-48 mix-blend-luminosity opacity-80" data-alt="A clean, minimalist 2D vector physics diagram of a solid cylinder on an inclined plane. The incline is set at a 30 degree angle. Arrows indicate the forces acting on the cylinder: gravity pointing straight down, normal force perpendicular to the surface, and friction pointing up the incline. Background is a dark indigo void with bright white and light blue technical lines. Highly legible academic style." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuApJmXyY3kvWxGlT06ZOn4kNX2-OFZNQU-67QBhddvnI1v4E9SQe1HLP4Mu3j5I9SHHko3zYHicp2Ri_5GJo2hX0Hg3jBcOBCrgezuE_2YYizItAGQrw2wt2tezXEobherF1gw8p-TJiOO9jsFQ5TrYQrZwW6Atq3evdPIeoak2WdcmdfrrB92tPRg9Q4q6qzY3WWcPOLIuHbK4RJQGhyPpK8AwRA6J0zlKp3ZlfB2E3lhHwDlobNs')"></div>
+</div>
+<!-- Options Grid -->
+<div class="grid grid-cols-1 gap-4 mt-4" id="mcq-options">
+<!-- Option A -->
+<label class="group relative flex items-center p-4 rounded-xl bg-surface-container hover:bg-surface-container-high cursor-pointer transition-all">
+<input class="peer sr-only" name="q12" type="radio" value="A"/>
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center mr-4 group-hover:bg-primary-container peer-checked:bg-primary transition-colors">
+<span class="font-label-md text-label-md text-on-surface peer-checked:text-on-primary">A</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface flex-1">3.27 m/s²</span>
+<!-- Selection Ring via box-shadow in JS -->
+</label>
+<!-- Option B -->
+<label class="group relative flex items-center p-4 rounded-xl bg-surface-container hover:bg-surface-container-high cursor-pointer transition-all">
+<input class="peer sr-only" name="q12" type="radio" value="B"/>
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center mr-4 group-hover:bg-primary-container peer-checked:bg-primary transition-colors">
+<span class="font-label-md text-label-md text-on-surface peer-checked:text-on-primary">B</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface flex-1">4.90 m/s²</span>
+</label>
+<!-- Option C -->
+<label class="group relative flex items-center p-4 rounded-xl bg-surface-container hover:bg-surface-container-high cursor-pointer transition-all shadow-[inset_0_0_0_2px_theme(colors.primary)] bg-primary/5">
+<input checked="" class="peer sr-only" name="q12" type="radio" value="C"/>
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center mr-4 transition-colors">
+<span class="font-label-md text-label-md text-on-primary">C</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface flex-1">2.45 m/s²</span>
+<span class="material-symbols-outlined text-primary ml-auto">check_circle</span>
+</label>
+<!-- Option D -->
+<label class="group relative flex items-center p-4 rounded-xl bg-surface-container hover:bg-surface-container-high cursor-pointer transition-all">
+<input class="peer sr-only" name="q12" type="radio" value="D"/>
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center mr-4 group-hover:bg-primary-container peer-checked:bg-primary transition-colors">
+<span class="font-label-md text-label-md text-on-surface peer-checked:text-on-primary">D</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface flex-1">6.54 m/s²</span>
+</label>
+</div>
+</div>
+<!-- Action Footer -->
+<div class="flex items-center justify-between mt-4">
+<div class="flex gap-4">
+<button class="flex items-center gap-2 bg-surface-container text-on-surface px-6 py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+              PREVIOUS
+            </button>
+<button class="flex items-center gap-2 bg-surface-container text-on-surface px-6 py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">ink_eraser</span>
+              CLEAR
+            </button>
+</div>
+<div class="flex gap-4">
+<button class="flex items-center gap-2 bg-tertiary text-on-tertiary px-6 py-3 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm">
+<span class="material-symbols-outlined text-[18px]">bookmark</span>
+              MARK FOR REVIEW
+            </button>
+<button class="flex items-center gap-2 bg-primary text-on-primary px-8 py-3 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-md">
+              SAVE &amp; NEXT
+              <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Question Navigator Sidebar -->
+<div class="w-80 bg-surface-container-lowest shrink-0 h-[calc(100vh-132px)] sticky top-[132px] shadow-[-4px_0_12px_rgba(0,0,0,0.03)] flex flex-col z-20">
+<!-- Legend -->
+<div class="p-6 bg-surface-container-low shadow-sm">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-4">Navigator</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Attempted</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-tertiary"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Review</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-surface-variant"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Unseen</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-surface shadow-[inset_0_0_0_2px_theme(colors.primary)]"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Current</span>
+</div>
+</div>
+</div>
+<!-- Grid -->
+<div class="p-6 overflow-y-auto flex-1">
+<div class="grid grid-cols-5 gap-3" id="navigator-grid">
+<!-- Populated by JS -->
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Setup Navigator Grid
+  document.addEventListener('DOMContentLoaded', () => {
+    const gridContainer = document.getElementById('navigator-grid');
+    let gridHTML = '';
+
+    for (let i = 1; i <= 120; i++) {
+      let bgClass = 'bg-surface-variant text-on-surface-variant hover:bg-surface-container-highest';
+      
+      if (i < 8) {
+        // Attempted
+        bgClass = 'bg-primary text-on-primary shadow-sm hover:opacity-90';
+      } else if (i === 8 || i === 10) {
+        // Review
+        bgClass = 'bg-tertiary text-on-tertiary shadow-sm hover:opacity-90';
+      } else if (i === 12) {
+        // Current
+        bgClass = 'bg-primary-container text-on-primary-container shadow-[inset_0_0_0_2px_theme(colors.primary)] scale-110 z-10';
+      }
+
+      gridHTML += `
+        <button class="w-10 h-10 rounded-lg flex items-center justify-center font-label-md text-label-md transition-all ${bgClass}">
+          ${i}
+        </button>
+      `;
+    }
+    gridContainer.innerHTML = gridHTML;
+
+    // Interactivity for options (radio buttons)
+    const options = document.querySelectorAll('#mcq-options label');
+    options.forEach(label => {
+      const radio = label.querySelector('input[type="radio"]');
+      radio.addEventListener('change', (e) => {
+        // Reset all
+        options.forEach(opt => {
+          opt.classList.remove('shadow-[inset_0_0_0_2px_theme(colors.primary)]', 'bg-primary/5');
+          const icon = opt.querySelector('.material-symbols-outlined.text-primary');
+          if (icon) icon.remove();
+        });
+        
+        // Set active
+        if (e.target.checked) {
+          label.classList.add('shadow-[inset_0_0_0_2px_theme(colors.primary)]', 'bg-primary/5');
+          const checkIcon = document.createElement('span');
+          checkIcon.className = 'material-symbols-outlined text-primary ml-auto';
+          checkIcon.innerText = 'check_circle';
+          label.appendChild(checkIcon);
+        }
+      });
+    });
+  });
+</script></main></div><script>document.addEventListener('DOMContentLoaded',()=>{const path=window.location.pathname;if(path.includes('active-exam')){document.getElementById('status-indicator').classList.remove('hidden');}});</script></body></html>

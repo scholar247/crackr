@@ -1,60 +1,70 @@
 import { auth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
-import type { UserRole } from '@/types';
+import { meetsMinRole, assertInternalCallbackPath, type UserRole } from '@/lib/roles';
 
-const ADMIN_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMIN', 'TEACHER'];
+const PUBLIC_PATH_PREFIXES = [
+  '/sign-in',
+  '/api/auth',
+  '/_next',
+  '/favicon',
+  // Crawlable / SEO files
+  '/sitemap',
+  '/robots.txt',
+  // Public marketing site — accessible without login, must be indexed by Google
+  '/exams',
+  '/blogs',
+  '/authors',
+  '/about',
+  '/contact',
+  '/privacy-policy',
+  '/terms',
+  // Practice is browsable and attemptable without an account — answers just aren't
+  // saved for anonymous visitors (practice-browser.tsx only persists when signed in).
+  '/practice',
+  // Communities — public browsing of PUBLIC communities/posts/search; pages that need a
+  // session (create, My Hub, notifications, manage members) redirect to /sign-in
+  // themselves (see src/app/(communities)/communities/**), same pattern as /practice.
+  '/communities',
+];
+
+// Path prefix -> minimum role required to view it.
+const ROLE_GATED_PREFIXES: [string, UserRole][] = [
+  ['/admin', 'ADMIN'],
+  ['/teacher', 'TEACHER'],
+];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
-  // Public routes — never redirect
-  if (
-    pathname === '/' ||
-    pathname.startsWith('/sign-in') ||
-    pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    // Public browse pages — accessible without login
-    pathname.startsWith('/exams') ||
-    pathname.startsWith('/subjects') ||
-    pathname.startsWith('/pyp') ||
-    pathname.startsWith('/courses')
-  ) {
+  if (pathname === '/' || PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     return NextResponse.next();
   }
 
-  // API routes handle auth independently
+  // API routes enforce auth independently via requireAuth() at the route level (see
+  // src/server/auth/require-auth.ts) — this is the same seam a future mobile client's
+  // auth strategy would plug into, so the proxy deliberately stays out of the way here.
   if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
-  // Not authenticated — redirect to sign-in
   if (!session?.user) {
     const signInUrl = new URL('/sign-in', req.url);
-    signInUrl.searchParams.set('callbackUrl', pathname);
+    const callbackPath = assertInternalCallbackPath(pathname);
+    if (callbackPath) signInUrl.searchParams.set('callbackUrl', callbackPath);
     return NextResponse.redirect(signInUrl);
   }
 
   const userRole = session.user.role as UserRole;
-  const isAdmin = ADMIN_ROLES.includes(userRole);
-
-  // Admin routes — require admin role
-  if (pathname.startsWith('/admin')) {
-    if (!isAdmin) {
+  for (const [prefix, minRole] of ROLE_GATED_PREFIXES) {
+    if (pathname.startsWith(prefix) && !meetsMinRole(userRole, minRole)) {
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
-    return NextResponse.next();
   }
-
-  // Onboarding gate is handled server-side in the student layout (reads Firestore
-  // directly) so it is never stale. The proxy only enforces auth + role access.
 
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

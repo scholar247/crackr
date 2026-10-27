@@ -1,5 +1,16 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+// The design system's named font sizes (globals.css `--text-*`). Without registering them,
+// tailwind-merge reads e.g. `text-body-sm` as a text *colour* and silently drops it — or
+// the real colour — whenever both are passed to cn().
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ['display-lg', 'headline-xl', 'headline-lg', 'headline-md', 'body-lg', 'body-md', 'body-sm', 'label-caps', 'code-md'],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -13,6 +24,30 @@ export function slugify(str: string): string {
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Locale-independent date formatting ("18 Aug 2026") — plain `toLocaleDateString()` with
+ * no locale argument resolves the *runtime's* default locale, which differs between the
+ * Node SSR process and the browser (e.g. server "en-GB" vs browser "en-US"), producing a
+ * React hydration mismatch on any Server Component that renders a date and is then
+ * re-rendered by a client boundary. Pinning the locale here makes server and client agree.
+ */
+export function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** Format a byte count as a human-readable size ("234 KB", "1.2 MB") */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB', 'MB', 'GB'];
+  let value = bytes / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  return `${value.toFixed(value < 10 ? 1 : 0)} ${units[unitIndex]}`;
 }
 
 /** Format seconds as mm:ss */
@@ -49,6 +84,13 @@ export function apiError(message: string, status = 400) {
   return Response.json({ error: message }, { status });
 }
 
+/** Parses a route param expected to be a positive integer content id (questions,
+ * articles); null if it isn't one, e.g. a stray non-numeric value in the URL. */
+export function parseContentId(raw: string): number | null {
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 /** Build a consistent API success response */
 export function apiSuccess<T>(data: T, meta?: object, status = 200) {
   return Response.json({ data, meta }, { status });
@@ -76,14 +118,13 @@ export const ROLE_COLORS: Record<string, string> = {
   SUPER_ADMIN: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
   ADMIN: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
   TEACHER: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400',
-  EDITOR: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-  REVIEWER: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
   STUDENT: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
 };
 
 /** Status badge colors */
 export const STATUS_COLORS: Record<string, string> = {
   DRAFT: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+  IN_REVIEW: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
   PUBLISHED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
   ARCHIVED: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500',
 };

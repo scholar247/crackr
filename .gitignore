@@ -44,3 +44,11 @@ next-env.d.ts
 ship_script.sh
 *.zip
 ../builds/
+.claude
+feed_data/
+
+# Local media storage (LocalFileStorageProvider) — see docs/media-module.md
+/storage/
+
+data/*
+prompts/*

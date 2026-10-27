@@ -1,31 +1,34 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Geist, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
-import { TopNavbar } from '@/components/layout/top-navbar';
-import { SiteFooter } from '@/components/layout/site-footer';
 import { cn } from '@/lib/utils';
 import Script from 'next/script';
 import { GoogleAnalytics } from '@next/third-parties/google';
+import { SITE_NAME, SITE_URL, SITE_TWITTER_HANDLE } from '@/lib/site-config';
 
 const isProd = process.env.NODE_ENV === 'production';
+const gaId = process.env.NEXT_PUBLIC_GA_ID;
+const adsenseClientId = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
-const inter = Inter({
+const geist = Geist({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-geist',
 });
 
-const BASE_URL = 'https://scholar247.org';
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+});
 
 export const metadata: Metadata = {
-  metadataBase: new URL(BASE_URL),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Scholar247 — Learn, Practice, Progress, Crack',
-    template: '%s | scholar247',
+    default: `${SITE_NAME} — Learn, Practice, Progress, Crack`,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    'scholar247 is an EdTech platform for practising MCQs, taking mock tests, and tracking your exam preparation progress. Built for JEE, NEET, UPSC, and more.',
-  keywords: ['MCQ', 'practice', 'exam preparation', 'mock test', 'JEE', 'NEET', 'UPSC', 'EdTech'],
+  description: `${SITE_NAME} is an EdTech platform for practising MCQs, taking mock tests, and tracking your exam preparation progress.`,
+  keywords: ['MCQ', 'practice', 'exam preparation', 'mock test', 'EdTech'],
   alternates: {
     canonical: '/',
   },
@@ -41,14 +44,14 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    siteName: 'scholar247',
+    siteName: SITE_NAME,
     type: 'website',
-    url: BASE_URL,
-    images: [{ url: '/logo.svg', width: 512, height: 512, alt: 'scholar247' }],
+    url: SITE_URL,
+    images: [{ url: '/logo.svg', width: 512, height: 512, alt: SITE_NAME }],
   },
   twitter: {
     card: 'summary',
-    site: '@scholar247',
+    site: SITE_TWITTER_HANDLE,
     images: ['/logo.svg'],
   },
   verification: {
@@ -56,38 +59,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="google-adsense-account" content="ca-pub-2514997743854204" />
+        {adsenseClientId && <meta name="google-adsense-account" content={adsenseClientId} />}
       </head>
-      <body
-        className={cn(
-          inter.variable,
-          'font-sans antialiased bg-background text-foreground'
-        )}
-      >
-        <Providers>
-          <TopNavbar />
-          {children}
-          <SiteFooter />
-        </Providers>
-        {isProd && (
+      <body className={cn(geist.variable, jetbrainsMono.variable, 'font-sans antialiased bg-background text-foreground')}>
+        <Providers>{children}</Providers>
+        {isProd && adsenseClientId && (
           <Script
             id="adsbygoogle-init"
             async
-            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2514997743854204"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
             crossOrigin="anonymous"
             strategy="afterInteractive"
           />
         )}
       </body>
-      {isProd && <GoogleAnalytics gaId="G-99J5BH9CHR" />}
+      {isProd && gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
   );
 }

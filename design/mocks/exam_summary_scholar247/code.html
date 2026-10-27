@@ -1,0 +1,197 @@
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"error":"#ba1a1a","tertiary-container":"#744800","secondary-fixed":"#dae2fd","outline-variant":"#c7c4d7","outline":"#777586","on-tertiary-fixed":"#2a1700","surface-dim":"#cbdbf5","surface-container-low":"#eff4ff","error-container":"#ffdad6","surface-container-highest":"#d3e4fe","tertiary-fixed":"#ffddb8","inverse-on-surface":"#eaf1ff","on-secondary-container":"#5c647a","surface":"#f8f9ff","on-surface":"#0b1c30","on-tertiary-container":"#ffb759","on-background":"#0b1c30","on-primary-fixed":"#100069","surface-container-high":"#dce9ff","primary":"#2a14b4","on-secondary-fixed":"#131b2e","on-surface-variant":"#464554","background":"#f8f9ff","inverse-surface":"#213145","on-tertiary":"#ffffff","on-primary":"#ffffff","on-primary-container":"#c1beff","surface-tint":"#5148d7","secondary":"#565e74","inverse-primary":"#c3c0ff","tertiary":"#553300","on-error-container":"#93000a","on-primary-fixed-variant":"#372abf","primary-fixed":"#e3dfff","secondary-fixed-dim":"#bec6e0","surface-container-lowest":"#ffffff","surface-variant":"#d3e4fe","primary-container":"#4338ca","surface-container":"#e5eeff","secondary-container":"#dae2fd","primary-fixed-dim":"#c3c0ff","on-secondary":"#ffffff","on-secondary-fixed-variant":"#3f465c","surface-bright":"#f8f9ff","on-error":"#ffffff","tertiary-fixed-dim":"#ffb95f","on-tertiary-fixed-variant":"#653e00"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"margin-mobile":"16px","gutter":"24px","margin-desktop":"40px","focus-padding":"48px","container-max":"1120px","unit":"4px"},"fontFamily":{"headline-sm":["Manrope"],"body-sm":["Inter"],"label-sm":["JetBrains Mono"],"body-md":["Inter"],"body-lg":["Inter"],"label-md":["JetBrains Mono"],"headline-lg":["Manrope"],"headline-md":["Manrope"],"headline-lg-mobile":["Manrope"]},"fontSize":{"headline-sm":["20px",{"lineHeight":"28px","fontWeight":"600"}],"body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],"label-sm":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"500"}],"body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"label-md":["14px",{"lineHeight":"20px","letterSpacing":"0.02em","fontWeight":"500"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"headline-md":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","fontWeight":"700"}]}}}}</script><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-background font-body-md text-body-md text-on-background"><aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col shadow-[1px_0_0_0_rgba(0,0,0,0.05)]"><div class="p-gutter mb-6 flex items-center gap-3"><div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center"><span class="material-symbols-outlined text-on-primary-container">school</span></div><span class="font-headline-sm text-headline-sm text-on-surface">Scholar247</span></div><nav class="flex-1 px-4 flex flex-col gap-2" data-active-classes="bg-primary-container text-on-primary-container font-bold"><div class="px-4 py-2 mb-2"><span class="font-label-sm text-label-sm text-outline uppercase">Navigation</span></div><a class="flex items-center px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="exam-setup" href="#"><span class="material-symbols-outlined mr-3">settings_suggest</span>Setup</a><a class="flex items-center px-4 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="active-exam" href="#"><span class="material-symbols-outlined mr-3">timer</span>Exam Room</a><a aria-current="page" class="flex items-center px-4 py-3 rounded-xl transition-all bg-primary-container text-on-primary-container font-bold" data-path="exam-results" href="#"><span class="material-symbols-outlined mr-3">analytics</span>Results</a></nav><div class="p-6 mt-auto border-t border-outline-variant/30"><div class="flex items-center gap-3 p-3 bg-surface-container-low rounded-xl"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex-1 min-w-0"><p class="text-body-sm font-semibold text-on-surface truncate">Student #1402</p><p class="text-label-sm text-on-surface-variant">Candidate ID</p></div></div></div></aside><div class="pl-72"><header class="fixed top-0 left-72 right-0 h-16 bg-surface/80 backdrop-blur-xl z-40 flex items-center justify-between px-gutter"><div class="flex items-center gap-4"><div class="hidden flex items-center gap-2 px-3 py-1 bg-error-container text-on-error-container rounded-full animate-pulse" id="status-indicator"><span class="material-symbols-outlined text-[16px]">fiber_manual_record</span><span class="font-label-sm text-label-sm">EXAM IN PROGRESS</span></div></div><div class="flex items-center gap-6"><div class="flex items-center gap-2 text-on-surface-variant hover:text-on-surface cursor-pointer"><span class="material-symbols-outlined">help_outline</span><span class="font-label-md text-label-md">Support</span></div><div class="w-[1px] h-6 bg-outline-variant/50"></div><button class="flex items-center gap-2 bg-inverse-surface text-inverse-on-surface px-4 py-2 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity">EXIT SESSION</button></div></header><main class="relative pt-16 bg-background min-h-screen"><div class="flex flex-col w-full px-gutter pb-gutter max-w-container-max mx-auto">
+<!-- Header Section -->
+<div class="relative py-12 flex flex-col items-center justify-center text-center">
+<!-- Decorative Background Glow -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+<div class="w-[600px] h-[600px] bg-primary/20 rounded-full blur-[100px] mix-blend-screen opacity-50"></div>
+</div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-20 h-20 bg-primary-container rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-primary/20 rotate-3">
+<span class="material-symbols-outlined text-on-primary-container text-[40px]" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-background mb-2">Exam Successfully Submitted</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">Your responses have been recorded. Below is a high-level overview of your session.</p>
+</div>
+</div>
+<!-- Core Metrics Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<!-- Total Score / Accuracy (Placeholder before detailed analysis) -->
+<div class="bg-surface-container rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
+<div class="absolute -right-8 -top-8 w-32 h-32 bg-primary/10 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-4 z-10">Completion</span>
+<!-- Circular Progress -->
+<div class="relative w-32 h-32 flex items-center justify-center z-10 mb-2">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="text-surface-container-highest stroke-current" cx="50" cy="50" fill="transparent" r="40" stroke-width="8"></circle>
+<circle class="text-primary stroke-current transition-all duration-1000 ease-out" cx="50" cy="50" fill="transparent" id="completion-ring" r="40" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute flex flex-col items-center justify-center">
+<span class="font-headline-lg text-headline-lg text-on-surface">100<span class="text-headline-sm">%</span></span>
+</div>
+</div>
+</div>
+<!-- Metrics Stack -->
+<div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-6">
+<!-- Attempted -->
+<div class="bg-surface-container-low rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-4">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Attempted</span>
+<span class="material-symbols-outlined text-primary">edit_note</span>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface mb-1">85<span class="font-headline-sm text-headline-sm text-on-surface-variant ml-2">/ 100</span></div>
+<div class="w-full bg-surface-container-highest rounded-full h-1 mt-4">
+<div class="bg-primary h-1 rounded-full w-[85%]"></div>
+</div>
+</div>
+</div>
+<!-- Not Attempted -->
+<div class="bg-surface-container-low rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-4">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Skipped</span>
+<span class="material-symbols-outlined text-outline">horizontal_rule</span>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface mb-1">10<span class="font-headline-sm text-headline-sm text-on-surface-variant ml-2">/ 100</span></div>
+<div class="w-full bg-surface-container-highest rounded-full h-1 mt-4">
+<div class="bg-outline h-1 rounded-full w-[10%]"></div>
+</div>
+</div>
+</div>
+<!-- Marked for Review -->
+<div class="bg-surface-container-low rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-4">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Reviewed</span>
+<span class="material-symbols-outlined text-tertiary">bookmark_added</span>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface mb-1">5<span class="font-headline-sm text-headline-sm text-on-surface-variant ml-2">/ 100</span></div>
+<div class="w-full bg-surface-container-highest rounded-full h-1 mt-4">
+<div class="bg-tertiary h-1 rounded-full w-[5%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Visualizations Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+<!-- Time Spent Chart -->
+<div class="bg-surface rounded-2xl p-8 shadow-md">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Time Allocation</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Total time: 2h 45m / 3h 00m</p>
+</div>
+<div class="w-12 h-12 bg-secondary-container rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container">schedule</span>
+</div>
+</div>
+<!-- Custom Bar Chart built with flex -->
+<div class="h-48 flex items-end justify-between gap-4">
+<!-- Subject 1 -->
+<div class="flex flex-col items-center gap-3 w-full group">
+<div class="relative w-full flex justify-center h-[120px] items-end">
+<div class="w-full max-w-[48px] bg-primary rounded-t-lg transition-all duration-500 h-[80%] group-hover:bg-primary-fixed"></div>
+<!-- Tooltip -->
+<div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded">65m</div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant text-center">Physics</span>
+</div>
+<!-- Subject 2 -->
+<div class="flex flex-col items-center gap-3 w-full group">
+<div class="relative w-full flex justify-center h-[120px] items-end">
+<div class="w-full max-w-[48px] bg-secondary rounded-t-lg transition-all duration-500 h-[60%] group-hover:bg-secondary-fixed"></div>
+<div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded">45m</div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant text-center">Chem</span>
+</div>
+<!-- Subject 3 -->
+<div class="flex flex-col items-center gap-3 w-full group">
+<div class="relative w-full flex justify-center h-[120px] items-end">
+<div class="w-full max-w-[48px] bg-tertiary rounded-t-lg transition-all duration-500 h-[100%] group-hover:bg-tertiary-fixed"></div>
+<div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded">55m</div>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant text-center">Math</span>
+</div>
+</div>
+<!-- X-axis line -->
+<div class="w-full h-px bg-outline-variant/30 mt-2"></div>
+</div>
+<!-- Section Summary List -->
+<div class="bg-surface rounded-2xl shadow-md overflow-hidden flex flex-col">
+<div class="p-8 pb-4">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Section Breakdown</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Attempt rate per module</p>
+</div>
+<div class="flex-1 px-8 pb-8 flex flex-col gap-6 justify-center">
+<!-- Item 1 -->
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center shrink-0">
+<span class="font-label-sm text-label-sm text-on-primary-container">P1</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Physics - Mechanics</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">28/30</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5">
+<div class="bg-primary h-1.5 rounded-full" style="width: 93%;"></div>
+</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-secondary-container rounded-lg flex items-center justify-center shrink-0">
+<span class="font-label-sm text-label-sm text-on-secondary-container">C1</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Chemistry - Organic</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">25/30</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5">
+<div class="bg-secondary h-1.5 rounded-full" style="width: 83%;"></div>
+</div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-tertiary-container rounded-lg flex items-center justify-center shrink-0">
+<span class="font-label-sm text-label-sm text-on-tertiary-container">M1</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="font-body-md text-body-md text-on-surface font-semibold">Mathematics - Calculus</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">32/40</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5">
+<div class="bg-tertiary h-1.5 rounded-full" style="width: 80%;"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="flex justify-center mt-auto pb-12 pt-8 relative">
+<div class="absolute left-1/2 -translate-x-1/2 top-0 w-3/4 h-px bg-gradient-to-r from-transparent via-outline-variant/30 to-transparent"></div>
+<button class="bg-primary hover:bg-primary-fixed-variant text-on-primary font-label-md text-label-md uppercase tracking-wider px-10 py-4 rounded-xl shadow-lg shadow-primary/20 transition-all hover:-translate-y-1 hover:shadow-xl flex items-center gap-3 group">
+            Go to Detailed Analysis
+            <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+<script>
+    // Animate completion ring on load
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            const ring = document.getElementById('completion-ring');
+            if(ring) {
+                // Circumference is 2 * pi * r (2 * 3.14 * 40 = 251.2)
+                // Set to 0 offset for 100% completion
+                ring.style.strokeDashoffset = '0';
+            }
+        }, 100);
+    });
+</script></main></div><script>document.addEventListener('DOMContentLoaded',()=>{const path=window.location.pathname;if(path.includes('active-exam')){document.getElementById('status-indicator').classList.remove('hidden');}});</script></body></html>

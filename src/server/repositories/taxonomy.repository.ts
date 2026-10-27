@@ -1,0 +1,597 @@
+import { asc, eq, and, sql, inArray } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/mysql-core';
+import { randomUUID } from 'crypto';
+import { db } from '@/server/db/client';
+import { programs, exams, curriculumNodes, curriculumEdges, examNodeMap } from '@/server/db/schema';
+import { isDuplicateKeyError } from '@/server/db/helpers';
+import { slugify } from '@/lib/utils';
+
+export interface SyllabusNode {
+  id: string;
+  nodeType: string;
+  name: string;
+  slug: string;
+  children: SyllabusNode[];
+}
+
+async function ensureUniqueSlug<T extends { slug: string }>(
+  base: string,
+  lookup: (slug: string) => Promise<T | null>,
+): Promise<string> {
+  let candidate = base;
+  let suffix = 1;
+  while (await lookup(candidate)) {
+    suffix += 1;
+    candidate = `${base}-${suffix}`;
+  }
+  return candidate;
+}
+
+// ── Programs ────────────────────────────────────────────────────────────────
+
+async function listPrograms() {
+  return db.select().from(programs).orderBy(asc(programs.name));
+}
+
+async function listPublicPrograms() {
+  return db.select().from(programs).where(eq(programs.status, 'ACTIVE')).orderBy(asc(programs.name));
+}
+
+async function findProgramBySlug(slug: string) {
+  const [row] = await db.select().from(programs).where(eq(programs.slug, slug)).limit(1);
+  return row ?? null;
+}
+
+async function findProgramById(id: string) {
+  const [row] = await db.select().from(programs).where(eq(programs.id, id)).limit(1);
+  return row ?? null;
+}
+
+async function createProgram(input: { name: string; description?: string; thumbnailUrl?: string }) {
+  const slug = await ensureUniqueSlug(slugify(input.name), findProgramBySlug);
+  const id = randomUUID();
+  await db.insert(programs).values({ id, name: input.name, slug, description: input.description, thumbnailUrl: input.thumbnailUrl });
+  return findProgramBySlug(slug);
+}
+
+// Slug is deliberately left untouched on edit — simpler and avoids anything else needing
+// to track a slug change; programs don't have their own public detail page today anyway.
+async function updateProgram(
+  id: string,
+  input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED'; thumbnailUrl?: string },
+) {
+  await db
+    .update(programs)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(programs.id, id));
+  return findProgramById(id);
+}
+
+// ── Exams ───────────────────────────────────────────────────────────────────
+
+async function listExams() {
+  return db
+    .select({ exam: exams, programName: programs.name })
+    .from(exams)
+    .innerJoin(programs, eq(exams.programId, programs.id))
+    .orderBy(asc(exams.name));
+}
+
+async function listPublicExams() {
+  return db
+    .select({ exam: exams, programName: programs.name })
+    .from(exams)
+    .innerJoin(programs, eq(exams.programId, programs.id))
+    .where(eq(exams.status, 'ACTIVE'))
+    .orderBy(asc(exams.name));
+}
+
+async function findExamBySlug(slug: string) {
+  const [row] = await db.select().from(exams).where(eq(exams.slug, slug)).limit(1);
+  return row ?? null;
+}
+
+async function findExamById(id: string) {
+  const [row] = await db.select().from(exams).where(eq(exams.id, id)).limit(1);
+  return row ?? null;
+}
+
+async function createExam(input: { programId: string; name: string; description?: string; thumbnailUrl?: string }) {
+  const slug = await ensureUniqueSlug(slugify(input.name), findExamBySlug);
+  const id = randomUUID();
+  await db
+    .insert(exams)
+    .values({ id, programId: input.programId, name: input.name, slug, description: input.description, thumbnailUrl: input.thumbnailUrl });
+  return findExamBySlug(slug);
+}
+
+// programId is reassignable here — this is how an exam moves to a different program (an
+// exam belongs to exactly one program, a plain FK, not a mapping table — the ERD itself
+// defines program->exam as 1-to-many, unlike exam<->curriculum_node below).
+async function updateExam(
+  id: string,
+  input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED'; programId?: string; thumbnailUrl?: string },
+) {
+  await db
+    .update(exams)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(exams.id, id));
+  return findExamById(id);
+}
+
+// Admin bulk activate/deactivate. An ARCHIVED ("inactive") exam drops out of every public
+// surface — listPublicExams, exam pages, public APIs — but stays in admin management.
+async function setExamsStatus(ids: string[], status: 'ACTIVE' | 'ARCHIVED') {
+  if (ids.length === 0) return 0;
+  const [result] = await db.update(exams).set({ status, updatedAt: new Date() }).where(inArray(exams.id, ids));
+  return result.affectedRows;
+}
+
+/** True only for an existing exam that is ACTIVE — the gate for exam-scoped public APIs. */
+async function isExamActive(id: string) {
+  const exam = await findExamById(id);
+  return exam?.status === 'ACTIVE';
+}
+
+// ── Curriculum nodes ────────────────────────────────────────────────────────
+
+async function listNodes() {
+  return db.select().from(curriculumNodes).orderBy(asc(curriculumNodes.name));
+}
+
+async function findNodeBySlug(slug: string) {
+  const [row] = await db.select().from(curriculumNodes).where(eq(curriculumNodes.slug, slug)).limit(1);
+  return row ?? null;
+}
+
+async function findNodeById(id: string) {
+  const [row] = await db.select().from(curriculumNodes).where(eq(curriculumNodes.id, id)).limit(1);
+  return row ?? null;
+}
+
+export type NodeType = 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SUBTOPIC';
+
+// Flat, filterable public listing of curriculum nodes — complements the nested syllabus
+// tree (getSyllabusTree) with a queryable "just give me all Topics" / "all nodes under
+// this exam" shape. ACTIVE only, same convention as listPublicPrograms/listPublicExams.
+async function listPublicNodes(filters: { nodeType?: NodeType; examId?: string } = {}) {
+  const conditions = [eq(curriculumNodes.status, 'ACTIVE')];
+  if (filters.nodeType) conditions.push(eq(curriculumNodes.nodeType, filters.nodeType));
+
+  if (filters.examId) {
+    const rootIds = await listNodeIdsForExam(filters.examId);
+    const idSet = new Set(rootIds);
+    for (const rootId of rootIds) {
+      const descendants = await getDescendantIds(rootId);
+      descendants.forEach((id) => idSet.add(id));
+    }
+    // Empty sentinel keeps the query valid (inArray([]) would otherwise match nothing
+    // predictably across drivers) when this exam has no mapped syllabus yet.
+    conditions.push(inArray(curriculumNodes.id, idSet.size > 0 ? Array.from(idSet) : ['__none__']));
+  }
+
+  return db.select().from(curriculumNodes).where(and(...conditions)).orderBy(asc(curriculumNodes.name));
+}
+
+// ── exam <-> curriculum_node (genuine many-to-many via exam_node_map) ────────
+
+async function attachNodeToExam(examId: string, nodeId: string) {
+  try {
+    await db.insert(examNodeMap).values({ examId, nodeId });
+  } catch (err) {
+    // Emulates ON CONFLICT DO NOTHING — examNodeMap's (examId, nodeId) composite primary
+    // key already prevents duplicates; a re-attach attempt is a harmless no-op.
+    if (!isDuplicateKeyError(err)) throw err;
+  }
+}
+
+async function detachNodeFromExam(examId: string, nodeId: string) {
+  await db.delete(examNodeMap).where(and(eq(examNodeMap.examId, examId), eq(examNodeMap.nodeId, nodeId)));
+}
+
+async function listNodeIdsForExam(examId: string): Promise<string[]> {
+  const rows = await db.select({ nodeId: examNodeMap.nodeId }).from(examNodeMap).where(eq(examNodeMap.examId, examId));
+  return rows.map((r) => r.nodeId);
+}
+
+// Reconciles exam_node_map to exactly `nodeIds` for this exam — attaches what's missing,
+// detaches what's no longer wanted, leaves the rest alone.
+async function setExamNodes(examId: string, nodeIds: string[]) {
+  const current = new Set(await listNodeIdsForExam(examId));
+  const desired = new Set(nodeIds);
+
+  for (const nodeId of desired) {
+    if (!current.has(nodeId)) await attachNodeToExam(examId, nodeId);
+  }
+  for (const nodeId of current) {
+    if (!desired.has(nodeId)) await detachNodeFromExam(examId, nodeId);
+  }
+}
+
+async function createNode(input: {
+  nodeType: 'SUBJECT' | 'CHAPTER' | 'TOPIC' | 'SUBTOPIC';
+  name: string;
+  description?: string;
+  thumbnailUrl?: string;
+  parentNodeId?: string;
+  examId?: string;
+}) {
+  const slug = await ensureUniqueSlug(slugify(input.name), findNodeBySlug);
+  const id = randomUUID();
+  await db
+    .insert(curriculumNodes)
+    .values({ id, nodeType: input.nodeType, name: input.name, slug, description: input.description, thumbnailUrl: input.thumbnailUrl });
+
+  if (input.parentNodeId) {
+    await db.insert(curriculumEdges).values({ parentNodeId: input.parentNodeId, childNodeId: id, sortOrder: 0 });
+  }
+  if (input.examId) {
+    await attachNodeToExam(input.examId, id);
+  }
+
+  return findNodeBySlug(slug);
+}
+
+// name/description/status only — nodeType stays fixed once created (changing SUBJECT to
+// CHAPTER etc. after the fact would be more likely to corrupt an existing tree than fix one).
+async function updateNode(
+  id: string,
+  input: { name?: string; description?: string; status?: 'ACTIVE' | 'ARCHIVED'; thumbnailUrl?: string },
+) {
+  await db
+    .update(curriculumNodes)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(curriculumNodes.id, id));
+  return findNodeById(id);
+}
+
+// ── curriculum_node <-> curriculum_node (genuine many-to-many parent/child via
+// curriculum_edges — a node CAN have more than one parent, e.g. "Thermodynamics" mapped
+// under both Physics and Chemistry) ──────────────────────────────────────────
+
+async function getNodeParentIds(nodeId: string): Promise<string[]> {
+  const rows = await db
+    .select({ parentNodeId: curriculumEdges.parentNodeId })
+    .from(curriculumEdges)
+    .where(eq(curriculumEdges.childNodeId, nodeId));
+  return rows.map((r) => r.parentNodeId);
+}
+
+// All descendants of nodeId (children, grandchildren, ...) — used only to guard against
+// cycles: attaching one of nodeId's own descendants as a new parent would make nodeId an
+// ancestor of its own ancestor.
+async function getDescendantIds(nodeId: string): Promise<Set<string>> {
+  const [rows] = (await db.execute<{ id: string }>(sql`
+    WITH RECURSIVE descendants AS (
+      SELECT child_node_id AS id FROM ${curriculumEdges} WHERE parent_node_id = ${nodeId}
+      UNION
+      SELECT edge.child_node_id AS id
+      FROM ${curriculumEdges} edge
+      INNER JOIN descendants d ON d.id = edge.parent_node_id
+    )
+    SELECT id FROM descendants
+  `)) as unknown as [{ id: string }[], unknown];
+  return new Set(rows.map((r) => r.id));
+}
+
+// All ancestors of nodeId (parent, grandparent, ...) — mirrors getDescendantIds but walks
+// curriculum_edges upward instead of downward. This is what makes tagging a question at a
+// Topic also tag it at that Topic's Chapter and Subject: a node can have more than one
+// parent (Thermodynamics under both Physics and Chemistry), so this naturally returns
+// ancestors from every parent branch, not just one path to the root.
+async function getAncestorIds(nodeId: string): Promise<Set<string>> {
+  const [rows] = (await db.execute<{ id: string }>(sql`
+    WITH RECURSIVE ancestors AS (
+      SELECT parent_node_id AS id FROM ${curriculumEdges} WHERE child_node_id = ${nodeId}
+      UNION
+      SELECT edge.parent_node_id AS id
+      FROM ${curriculumEdges} edge
+      INNER JOIN ancestors a ON a.id = edge.child_node_id
+    )
+    SELECT id FROM ancestors
+  `)) as unknown as [{ id: string }[], unknown];
+  return new Set(rows.map((r) => r.id));
+}
+
+// Reconciles this node's parent edges to exactly `parentNodeIds` — attaches what's
+// missing, detaches what's no longer wanted. This is "add chapter to subject" / "add
+// topic to chapter" for nodes that already exist, and also how Thermodynamics ends up
+// under both Physics and Chemistry: call this with both subject ids.
+async function setNodeParents(nodeId: string, parentNodeIds: string[]) {
+  const desired = new Set(parentNodeIds);
+  if (desired.has(nodeId)) {
+    throw new Error('A node cannot be its own parent');
+  }
+
+  const descendants = await getDescendantIds(nodeId);
+  for (const parentId of desired) {
+    if (descendants.has(parentId)) {
+      throw new Error('That would create a cycle — the selected parent is a descendant of this node');
+    }
+  }
+
+  const current = new Set(await getNodeParentIds(nodeId));
+  for (const parentId of desired) {
+    if (!current.has(parentId)) {
+      await db.insert(curriculumEdges).values({ parentNodeId: parentId, childNodeId: nodeId, sortOrder: 0 });
+    }
+  }
+  for (const parentId of current) {
+    if (!desired.has(parentId)) {
+      await db.delete(curriculumEdges).where(and(eq(curriculumEdges.parentNodeId, parentId), eq(curriculumEdges.childNodeId, nodeId)));
+    }
+  }
+}
+
+interface NodeWithParents {
+  id: string;
+  nodeType: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  thumbnailUrl: string | null;
+  status: string;
+  parents: { id: string; name: string }[];
+}
+
+async function listNodesWithParents(): Promise<NodeWithParents[]> {
+  const parentNode = alias(curriculumNodes, 'parent_node');
+  const [nodes, edgeRows] = await Promise.all([
+    db.select().from(curriculumNodes).orderBy(asc(curriculumNodes.name)),
+    db
+      .select({ childId: curriculumEdges.childNodeId, parentId: curriculumEdges.parentNodeId, parentName: parentNode.name })
+      .from(curriculumEdges)
+      .innerJoin(parentNode, eq(parentNode.id, curriculumEdges.parentNodeId)),
+  ]);
+
+  const parentsByChild = new Map<string, { id: string; name: string }[]>();
+  for (const edge of edgeRows) {
+    const list = parentsByChild.get(edge.childId) ?? [];
+    list.push({ id: edge.parentId, name: edge.parentName });
+    parentsByChild.set(edge.childId, list);
+  }
+
+  return nodes.map((n) => ({ ...n, parents: parentsByChild.get(n.id) ?? [] }));
+}
+
+// ── Syllabus tree (recursive descendants of an exam's mapped root nodes) ─────
+
+interface DescendantRow extends Record<string, unknown> {
+  id: string;
+  nodeType: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+}
+
+async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
+  // The ERD's own sample data maps both a subject AND its deep descendants directly into
+  // exam_node_map (not just top-level roots — see "root or relevant nodes" in the ERD).
+  // So `reachable` dedupes by node id via UNION (not UNION ALL) first; each node's actual
+  // parent(s) are then resolved separately via curriculum_edges, so a node that's both
+  // directly mapped and reachable through an ancestor still nests exactly once per real
+  // parent — not as a duplicate phantom root.
+  //
+  // The join to curriculum_edges is constrained to `edge.parent_node_id IN (reachable)`
+  // — without that, a node with a parent OUTSIDE this exam's relevant subtree (e.g.
+  // Thermodynamics under Chemistry, when only Physics is reachable for this exam) would
+  // produce a row whose parentId isn't in `byId`, and the loop below would push it as a
+  // second, spurious root in addition to its legitimate position under Physics. A node
+  // can validly have more than one parent now (Thermodynamics under both Physics and
+  // Chemistry) — when that happens for a node reachable via multiple relevant parents,
+  // it correctly nests under each of them (same shared object pushed into multiple
+  // children arrays), which is why `byId` uses one node object per id rather than one per
+  // row.
+  //
+  // db.execute()'s return type is a union across all possible query kinds (SELECT vs
+  // INSERT/UPDATE) since it can't statically know this raw SQL is a SELECT — cast the
+  // destructured rows accordingly.
+  const [rows] = (await db.execute<DescendantRow>(sql`
+    WITH RECURSIVE reachable AS (
+      SELECT node_id AS id FROM ${examNodeMap} WHERE exam_id = ${examId}
+
+      UNION
+
+      SELECT edge.child_node_id AS id
+      FROM ${curriculumEdges} edge
+      INNER JOIN reachable r ON r.id = edge.parent_node_id
+    )
+    SELECT cn.id, cn.node_type AS "nodeType", cn.name, cn.slug, edge.parent_node_id AS "parentId"
+    FROM reachable r
+    INNER JOIN ${curriculumNodes} cn ON cn.id = r.id
+    LEFT JOIN ${curriculumEdges} edge ON edge.child_node_id = cn.id AND edge.parent_node_id IN (SELECT id FROM reachable)
+  `)) as unknown as [DescendantRow[], unknown];
+
+  const byId = new Map<string, SyllabusNode>();
+  const roots: SyllabusNode[] = [];
+
+  for (const row of rows) {
+    if (!byId.has(row.id)) {
+      byId.set(row.id, { id: row.id, nodeType: row.nodeType, name: row.name, slug: row.slug, children: [] });
+    }
+  }
+  for (const row of rows) {
+    const node = byId.get(row.id)!;
+    if (row.parentId && byId.has(row.parentId)) {
+      byId.get(row.parentId)!.children.push(node);
+    } else if (!row.parentId) {
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
+
+// ── Root paths (a node can sit under several parents) ───────────────────────
+
+/** Thrown for an invalid or ambiguous curriculum selection — callers map it to a 400. */
+export class NodePathError extends Error {}
+
+/**
+ * Every distinct chain from a root down to `nodeId`, each ordered root → node. A node with
+ * one parent chain has one path; "Trigonometry" under both "Mathematics" and "Mathematics
+ * (Class 10)" has two. Capped so a pathological graph can't explode.
+ */
+async function listRootPaths(nodeId: string, max = 50): Promise<string[][]> {
+  const ancestors = await getAncestorIds(nodeId);
+  const ids = [nodeId, ...ancestors];
+  const edgeRows = await db
+    .select({ child: curriculumEdges.childNodeId, parent: curriculumEdges.parentNodeId })
+    .from(curriculumEdges)
+    .where(inArray(curriculumEdges.childNodeId, ids));
+
+  const parentsOf = new Map<string, string[]>();
+  for (const e of edgeRows) parentsOf.set(e.child, [...(parentsOf.get(e.child) ?? []), e.parent]);
+
+  const paths: string[][] = [];
+  const walk = (id: string, suffix: string[]) => {
+    if (paths.length >= max || suffix.includes(id)) return;
+    const parents = parentsOf.get(id) ?? [];
+    if (parents.length === 0) {
+      paths.push([id, ...suffix]);
+      return;
+    }
+    for (const parent of parents) walk(parent, [id, ...suffix]);
+  };
+  walk(nodeId, []);
+  return paths;
+}
+
+/** A selection is one root → leaf chain: real active nodes, each the parent of the next, starting at a root. */
+async function validateNodePath(path: string[]): Promise<void> {
+  if (path.length === 0 || path.length > 12 || new Set(path).size !== path.length) {
+    throw new NodePathError('Invalid curriculum selection');
+  }
+
+  const nodes = await db.select({ id: curriculumNodes.id, status: curriculumNodes.status }).from(curriculumNodes).where(inArray(curriculumNodes.id, path));
+  if (nodes.length !== path.length || nodes.some((n) => n.status !== 'ACTIVE')) {
+    throw new NodePathError('Curriculum node not found or archived');
+  }
+
+  const edges = await db
+    .select({ child: curriculumEdges.childNodeId, parent: curriculumEdges.parentNodeId })
+    .from(curriculumEdges)
+    .where(inArray(curriculumEdges.childNodeId, path));
+  const hasEdge = (parent: string, child: string) => edges.some((e) => e.parent === parent && e.child === child);
+
+  for (let i = 0; i < path.length - 1; i++) {
+    if (!hasEdge(path[i], path[i + 1])) throw new NodePathError('Selection is not a connected chain of parent → child nodes');
+  }
+  if (edges.some((e) => e.child === path[0])) throw new NodePathError('Selection must start at a top-level node');
+}
+
+/**
+ * Turns whatever a caller sent into the one chain to store:
+ *  - `nodePath` array → validated as-is
+ *  - `nodePath: null`  → null (clear the mapping)
+ *  - only `nodeId`     → its single root path; if the node has several parents the caller
+ *                        must say which chain, so this throws instead of guessing (guessing
+ *                        is how an article tagged "Trigonometry" ended up on every exam)
+ *  - neither           → undefined (leave the mapping untouched)
+ */
+async function resolveNodePath(input: { nodePath?: string[] | null; nodeId?: string }): Promise<string[] | null | undefined> {
+  if (input.nodePath === null) return null;
+  if (input.nodePath) {
+    await validateNodePath(input.nodePath);
+    return input.nodePath;
+  }
+  if (!input.nodeId) return undefined;
+
+  const paths = await listRootPaths(input.nodeId);
+  if (paths.length === 0) throw new NodePathError('Curriculum node not found');
+  if (paths.length > 1) throw new NodePathError('This node sits under more than one parent — choose which chain to attach to');
+  await validateNodePath(paths[0]);
+  return paths[0];
+}
+
+// For the blog pickers: the whole (small) curriculum graph in one payload — parent ids per
+// node, plus the exams each node is directly mapped to — so the client can offer every
+// distinct root → node chain without a request per search.
+async function listPublicNodesWithGraph() {
+  const [nodes, edgeRows, examRows] = await Promise.all([
+    db.select().from(curriculumNodes).where(eq(curriculumNodes.status, 'ACTIVE')).orderBy(asc(curriculumNodes.name)),
+    db.select({ child: curriculumEdges.childNodeId, parent: curriculumEdges.parentNodeId }).from(curriculumEdges),
+    db
+      .select({ nodeId: examNodeMap.nodeId, examName: exams.name })
+      .from(examNodeMap)
+      .innerJoin(exams, and(eq(exams.id, examNodeMap.examId), eq(exams.status, 'ACTIVE'))),
+  ]);
+
+  const parentsOf = new Map<string, string[]>();
+  for (const e of edgeRows) parentsOf.set(e.child, [...(parentsOf.get(e.child) ?? []), e.parent]);
+  const examsOf = new Map<string, string[]>();
+  for (const r of examRows) examsOf.set(r.nodeId, [...(examsOf.get(r.nodeId) ?? []), r.examName]);
+
+  return nodes.map((n) => ({
+    id: n.id,
+    name: n.name,
+    nodeType: n.nodeType,
+    slug: n.slug,
+    parentIds: parentsOf.get(n.id) ?? [],
+    exams: examsOf.get(n.id) ?? [],
+  }));
+}
+
+// For the admin syllabus graph's lineage view: the whole curriculum graph (archived rows
+// included) as flat lists, so the client can walk every parent chain and every exam that
+// reaches a node without a request per hop.
+async function getCurriculumGraph() {
+  const [examRows, nodeRows, edgeRows, mapRows] = await Promise.all([
+    db
+      .select({ id: exams.id, name: exams.name, slug: exams.slug, status: exams.status, programName: programs.name })
+      .from(exams)
+      .innerJoin(programs, eq(exams.programId, programs.id))
+      .orderBy(asc(exams.name)),
+    db
+      .select({
+        id: curriculumNodes.id,
+        nodeType: curriculumNodes.nodeType,
+        name: curriculumNodes.name,
+        slug: curriculumNodes.slug,
+        status: curriculumNodes.status,
+      })
+      .from(curriculumNodes)
+      .orderBy(asc(curriculumNodes.name)),
+    db.select({ parentId: curriculumEdges.parentNodeId, childId: curriculumEdges.childNodeId }).from(curriculumEdges),
+    db.select({ examId: examNodeMap.examId, nodeId: examNodeMap.nodeId }).from(examNodeMap),
+  ]);
+
+  return { exams: examRows, nodes: nodeRows, edges: edgeRows, examNodes: mapRows };
+}
+
+export const taxonomyRepository = {
+  getCurriculumGraph,
+  listRootPaths,
+  validateNodePath,
+  resolveNodePath,
+  listPublicNodesWithGraph,
+  listPrograms,
+  listPublicPrograms,
+  findProgramBySlug,
+  findProgramById,
+  createProgram,
+  updateProgram,
+  listExams,
+  listPublicExams,
+  findExamBySlug,
+  findExamById,
+  createExam,
+  updateExam,
+  setExamsStatus,
+  isExamActive,
+  listNodes,
+  listPublicNodes,
+  listNodesWithParents,
+  findNodeBySlug,
+  findNodeById,
+  createNode,
+  updateNode,
+  attachNodeToExam,
+  detachNodeFromExam,
+  listNodeIdsForExam,
+  setExamNodes,
+  getNodeParentIds,
+  getAncestorIds,
+  setNodeParents,
+  getSyllabusTree,
+};
