@@ -1,4 +1,4 @@
-import { LayoutDashboard, GraduationCap, Network, Newspaper, ListChecks, Users, Dumbbell, ClipboardList, Settings, FolderOpen, TrendingUp, LayoutGrid, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Network, Newspaper, ListChecks, Users, Dumbbell, ClipboardList, Settings, FolderOpen, TrendingUp, LayoutGrid, TerminalSquare, type LucideIcon } from 'lucide-react';
 import type { UserRole } from '@/lib/roles';
 
 export interface NavItem {
@@ -15,6 +15,7 @@ const STUDENT_NAV: NavItem[] = [
   { href: '/progress', label: 'Progress', icon: TrendingUp },
   { href: '/mocks', label: 'Mock Tests', icon: ClipboardList },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
+  { href: '/sql-playground', label: 'SQL Playground', icon: TerminalSquare },
   { href: '/media', label: 'My Media', icon: FolderOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -24,6 +25,7 @@ const TEACHER_NAV: NavItem[] = [
   { href: '/progress', label: 'Progress', icon: TrendingUp },
   { href: '/mocks', label: 'Mock Tests', icon: ClipboardList },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
+  { href: '/sql-playground', label: 'SQL Playground', icon: TerminalSquare },
   { href: '/media', label: 'My Media', icon: FolderOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -38,6 +40,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: '/mocks', label: 'Mock Tests', icon: ClipboardList },
   { href: '/admin/users', label: 'User Management', icon: Users },
   { href: '/practice', label: 'Practice', icon: Dumbbell },
+  { href: '/sql-playground', label: 'SQL Playground', icon: TerminalSquare },
   { href: '/media', label: 'My Media', icon: FolderOpen },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
