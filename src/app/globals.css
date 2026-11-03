@@ -1006,3 +1006,40 @@ body {
   border-radius: 9999px 9999px 0 0;
 }
 
+
+/* ── SQL playground ─────────────────────────────────────────────────────────
+ * Syntax colors for the editor's highlight layer (src/lib/sql-playground/highlight.ts)
+ * plus the status colors its results panel uses.
+ * ────────────────────────────────────────────────────────────────────────── */
+.sql-playground {
+  --sql-keyword: #7c3aed;
+  --sql-fn: #0369a1;
+  --sql-string: #15803d;
+  --sql-number: #b45309;
+  --sql-comment: #6b7280;
+  --sql-quoted: #be185d;
+  --sql-op: #475569;
+  --sql-ok: #047857;
+  --sql-err: #b91c1c;
+  --sql-null: #9ca3af;
+}
+.dark .sql-playground {
+  --sql-keyword: #c4b5fd;
+  --sql-fn: #7dd3fc;
+  --sql-string: #86efac;
+  --sql-number: #fcd34d;
+  --sql-comment: #7c8496;
+  --sql-quoted: #f9a8d4;
+  --sql-op: #94a3b8;
+  --sql-ok: #5de6ff;
+  --sql-err: #ff8a80;
+  --sql-null: #6b7280;
+}
+.sql-highlight .sh-keyword { color: var(--sql-keyword); }
+.sql-highlight .sh-fn { color: var(--sql-fn); }
+.sql-highlight .sh-string { color: var(--sql-string); }
+.sql-highlight .sh-number { color: var(--sql-number); }
+.sql-highlight .sh-comment { color: var(--sql-comment); font-style: italic; }
+.sql-highlight .sh-quoted { color: var(--sql-quoted); }
+.sql-highlight .sh-op { color: var(--sql-op); }
+.sql-highlight .sh-ident { color: var(--foreground); }
