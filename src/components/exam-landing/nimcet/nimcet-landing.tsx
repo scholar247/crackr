@@ -19,6 +19,7 @@ import { StudyPlanTeaser } from './study-plan-teaser';
 import { PrepTracker } from './prep-tracker';
 import { CollegesTeaser } from './colleges-teaser';
 import { NimcetFinalCta } from './final-cta';
+import { SamplePapersCtaCard } from '@/components/sample-papers/sample-papers-cta-card';
 
 const NAV_ITEMS = [
   { id: 'overview', label: 'Overview' },
@@ -84,6 +85,7 @@ export function NimcetLanding({ data }: { data: NimcetData }) {
         signedIn={signedIn}
       />
       <MockSection mocks={data.mocks} signedIn={signedIn} buildMockHref={links.buildMock} />
+      <SamplePapersCtaCard examSlug={data.exam.slug} />
       <StudyPlanTeaser />
       <PrepTracker signedIn={signedIn} progress={data.progress} subjects={subjects} buildMockHref={links.buildMock} />
       <CollegesTeaser />

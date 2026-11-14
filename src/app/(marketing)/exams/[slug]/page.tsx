@@ -7,6 +7,7 @@ import { PrepDashboard } from '@/components/marketing/exam-detail/prep-dashboard
 import { ExamTabs } from '@/components/marketing/exam-detail/exam-tabs';
 import { SubjectsTab } from '@/components/marketing/exam-detail/subjects-tab';
 import { getExamLanding } from '@/components/exam-landing/registry';
+import { SamplePapersCtaCard } from '@/components/sample-papers/sample-papers-cta-card';
 import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -118,6 +119,9 @@ export default async function ExamDetailPage({ params, searchParams }: ExamDetai
         }
         subjects={<SubjectsTab syllabus={syllabus} subjectCount={subjectCount} topicCount={topicCount} examSlug={exam.slug} />}
       />
+
+      {/* Sample papers entry point: full card once papers are published, "coming soon" before. */}
+      <SamplePapersCtaCard examSlug={exam.slug} />
     </main>
   );
 }

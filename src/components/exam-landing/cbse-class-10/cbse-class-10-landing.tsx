@@ -13,6 +13,7 @@ import { StudyNotes } from './study-notes';
 import { MockTests } from './mock-tests';
 import { PrepRoadmap } from './prep-roadmap';
 import { FinalCta } from './final-cta';
+import { SamplePapersCtaCard } from '@/components/sample-papers/sample-papers-cta-card';
 
 const NAV_ITEMS = [
   { id: 'syllabus', label: 'Syllabus' },
@@ -65,6 +66,7 @@ export function CbseClass10Landing({ data }: { data: CbseClass10LandingData }) {
         progress={data.progress}
       />
       <StudyNotes articles={data.articles} notesHref={links.notes} practiceHref={links.practice} />
+      <SamplePapersCtaCard examSlug={exam.slug} />
       <MockTests mocks={data.mocks} signedIn={data.signedIn} />
       <PrepRoadmap current={phase} />
       <FaqSection title="CBSE Class 10: common questions" faqs={FAQS} />

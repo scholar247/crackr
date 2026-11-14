@@ -161,7 +161,22 @@ async function getContent(slug: string, viewer: Viewer): Promise<MediaContent> {
   const row = await mediaRepository.findBySlug(slug);
   if (!row) throw new MediaNotFoundError();
   if (!canView(row, viewer)) throw new MediaAuthorizationError();
+  return contentFor(row);
+}
 
+/**
+ * Server-side read that skips the per-viewer check, for features that publish media under
+ * their own access rules (e.g. a published sample paper is public even when
+ * MEDIA_PUBLIC_ACCESS is off). Never wire this to a route that takes a media slug from the
+ * request — the caller is responsible for deciding the bytes may be shown.
+ */
+async function getContentAsSystem(slug: string): Promise<MediaContent> {
+  const row = await mediaRepository.findBySlug(slug);
+  if (!row) throw new MediaNotFoundError();
+  return contentFor(row);
+}
+
+async function contentFor(row: { storageKey: string; mimeType: string; originalFileName: string }): Promise<MediaContent> {
   const provider = getStorageProvider();
 
   const accessUrl = await provider.getAccessUrl?.(row.storageKey);
@@ -212,6 +227,7 @@ export const mediaService = {
   upload,
   getMetadata,
   getContent,
+  getContentAsSystem,
   remove,
   listMine,
 };

@@ -3,14 +3,17 @@ import { articleRepository } from '@/server/repositories/article.repository';
 import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
 import { SITE_URL as BASE_URL } from '@/lib/site-config';
 import { EXAM_LANDINGS } from '@/components/exam-landing/registry';
+import { samplePaperRepository } from '@/server/repositories/sample-paper.repository';
+import { samplePapersPath } from '@/lib/sample-papers';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articles, exams] = await Promise.all([
+  const [articles, exams, samplePapers] = await Promise.all([
     articleRepository.findPublished(),
     taxonomyRepository.listPublicExams(),
+    samplePaperRepository.listPublishedForSitemap(),
   ]);
 
   const articleEntries: MetadataRoute.Sitemap = articles.map((article) => ({
@@ -40,6 +43,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       : [],
   );
 
+  // Sample papers: hub + one page per session + one per paper, each dated by its newest
+  // paper so Google recrawls when a new subject or session is published.
+  const newest = new Map<string, Date>();
+  const bump = (path: string, at: Date) => {
+    const prev = newest.get(path);
+    if (!prev || at > prev) newest.set(path, at);
+  };
+  for (const p of samplePapers) {
+    bump(samplePapersPath(p.examSlug), p.updatedAt);
+    bump(samplePapersPath(p.examSlug, p.year), p.updatedAt);
+    bump(samplePapersPath(p.examSlug, p.year, p.subjectSlug), p.updatedAt);
+  }
+  const samplePaperEntries: MetadataRoute.Sitemap = [...newest].map(([path, lastModified]) => ({
+    url: `${BASE_URL}${path}`,
+    lastModified,
+    changeFrequency: 'weekly' as const,
+    // Hub pages rank for the head term ("CBSE Class 10 sample paper"); paper pages for the long tail.
+    priority: path.split('/').length <= 4 ? 0.8 : path.split('/').length === 5 ? 0.7 : 0.6,
+  }));
+
   return [
     { url: `${BASE_URL}/`, lastModified: new Date(), changeFrequency: 'weekly', priority: 1 },
     { url: `${BASE_URL}/exams`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
@@ -50,6 +73,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/terms`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.4 },
     ...examEntries,
     ...examSubpageEntries,
+    ...samplePaperEntries,
     ...articleEntries,
   ];
 }
