@@ -8,3 +8,4 @@ export * from './preparation';
 export * from './community';
 export * from './media';
 export * from './home';
+export * from './sample-paper';
