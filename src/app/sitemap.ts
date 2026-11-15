@@ -6,17 +6,33 @@ import { EXAM_LANDINGS } from '@/components/exam-landing/registry';
 import { samplePaperRepository } from '@/server/repositories/sample-paper.repository';
 import { samplePapersPath } from '@/lib/sample-papers';
 import { notificationRepository } from '@/server/repositories/notification.repository';
+import { mindMapRepository } from '@/server/repositories/mind-map.repository';
+import { mindMapSitemapPaths } from '@/lib/mind-maps';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articles, exams, samplePapers, notificationsUpdated] = await Promise.all([
+  const [articles, exams, samplePapers, notificationsUpdated, mindMaps] = await Promise.all([
     articleRepository.findPublished(),
     taxonomyRepository.listPublicExams(),
     samplePaperRepository.listPublishedForSitemap(),
     notificationRepository.latestPublishedAtByExam(),
+    mindMapRepository.listPublishedForSitemap(),
   ]);
+
+  // Published mind maps only (chapter + subject + hub pages); syllabus trees resolve slugs.
+  const mindMapExams = [...new Map(mindMaps.map((m) => [m.examSlug, m.examId])).entries()];
+  const syllabusByExam = new Map(await Promise.all(mindMapExams.map(async ([slug, id]) => [slug, await taxonomyRepository.getSyllabusTree(id)] as const)));
+  const mindMapEntries: MetadataRoute.Sitemap = mindMapSitemapPaths(
+    mindMaps.map((m) => ({ examSlug: m.examSlug, chapterNodeId: m.chapterNodeId, publishedAt: m.publishedAt! })),
+    syllabusByExam,
+  ).map((e) => ({
+    url: `${BASE_URL}${e.path}`,
+    lastModified: e.lastModified,
+    changeFrequency: 'monthly' as const,
+    priority: e.level === 'chapter' ? 0.6 : 0.7,
+  }));
 
   const articleEntries: MetadataRoute.Sitemap = articles.map((article) => ({
     url: `${BASE_URL}/blogs/${article.slug}`,
@@ -81,6 +97,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...examEntries,
     ...examSubpageEntries,
     ...samplePaperEntries,
+    ...mindMapEntries,
     ...articleEntries,
   ];
 }

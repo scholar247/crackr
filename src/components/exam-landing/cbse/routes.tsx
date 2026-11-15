@@ -10,6 +10,7 @@ import { CbsePracticePage } from './pages/practice-page';
 import { CbseNotesPage } from './pages/notes-page';
 import { CbseMockTestsPage } from './pages/mock-tests-page';
 import { samplePaperSubpage } from './pages/sample-papers';
+import { mindMapSubpage } from './pages/mind-maps';
 import { CBSE_SECTIONS, cbsePath } from './paths';
 import { cbseMeta } from './seo';
 
@@ -78,8 +79,10 @@ export function cbseLanding(board: CbseBoard): ExamLanding {
     // they're read on the home page's notification board.
     subpage: (path) => {
       if (path[0] === 'sample-papers') return samplePaperSubpage(board, path.slice(1));
+      if (path[0] === 'mind-maps') return mindMapSubpage(board, path.slice(1));
       return path.length === 1 ? (PAGES[path[0]] ?? null) : null;
     },
+    // Mind map pages are added to the sitemap only when published (see app/sitemap.ts).
     sitemapPaths: () => [...CBSE_SECTIONS],
   };
 }

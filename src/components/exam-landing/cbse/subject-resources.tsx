@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, FileText, ListChecks, Target } from 'lucide-react';
+import { BookOpen, FileText, ListChecks, Network, Target } from 'lucide-react';
 import { LandingSection, SectionHeader } from '@/components/exam-landing/shared/section-header';
 import type { LandingSubject } from '@/server/services/exam-landing/cbse';
 import type { CbseBoard } from '@/content/exams/cbse/types';
@@ -29,6 +29,7 @@ export function SubjectResources({ board, subjects, examPracticeHref }: { board:
             hasPattern && { href: `${cbsePath(slug, 'paper-pattern')}#pattern-${s.slug}`, label: `${s.name} paper pattern`, icon: <FileText className="h-3.5 w-3.5" /> },
             { href: s.questionCount > 0 ? s.practiceHref : examPracticeHref, label: `${s.name} MCQs`, icon: <Target className="h-3.5 w-3.5" /> },
             s.articleCount > 0 && { href: s.notesHref, label: `${s.name} notes`, icon: <BookOpen className="h-3.5 w-3.5" /> },
+            s.mindMapCount > 0 && { href: s.mindMapsHref, label: `${s.name} mind maps`, icon: <Network className="h-3.5 w-3.5" /> },
           ].filter((l): l is { href: string; label: string; icon: React.ReactElement } => !!l);
 
           return (

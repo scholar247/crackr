@@ -380,7 +380,8 @@ async function findRandomPublishedByNodes(nodeIds: string[]) {
 // includes everything tagged beneath it, since setNodeTag propagates to ancestors). Use this
 // rather than listPublished(...).length, which is capped at 200 rows. Pass examId to count
 // only that exam's questions — the same examId + nodeId filter the practice browser applies.
-async function countPublishedByNodes(nodeIds: string[], examId?: string): Promise<Map<string, number>> {
+/** Published public questions per node (tags include ancestors, so counts roll up). `pyqOnly` counts previous-year questions (tagged "pyq"). */
+async function countPublishedByNodes(nodeIds: string[], examId?: string, opts: { pyqOnly?: boolean } = {}): Promise<Map<string, number>> {
   if (nodeIds.length === 0) return new Map();
   const rows = await db
     .select({ nodeId: contentNodeMap.nodeId, n: sql<number>`count(distinct ${questions.id})` })
@@ -392,6 +393,7 @@ async function countPublishedByNodes(nodeIds: string[], examId?: string): Promis
         inArray(contentNodeMap.nodeId, nodeIds),
         eq(questions.status, 'PUBLISHED'),
         eq(questions.visibility, 'PUBLIC'),
+        opts.pyqOnly ? sql`json_contains(${questions.tags}, '"pyq"')` : undefined,
         examId
           ? inArray(
               questions.id,

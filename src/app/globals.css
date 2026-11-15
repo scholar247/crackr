@@ -1013,3 +1013,29 @@ body {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+
+/* Mind map print/PDF: only the map is printed, fully expanded and fitted to an A4
+   landscape page by the component (which also injects the @page rule while printing).
+   Vector output — the real HTML/SVG, not a screenshot. */
+@media print {
+  html.mindmap-printing body * { visibility: hidden !important; }
+  html.mindmap-printing [data-mindmap-print-root],
+  html.mindmap-printing [data-mindmap-print-root] * { visibility: visible !important; }
+  html.mindmap-printing [data-mindmap-print-root] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+  }
+  html.mindmap-printing [data-mindmap-chrome],
+  html.mindmap-printing [role='tooltip'] { display: none !important; }
+  html.mindmap-printing [data-mindmap-print-root] * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    animation: none !important;
+    transition: none !important;
+  }
+}

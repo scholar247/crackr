@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BookOpen, ListChecks, PenLine } from 'lucide-react';
+import { ArrowRight, BookOpen, ListChecks, Network, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { LandingSubject } from '@/server/services/exam-landing/cbse';
 import { SubjectIcon } from './subject-icon';
@@ -94,6 +94,13 @@ export function SyllabusList({ subjects, classLabel, examPracticeHref }: { subje
                     <p className="mt-1 text-xs text-muted-foreground">{chapter.questionCount > 0 ? count(chapter.questionCount, 'question') : 'Questions coming soon'}</p>
                   </div>
                   <div className="flex shrink-0 gap-2 sm:justify-end">
+                    {chapter.mindMapHref && (
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={chapter.mindMapHref} aria-label={`${chapter.name} mind map`}>
+                          <Network className="h-4 w-4" /> Mind map
+                        </Link>
+                      </Button>
+                    )}
                     {chapter.articleCount > 0 && (
                       <Button variant="ghost" size="sm" asChild>
                         <Link href={chapter.notesHref} aria-label={`${chapter.name} notes`}>

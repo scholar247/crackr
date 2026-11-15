@@ -11,3 +11,4 @@ export * from './home';
 export * from './sample-paper';
 export * from './notification';
 export * from './daily-question';
+export * from './mind-map';

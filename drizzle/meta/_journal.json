@@ -155,6 +155,13 @@
       "when": 1794747296397,
       "tag": "0021_daily_question_streaks",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1794756743556,
+      "tag": "0022_mind_maps",
+      "breakpoints": true
     }
   ]
 }

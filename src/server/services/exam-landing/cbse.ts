@@ -5,6 +5,8 @@ import { assessmentRepository } from '@/server/repositories/assessment.repositor
 import { questionRepository } from '@/server/repositories/question.repository';
 import { notificationRepository } from '@/server/repositories/notification.repository';
 import { samplePaperRepository } from '@/server/repositories/sample-paper.repository';
+import { mindMapRepository } from '@/server/repositories/mind-map.repository';
+import { mindMapsPath } from '@/lib/mind-maps';
 import { blogsPath } from '@/server/services/blog-browse';
 import { samplePapersPath } from '@/lib/sample-papers';
 import { BOARD_NOTIFICATION_LIMIT, NEW_NOTICE_DAYS, noticeHref } from '@/lib/notifications';
@@ -36,6 +38,8 @@ export interface LandingChapter {
   topics: LandingTopic[];
   practiceHref: string;
   notesHref: string;
+  /** Published mind map for this chapter, if any. */
+  mindMapHref: string | null;
 }
 
 export interface LandingSubject {
@@ -48,6 +52,9 @@ export interface LandingSubject {
   chapters: LandingChapter[];
   practiceHref: string;
   notesHref: string;
+  /** Published mind maps in this subject (0 → no link). */
+  mindMapCount: number;
+  mindMapsHref: string;
 }
 
 export interface LandingMock {
@@ -81,7 +88,7 @@ function leafNames(node: SyllabusNode): string[] {
 // Everything a CBSE board landing (home or inner page) shows, read through the existing
 // repositories in one parallel batch. The progress lookup only runs for a signed-in viewer.
 export async function getCbseLandingData(exam: LandingExam, userId: string | null, board: CbseBoard) {
-  const [syllabus, spotlight, articleCounts, articles, practiceMocks, officialMocks, progressGroups, notifications, samplePapers] = await Promise.all([
+  const [syllabus, spotlight, articleCounts, articles, practiceMocks, officialMocks, progressGroups, notifications, samplePapers, mindMaps] = await Promise.all([
     taxonomyRepository.getSyllabusTree(exam.id),
     examSpotlightRepository.getSpotlight(exam.id),
     articleRepository.countPublishedByNode(),
@@ -91,7 +98,9 @@ export async function getCbseLandingData(exam: LandingExam, userId: string | nul
     userId ? assessmentRepository.getUserProgress(userId, 'exam') : Promise.resolve(null),
     notificationRepository.listBoardByExam(exam.id, BOARD_NOTIFICATION_LIMIT),
     samplePaperRepository.listPublishedByExam(exam.id),
+    mindMapRepository.listPublishedByExam(exam.id),
   ]);
+  const publishedMindMaps = new Set(mindMaps.map((m) => m.chapterNodeId));
 
   const questionCounts = await questionRepository.countPublishedByNodes([...collectIds(syllabus)], exam.id);
 
@@ -104,6 +113,8 @@ export async function getCbseLandingData(exam: LandingExam, userId: string | nul
     articleCount: articleCounts.get(subject.id) ?? 0,
     practiceHref: practiceHref(exam.slug, subject.id),
     notesHref: blogsPath(exam.slug, [subject]),
+    mindMapCount: subject.children.filter((c) => publishedMindMaps.has(c.id)).length,
+    mindMapsHref: mindMapsPath(exam.slug, subject.slug),
     chapters: subject.children
       .filter((c) => c.nodeType === 'CHAPTER')
       .map((chapter) => ({
@@ -124,6 +135,7 @@ export async function getCbseLandingData(exam: LandingExam, userId: string | nul
         })),
         practiceHref: practiceHref(exam.slug, subject.id, chapter.id),
         notesHref: blogsPath(exam.slug, [subject, chapter]),
+        mindMapHref: publishedMindMaps.has(chapter.id) ? mindMapsPath(exam.slug, subject.slug, chapter.slug) : null,
       })),
   }));
 
