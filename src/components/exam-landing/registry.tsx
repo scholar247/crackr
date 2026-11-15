@@ -9,7 +9,8 @@ import { NIMCET_LANDING } from './nimcet/routes';
 type RenderContext = { userId: string | null };
 
 export interface ExamSubpage {
-  metadata: Metadata;
+  /** Static metadata, or computed from the database (e.g. a sample paper's subject and year). */
+  metadata: Metadata | ((exam: LandingExam) => Promise<Metadata>);
   render: (exam: LandingExam, ctx: RenderContext) => Promise<ReactNode>;
 }
 

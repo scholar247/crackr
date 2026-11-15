@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { taxonomyRepository } from '@/server/repositories/taxonomy.repository';
 import { samplePaperRepository } from '@/server/repositories/sample-paper.repository';
-import { samplePaperExamConfig, samplePapersPath } from '@/lib/sample-papers';
+import { isSamplePaperExam, samplePaperExamConfig, samplePapersPath } from '@/lib/sample-papers';
 
 const LINKS_TAG = 'sample-paper-links';
 
@@ -13,6 +13,8 @@ const LINKS_TAG = 'sample-paper-links';
  * error. Memoised per request so generateMetadata and the page share one query.
  */
 export const loadSamplePaperExam = cache(async (slug: string) => {
+  // Only the CBSE boards have sample papers.
+  if (!isSamplePaperExam(slug)) return null;
   const exam = await taxonomyRepository.findExamBySlug(slug);
   if (!exam || exam.status !== 'ACTIVE') return null;
   const config = samplePaperExamConfig(exam);
@@ -22,7 +24,7 @@ export const loadSamplePaperExam = cache(async (slug: string) => {
 });
 
 /**
- * Site-wide links (footer) to every exam's sample-paper hub that has published papers.
+ * Site-wide links (footer) to each CBSE board's sample-paper hub that has published papers.
  * Rendered on every marketing page, so it's cached across requests and purged by tag on
  * admin writes rather than querying the DB per page view. Capped to keep the footer short.
  */

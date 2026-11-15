@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react';
-import { JsonLd } from './sample-paper-shell';
+import { JsonLd } from '@/components/exam-landing/shared/json-ld';
 import { faqJsonLd, type Faq } from './seo';
 
 // Native <details> accordion (no JS needed, answers stay in the HTML for crawlers) plus

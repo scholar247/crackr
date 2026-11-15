@@ -1,76 +1,70 @@
 import Link from 'next/link';
-import { ArrowRight, LineChart, LogIn } from 'lucide-react';
+import { ArrowRight, LineChart, ListChecks, LogIn, Shuffle, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DailyPractice } from '@/components/marketing/home/daily-practice';
+import { DailyChallenge } from './daily-challenge';
 import { ProgressStatCard } from '@/components/progress/progress-stat-card';
 import { progressColorFor } from '@/components/progress/progress-chart-colors';
 import type { DailyProblem } from '@/server/repositories/exam-spotlight.repository';
 import type { ProgressGroup } from '@/server/repositories/assessment.repository';
-import type { LandingSubject } from '@/server/services/exam-landing/cbse';
+import type { StreakSummary } from '@/server/services/daily-streak';
 
 interface PracticeSectionProps {
   exam: { name: string; slug: string };
   /** "Class 10" — used in copy. */
   classLabel: string;
   dailyProblem: DailyProblem | null;
-  subjects: LandingSubject[];
   practiceHref: string;
-  totalQuestions: number;
+  mockTestsHref: string;
   signedIn: boolean;
   progress: ProgressGroup | null;
+  /** Server's IST day key and the signed-in student's streak (null for guests). */
+  today: string;
+  streak: StreakSummary | null;
 }
 
-// Question of the day, then practice by subject next to the student's progress.
-export function PracticeSection({ exam, classLabel, dailyProblem, subjects, practiceHref, totalQuestions, signedIn, progress }: PracticeSectionProps) {
-  const rowClass = 'flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3';
-  const linkRowClass = `group ${rowClass} transition-colors hover:border-primary/40 hover:bg-primary/5`;
-  const arrow = (
-    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-  );
-
+// Question of the day at full width, then streak · progress · next steps in one row, so
+// answering today's question leads straight into more practice.
+export function PracticeSection({ exam, classLabel, dailyProblem, practiceHref, mockTestsHref, signedIn, progress, today, streak }: PracticeSectionProps) {
   return (
-    <div>
-      <DailyPractice examName={classLabel} examSlug={exam.slug} problem={dailyProblem} practiceHref={practiceHref} />
+    <DailyChallenge
+      examSlug={exam.slug}
+      classLabel={classLabel}
+      problem={dailyProblem}
+      practiceHref={practiceHref}
+      signedIn={signedIn}
+      signInHref={`/sign-in?callbackUrl=${encodeURIComponent(`/exams/${exam.slug}/practice`)}`}
+      today={today}
+      initialSummary={streak}
+    >
+      <ProgressPanel examSlug={exam.slug} classLabel={classLabel} signedIn={signedIn} progress={progress} />
+      <KeepGoing classLabel={classLabel} practiceHref={practiceHref} mockTestsHref={mockTestsHref} />
+    </DailyChallenge>
+  );
+}
 
-      <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="text-body-lg font-semibold text-foreground">Practise by subject</h3>
-          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-            <li className="sm:col-span-2">
-              <Link href={practiceHref} className={linkRowClass}>
-                <span>
-                  <span className="block font-medium text-foreground">All subjects (mixed)</span>
-                  <span className="text-body-sm text-muted-foreground">{totalQuestions.toLocaleString('en-IN')} questions</span>
-                </span>
-                {arrow}
-              </Link>
-            </li>
-            {subjects.map((s) => (
-              <li key={s.id}>
-                {/* A subject with no tagged questions would open an empty practice set — show it, but not as a link. */}
-                {s.questionCount > 0 ? (
-                  <Link href={s.practiceHref} className={linkRowClass}>
-                    <span>
-                      <span className="block font-medium text-foreground">{s.name}</span>
-                      <span className="text-body-sm text-muted-foreground">{s.questionCount.toLocaleString('en-IN')} questions</span>
-                    </span>
-                    {arrow}
-                  </Link>
-                ) : (
-                  <div className={`${rowClass} opacity-60`} aria-disabled="true">
-                    <span>
-                      <span className="block font-medium text-foreground">{s.name}</span>
-                      <span className="text-body-sm text-muted-foreground">Coming soon</span>
-                    </span>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <ProgressPanel examSlug={exam.slug} classLabel={classLabel} signedIn={signedIn} progress={progress} />
-      </div>
+function KeepGoing({ classLabel, practiceHref, mockTestsHref }: { classLabel: string; practiceHref: string; mockTestsHref: string }) {
+  const items = [
+    { href: '#find', icon: <ListChecks className="h-4 w-4" />, title: 'Practise by chapter & topic', description: 'Pick exactly what you are revising' },
+    { href: practiceHref, icon: <Shuffle className="h-4 w-4" />, title: `Mixed ${classLabel} MCQs`, description: 'Every subject, with solutions' },
+    { href: mockTestsHref, icon: <Timer className="h-4 w-4" />, title: 'Take a timed mock', description: 'Test yourself under exam conditions' },
+  ];
+  return (
+    <div className="flex flex-col rounded-2xl border border-border bg-card p-5">
+      <p className="font-semibold text-foreground">Keep going</p>
+      <ul className="mt-3 space-y-1.5">
+        {items.map((i) => (
+          <li key={i.title}>
+            <Link href={i.href} className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-primary/5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">{i.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-foreground group-hover:text-primary">{i.title}</span>
+                <span className="block text-xs text-muted-foreground">{i.description}</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

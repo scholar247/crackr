@@ -10,3 +10,4 @@ export * from './media';
 export * from './home';
 export * from './sample-paper';
 export * from './notification';
+export * from './daily-question';

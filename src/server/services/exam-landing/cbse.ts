@@ -17,12 +17,23 @@ export interface LandingExam {
   description: string | null;
 }
 
+export interface LandingTopic {
+  id: string;
+  slug: string;
+  name: string;
+  questionCount: number;
+  practiceHref: string;
+}
+
 export interface LandingChapter {
   id: string;
+  slug: string;
   name: string;
   questionCount: number;
   articleCount: number;
   topicNames: string[];
+  /** Direct children (topics), for topic-level practice. */
+  topics: LandingTopic[];
   practiceHref: string;
   notesHref: string;
 }
@@ -46,10 +57,11 @@ export interface LandingMock {
   kind: 'official' | 'practice';
 }
 
-function practiceHref(examSlug: string, subjectId?: string, chapterId?: string) {
+function practiceHref(examSlug: string, subjectId?: string, chapterId?: string, topicId?: string) {
   const params = new URLSearchParams();
   if (subjectId) params.set('subject', subjectId);
   if (chapterId) params.set('chapter', chapterId);
+  if (topicId) params.set('topic', topicId);
   const qs = params.toString();
   return `/practice/exams/${examSlug}/questions${qs ? `?${qs}` : ''}`;
 }
@@ -96,10 +108,20 @@ export async function getCbseLandingData(exam: LandingExam, userId: string | nul
       .filter((c) => c.nodeType === 'CHAPTER')
       .map((chapter) => ({
         id: chapter.id,
+        slug: chapter.slug,
         name: chapter.name,
         questionCount: questionCounts.get(chapter.id) ?? 0,
         articleCount: articleCounts.get(chapter.id) ?? 0,
         topicNames: leafNames(chapter),
+        // Tags include every ancestor, so a topic's count is everything at or below it — the
+        // same set the practice browser shows when filtered to that topic.
+        topics: chapter.children.map((topic) => ({
+          id: topic.id,
+          slug: topic.slug,
+          name: topic.name,
+          questionCount: questionCounts.get(topic.id) ?? 0,
+          practiceHref: practiceHref(exam.slug, subject.id, chapter.id, topic.id),
+        })),
         practiceHref: practiceHref(exam.slug, subject.id, chapter.id),
         notesHref: blogsPath(exam.slug, [subject, chapter]),
       })),

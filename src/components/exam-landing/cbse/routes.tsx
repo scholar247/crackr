@@ -1,12 +1,15 @@
 import type { ExamLanding, ExamSubpage } from '@/components/exam-landing/registry';
 import type { CbseBoard } from '@/content/exams/cbse/types';
 import { getCbseLandingData } from '@/server/services/exam-landing/cbse';
+import { getStreakSummary } from '@/server/services/daily-streak';
+import { istDayKey } from '@/lib/ist-date';
 import { CbseLanding } from './cbse-landing';
 import { CbseSyllabusPage } from './pages/syllabus-page';
 import { CbsePaperPatternPage } from './pages/paper-pattern-page';
 import { CbsePracticePage } from './pages/practice-page';
 import { CbseNotesPage } from './pages/notes-page';
 import { CbseMockTestsPage } from './pages/mock-tests-page';
+import { samplePaperSubpage } from './pages/sample-papers';
 import { CBSE_SECTIONS, cbsePath } from './paths';
 import { cbseMeta } from './seo';
 
@@ -39,7 +42,11 @@ export function cbseLanding(board: CbseBoard): ExamLanding {
         `${label} MCQs: Chapter-wise Practice with Solutions`,
         `Practise ${label} MCQs subject by subject and chapter by chapter, including previous year questions, each with a worked solution. Plus a new question every day.`,
       ),
-      render: async (exam, { userId }) => <CbsePracticePage data={await getCbseLandingData(exam, userId, board)} />,
+      render: async (exam, { userId }) => {
+        // The signed-in student's streak, loaded with the page so the calendar renders filled in.
+        const [data, streak] = await Promise.all([getCbseLandingData(exam, userId, board), userId ? getStreakSummary(userId, exam.id) : Promise.resolve(null)]);
+        return <CbsePracticePage data={data} today={istDayKey()} streak={streak} />;
+      },
     },
     notes: {
       metadata: cbseMeta(
@@ -67,8 +74,12 @@ export function cbseLanding(board: CbseBoard): ExamLanding {
         `Prepare for the ${label} board exam ${session} with the chapter-wise syllabus, paper pattern, MCQs, notes, mock tests, sample papers and CBSE notifications.`,
       ),
     render: async (exam, { userId }) => <CbseLanding data={await getCbseLandingData(exam, userId, board)} />,
-    // Notifications have no inner pages: they're read on the home page's notification board.
-    subpage: (path) => (path.length === 1 ? (PAGES[path[0]] ?? null) : null),
+    // Sample papers: hub, session and paper pages. Notifications have no inner pages —
+    // they're read on the home page's notification board.
+    subpage: (path) => {
+      if (path[0] === 'sample-papers') return samplePaperSubpage(board, path.slice(1));
+      return path.length === 1 ? (PAGES[path[0]] ?? null) : null;
+    },
     sitemapPaths: () => [...CBSE_SECTIONS],
   };
 }

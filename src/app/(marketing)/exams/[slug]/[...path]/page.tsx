@@ -25,8 +25,10 @@ async function findActiveExam(slug: string) {
 export async function generateMetadata({ params }: ExamSubpageProps): Promise<Metadata> {
   const { slug, path } = await params;
   const page = resolve(slug, path);
-  if (!page || !(await findActiveExam(slug))) return {};
-  return page.metadata;
+  if (!page) return {};
+  const exam = await findActiveExam(slug);
+  if (!exam) return {};
+  return typeof page.metadata === 'function' ? page.metadata(exam) : page.metadata;
 }
 
 export default async function ExamSubpage({ params }: ExamSubpageProps) {

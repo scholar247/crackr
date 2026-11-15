@@ -1,7 +1,8 @@
-import { and, asc, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { exams, samplePaperDownloads, samplePapers, users } from '@/server/db/schema';
 import { slugify } from '@/lib/utils';
+import { SAMPLE_PAPER_EXAM_SLUGS } from '@/lib/sample-papers';
 import type { SamplePaperInput } from '@/schemas/sample-paper.schema';
 
 export type SamplePaper = typeof samplePapers.$inferSelect;
@@ -34,22 +35,25 @@ async function listPublishedByExam(examId: string): Promise<PublicSamplePaper[]>
   return rows.map(toPublic);
 }
 
-/** Published papers across every ACTIVE exam, with the exam slug — for the sitemap. */
+/** Exams that have sample papers (the CBSE boards) and are ACTIVE. */
+const isListedExam = () => and(eq(exams.status, 'ACTIVE'), inArray(exams.slug, SAMPLE_PAPER_EXAM_SLUGS));
+
+/** Published papers across the sample-paper exams, with the exam slug — for the sitemap. */
 async function listPublishedForSitemap() {
   return db
     .select({ examSlug: exams.slug, year: samplePapers.year, subjectSlug: samplePapers.subjectSlug, updatedAt: samplePapers.updatedAt })
     .from(samplePapers)
     .innerJoin(exams, eq(samplePapers.examId, exams.id))
-    .where(and(eq(samplePapers.isPublished, true), eq(exams.status, 'ACTIVE')));
+    .where(and(eq(samplePapers.isPublished, true), isListedExam()));
 }
 
-/** ACTIVE exams with at least one published paper (slug + name) — for site-wide links. */
+/** Sample-paper exams with at least one published paper (slug + name) — for site-wide links. */
 async function listExamsWithPublished() {
   return db
     .selectDistinct({ slug: exams.slug, name: exams.name })
     .from(samplePapers)
     .innerJoin(exams, eq(samplePapers.examId, exams.id))
-    .where(and(eq(samplePapers.isPublished, true), eq(exams.status, 'ACTIVE')))
+    .where(and(eq(samplePapers.isPublished, true), isListedExam()))
     .orderBy(asc(exams.name));
 }
 
@@ -78,9 +82,9 @@ async function listAll() {
   return rows.map((r) => ({ ...r, downloads: Number(r.downloads ?? 0) }));
 }
 
-/** Exams papers can be attached to: every ACTIVE exam (archived ones have no public pages). */
+/** Exams papers can be attached to: the ACTIVE CBSE boards (others have no sample-paper pages). */
 async function listEligibleExams() {
-  return db.select({ id: exams.id, name: exams.name, slug: exams.slug }).from(exams).where(eq(exams.status, 'ACTIVE')).orderBy(asc(exams.name));
+  return db.select({ id: exams.id, name: exams.name, slug: exams.slug }).from(exams).where(isListedExam()).orderBy(asc(exams.name));
 }
 
 async function findById(id: string) {

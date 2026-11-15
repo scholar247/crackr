@@ -1,8 +1,7 @@
 // Shared sample-paper config and URL helpers — no server imports, so safe for client
-// components too. Every ACTIVE exam has sample-paper pages at /exams/{slug}/sample-papers;
-// SAMPLE_PAPER_EXAM_OVERRIDES only refines the wording for exams that need it (school
-// boards label papers by session and are set by a named board), everything else is
-// derived from the exam's own name.
+// components too. Sample papers exist only for the exams in SAMPLE_PAPER_EXAMS (the CBSE
+// boards): their pages are inner pages of the CBSE landing at /exams/{slug}/sample-papers,
+// and the admin panel, sitemap and footer only offer these exams.
 
 export interface SamplePaperExamConfig {
   /** Short name used in titles and headings: "CBSE Class 10", "NIMCET". */
@@ -19,13 +18,21 @@ export interface SamplePaperExamConfig {
 
 const CBSE = { name: 'Central Board of Secondary Education', alternateName: 'CBSE', url: 'https://www.cbse.gov.in' };
 
-export const SAMPLE_PAPER_EXAM_OVERRIDES: Record<string, SamplePaperExamConfig> = {
+export const SAMPLE_PAPER_EXAMS: Record<string, SamplePaperExamConfig> = {
   'cbse-class-10-board': { label: 'CBSE Class 10', eyebrow: 'CBSE · Class 10', educationalLevel: 'Secondary School (Class 10)', isBoard: true, creator: CBSE },
   'cbse-class-12-board': { label: 'CBSE Class 12', eyebrow: 'CBSE · Class 12', educationalLevel: 'Senior Secondary School (Class 12)', isBoard: true, creator: CBSE },
 };
 
+/** Slugs of the exams that have sample papers. */
+export const SAMPLE_PAPER_EXAM_SLUGS = Object.keys(SAMPLE_PAPER_EXAMS);
+
+export function isSamplePaperExam(slug: string): boolean {
+  return slug in SAMPLE_PAPER_EXAMS;
+}
+
+/** Wording for an exam's sample papers; the fallback only covers legacy rows under other exams. */
 export function samplePaperExamConfig(exam: { slug: string; name: string }): SamplePaperExamConfig {
-  return SAMPLE_PAPER_EXAM_OVERRIDES[exam.slug] ?? { label: exam.name, eyebrow: `${exam.name} · Sample papers`, educationalLevel: exam.name, isBoard: false };
+  return SAMPLE_PAPER_EXAMS[exam.slug] ?? { label: exam.name, eyebrow: `${exam.name} · Sample papers`, educationalLevel: exam.name, isBoard: false };
 }
 
 /** `year` is the exam year; boards label papers by session, so 2026 → "2025-26". */

@@ -48,16 +48,25 @@ interface DailyPracticeProps {
   loading?: boolean;
   /** Where "Practice more" goes — defaults to the exam page; pages that *are* the exam page pass the practice route. */
   practiceHref?: string;
+  /** Called once when the visitor checks their answer (e.g. to record a daily streak). */
+  onVerified?: (correct: boolean, picked: string) => void;
+  /** An answer already saved for this problem: the card opens on it, checked and locked. */
+  answered?: { picked: string } | null;
 }
 
-export function DailyPractice({ examName, examSlug, problem, loading, practiceHref }: DailyPracticeProps) {
+export function DailyPractice({ examName, examSlug, problem, loading, practiceHref, onVerified, answered }: DailyPracticeProps) {
   // Keyed on the problem id so switching exams starts each problem fresh.
   const [state, setState] = useState<{ problemId: number | null; picked: string | null; verified: boolean }>({
     problemId: null,
     picked: null,
     verified: false,
   });
-  const current = state.problemId === problem?.id ? state : { problemId: problem?.id ?? null, picked: null, verified: false };
+  const current =
+    state.problemId === problem?.id
+      ? state
+      : answered
+        ? { problemId: problem?.id ?? null, picked: answered.picked, verified: true }
+        : { problemId: problem?.id ?? null, picked: null, verified: false };
 
   if (loading) return <Skeleton className="h-56 rounded-xl" />;
 
@@ -134,7 +143,10 @@ export function DailyPractice({ examName, examSlug, problem, loading, practiceHr
             <Button
               className="rounded-full"
               disabled={!current.picked || current.verified}
-              onClick={() => setState({ ...current, verified: true })}
+              onClick={() => {
+                setState({ ...current, verified: true });
+                onVerified?.(current.picked === correct?.key, current.picked!);
+              }}
             >
               Verify solution
             </Button>

@@ -17,7 +17,7 @@ export function cbsePath(examSlug: string, section?: CbseSection | 'notification
   return `/exams/${examSlug}${section ? `/${section}` : ''}`;
 }
 
-export type CbseNavKey = 'overview' | CbseSection | 'sample-papers' | 'notifications';
+export type CbseNavKey = 'overview' | CbseSection | 'sample-papers';
 
 export function cbseNavItems(examSlug: string): (ExamNavItem & { key: CbseNavKey })[] {
   return [
@@ -28,7 +28,6 @@ export function cbseNavItems(examSlug: string): (ExamNavItem & { key: CbseNavKey
     { key: 'notes', label: 'Notes', href: cbsePath(examSlug, 'notes') },
     { key: 'mock-tests', label: 'Mock tests', href: cbsePath(examSlug, 'mock-tests') },
     { key: 'sample-papers', label: 'Sample papers', href: cbsePath(examSlug, 'sample-papers') },
-    { key: 'notifications', label: 'Notifications', href: cbsePath(examSlug, 'notifications') },
   ];
 }
 
@@ -43,7 +42,6 @@ export function cbseSteps(board: CbseBoard): Record<CbseNavKey, NextStep> {
     practice: { label: `${c} practice MCQs`, description: 'Subject and chapter-wise questions with solutions', href: cbsePath(slug, 'practice') },
     notes: { label: `${c} notes`, description: 'Chapter notes and revision guides', href: cbsePath(slug, 'notes') },
     'mock-tests': { label: `${c} mock tests`, description: 'Timed board-style tests and your scores', href: cbsePath(slug, 'mock-tests') },
-    'sample-papers': { label: `${c} sample papers`, description: 'Official papers with marking schemes', href: cbsePath(slug, 'sample-papers') },
-    notifications: { label: `${board.label} notifications`, description: 'Date sheets, circulars and results on the exam home page', href: cbsePath(slug, 'notifications') },
+    'sample-papers': { label: `${c} sample papers`, description: 'Official papers with marking schemes', href: cbsePath(slug, 'sample-papers') }
   };
 }

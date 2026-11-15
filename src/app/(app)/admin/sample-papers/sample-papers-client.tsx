@@ -206,7 +206,7 @@ export function SamplePapersClient() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Sample papers</h1>
           <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-            Board sample papers and marking schemes, shown at <code>/exams/[exam]/sample-papers</code>. Visitors read PDFs in the on-site viewer; the links
+            CBSE Class 10 and Class 12 sample papers and marking schemes, shown on the CBSE exam pages at <code>/exams/[exam]/sample-papers</code>. Visitors read PDFs in the on-site viewer; the links
             below are never shown to them. Only published papers appear on the site.
           </p>
         </div>
@@ -217,7 +217,7 @@ export function SamplePapersClient() {
 
       {!isLoading && exams.length === 0 && (
         <p className="mt-4 rounded-lg border border-warning bg-warning/10 p-3 text-sm text-foreground">
-          No active exams found. Create or activate an exam in Curriculum &amp; Exams first.
+          Sample papers are only available for the CBSE Class 10 and Class 12 board exams, and neither is active. Activate them in Curriculum &amp; Exams first.
         </p>
       )}
 

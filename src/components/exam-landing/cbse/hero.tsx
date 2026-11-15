@@ -1,10 +1,8 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { format } from 'date-fns';
 import { BookMarked, FileQuestion, History, Layers, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Breadcrumbs } from '@/components/exam-landing/shared/breadcrumbs';
-import { Countdown } from '@/components/exam-landing/shared/countdown';
 import type { CbseBoard, RoadmapPhase } from '@/content/exams/cbse/types';
 import { cbsePath } from './paths';
 
@@ -54,28 +52,6 @@ export function CbseHero({ board, practiceHref, phase, stats, notifications }: H
         <div className="lg:row-span-2">{notifications}</div>
 
         <div className="space-y-4">
-          <aside aria-label="Board exam countdown" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-foreground p-5 text-background shadow-lg">
-            <div>
-              <p className="text-label-caps uppercase tracking-wider opacity-70">{board.boardExam.label} countdown</p>
-              <div className="mt-2">
-                <Countdown until={board.boardExam.startsOn} />
-              </div>
-              <p className="text-body-sm mt-2 opacity-70">
-                {board.boardExam.isTentative ? 'Expected from ' : 'Starts '}
-                {format(examDate, 'd MMMM yyyy')}
-                {board.boardExam.isTentative && ' · date sheet awaited'}
-              </p>
-            </div>
-            <a href="#roadmap" className="flex max-w-xs items-start gap-3 rounded-xl bg-background/10 p-4 transition-colors hover:bg-background/15">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                <span className="text-label-caps block uppercase tracking-wider opacity-70">Where you should be now</span>
-                <span className="mt-0.5 block font-semibold">{phase.title}</span>
-                <span className="text-body-sm block opacity-70">{phase.focus[0]} → full plan</span>
-              </span>
-            </a>
-          </aside>
-
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {statItems.map((s) => (
               <div key={s.label} className="flex flex-col rounded-xl border border-border bg-card p-4">

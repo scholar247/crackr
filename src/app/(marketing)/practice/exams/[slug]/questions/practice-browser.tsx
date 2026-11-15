@@ -45,9 +45,10 @@ export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Deep-link entry point — e.g. the homepage's "jump to this subject" shortcuts link here
-  // with ?subject=<nodeId>, and exam landing pages add &chapter=<nodeId>. Only read once on
-  // mount; this isn't meant to react to further client-side URL changes, just to seed where
-  // the browser opens. A chapter that isn't under the given subject is ignored.
+  // with ?subject=<nodeId>, and exam landing pages add &chapter=<nodeId>[&topic=<nodeId>].
+  // Only read once on mount; this isn't meant to react to further client-side URL changes,
+  // just to seed where the browser opens. A chapter not under the subject (or a topic not
+  // under the chapter) is ignored.
   const searchParams = useSearchParams();
   const [subjectId, setSubjectId] = useState(() => searchParams.get('subject') ?? '');
   const [chapterId, setChapterId] = useState(() => {
@@ -55,7 +56,11 @@ export function PracticeBrowser({ examId, examName, examSlug, syllabus, loggedIn
     const subject = syllabus.find((s) => s.id === searchParams.get('subject'));
     return chapter && subject?.children.some((c) => c.id === chapter) ? chapter : '';
   });
-  const [topicId, setTopicId] = useState('');
+  const [topicId, setTopicId] = useState(() => {
+    const topic = searchParams.get('topic');
+    const chapter = syllabus.find((s) => s.id === searchParams.get('subject'))?.children.find((c) => c.id === searchParams.get('chapter'));
+    return topic && chapter?.children.some((t) => t.id === topic) ? topic : '';
+  });
   const [subtopicId, setSubtopicId] = useState('');
   const [difficulty, setDifficulty] = useState<string>('all');
   const [sort, setSort] = useState<string>('newest');
