@@ -1,16 +1,17 @@
 import Link from 'next/link';
-import { ArrowRight, LineChart, LogIn, Target } from 'lucide-react';
+import { ArrowRight, LineChart, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DailyPractice } from '@/components/marketing/home/daily-practice';
 import { ProgressStatCard } from '@/components/progress/progress-stat-card';
 import { progressColorFor } from '@/components/progress/progress-chart-colors';
-import { LandingSection, SectionHeader } from '@/components/exam-landing/shared/section-header';
 import type { DailyProblem } from '@/server/repositories/exam-spotlight.repository';
 import type { ProgressGroup } from '@/server/repositories/assessment.repository';
-import type { LandingSubject } from '@/server/services/exam-landing/cbse-class-10';
+import type { LandingSubject } from '@/server/services/exam-landing/cbse';
 
 interface PracticeSectionProps {
   exam: { name: string; slug: string };
+  /** "Class 10" — used in copy. */
+  classLabel: string;
   dailyProblem: DailyProblem | null;
   subjects: LandingSubject[];
   practiceHref: string;
@@ -19,7 +20,8 @@ interface PracticeSectionProps {
   progress: ProgressGroup | null;
 }
 
-export function PracticeSection({ exam, dailyProblem, subjects, practiceHref, totalQuestions, signedIn, progress }: PracticeSectionProps) {
+// Question of the day, then practice by subject next to the student's progress.
+export function PracticeSection({ exam, classLabel, dailyProblem, subjects, practiceHref, totalQuestions, signedIn, progress }: PracticeSectionProps) {
   const rowClass = 'flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3';
   const linkRowClass = `group ${rowClass} transition-colors hover:border-primary/40 hover:bg-primary/5`;
   const arrow = (
@@ -27,17 +29,8 @@ export function PracticeSection({ exam, dailyProblem, subjects, practiceHref, to
   );
 
   return (
-    <LandingSection id="practice">
-      <SectionHeader
-        eyebrow="Practice"
-        icon={<Target className="h-3.5 w-3.5" />}
-        title="Practise every day"
-        description="One question a day keeps you in touch with every subject. Then go deeper, one subject at a time."
-      />
-
-      <div className="mt-8">
-        <DailyPractice examName="Class 10" examSlug={exam.slug} problem={dailyProblem} practiceHref={practiceHref} />
-      </div>
+    <div>
+      <DailyPractice examName={classLabel} examSlug={exam.slug} problem={dailyProblem} practiceHref={practiceHref} />
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="rounded-2xl border border-border bg-card p-6">
@@ -76,15 +69,15 @@ export function PracticeSection({ exam, dailyProblem, subjects, practiceHref, to
           </ul>
         </div>
 
-        <ProgressPanel examSlug={exam.slug} signedIn={signedIn} progress={progress} />
+        <ProgressPanel examSlug={exam.slug} classLabel={classLabel} signedIn={signedIn} progress={progress} />
       </div>
-    </LandingSection>
+    </div>
   );
 }
 
 // Real progress only (from mock attempts) — a nudge to sign in or take a first mock otherwise,
 // never placeholder numbers.
-function ProgressPanel({ examSlug, signedIn, progress }: { examSlug: string; signedIn: boolean; progress: ProgressGroup | null }) {
+function ProgressPanel({ examSlug, classLabel, signedIn, progress }: { examSlug: string; classLabel: string; signedIn: boolean; progress: ProgressGroup | null }) {
   if (signedIn && progress) {
     return (
       <div className="flex flex-col gap-3">
@@ -100,14 +93,14 @@ function ProgressPanel({ examSlug, signedIn, progress }: { examSlug: string; sig
     ? {
         icon: <LineChart className="h-5 w-5" />,
         title: 'Your progress shows up here',
-        description: 'Take your first Class 10 mock and your scores, best result and trend appear here.',
+        description: `Take your first ${classLabel} mock and your scores, best result and trend appear here.`,
         cta: { href: '/mocks/new/self', label: 'Build a mock' },
       }
     : {
         icon: <LogIn className="h-5 w-5" />,
         title: 'Track your progress',
         description: 'Sign in to save your answers and see your scores and trends across mocks.',
-        cta: { href: `/sign-in?callbackUrl=${encodeURIComponent(`/exams/${examSlug}`)}`, label: 'Sign in' },
+        cta: { href: `/sign-in?callbackUrl=${encodeURIComponent(`/exams/${examSlug}/practice`)}`, label: 'Sign in' },
       };
 
   return (

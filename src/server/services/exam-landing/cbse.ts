@@ -3,8 +3,12 @@ import { examSpotlightRepository } from '@/server/repositories/exam-spotlight.re
 import { articleRepository } from '@/server/repositories/article.repository';
 import { assessmentRepository } from '@/server/repositories/assessment.repository';
 import { questionRepository } from '@/server/repositories/question.repository';
+import { notificationRepository } from '@/server/repositories/notification.repository';
+import { samplePaperRepository } from '@/server/repositories/sample-paper.repository';
 import { blogsPath } from '@/server/services/blog-browse';
-import { shortSubjectName, subjectKeyFor, type SubjectKey } from '@/components/exam-landing/cbse-class-10/content';
+import { samplePapersPath } from '@/lib/sample-papers';
+import { BOARD_NOTIFICATION_LIMIT, NEW_NOTICE_DAYS, noticeHref } from '@/lib/notifications';
+import type { CbseBoard, CbseSubjectKey } from '@/content/exams/cbse/types';
 
 export interface LandingExam {
   id: string;
@@ -25,8 +29,9 @@ export interface LandingChapter {
 
 export interface LandingSubject {
   id: string;
+  slug: string;
   name: string;
-  key: SubjectKey | null;
+  key: CbseSubjectKey | null;
   questionCount: number;
   articleCount: number;
   chapters: LandingChapter[];
@@ -61,25 +66,28 @@ function leafNames(node: SyllabusNode): string[] {
   return node.children.flatMap((c) => [c.name, ...leafNames(c)]);
 }
 
-// Everything the CBSE Class 10 landing page shows, read through the existing repositories
-// in one parallel batch. The progress lookup only runs for a signed-in viewer.
-export async function getCbseClass10LandingData(exam: LandingExam, userId: string | null) {
-  const [syllabus, spotlight, articleCounts, articles, practiceMocks, officialMocks, progressGroups] = await Promise.all([
+// Everything a CBSE board landing (home or inner page) shows, read through the existing
+// repositories in one parallel batch. The progress lookup only runs for a signed-in viewer.
+export async function getCbseLandingData(exam: LandingExam, userId: string | null, board: CbseBoard) {
+  const [syllabus, spotlight, articleCounts, articles, practiceMocks, officialMocks, progressGroups, notifications, samplePapers] = await Promise.all([
     taxonomyRepository.getSyllabusTree(exam.id),
     examSpotlightRepository.getSpotlight(exam.id),
     articleRepository.countPublishedByNode(),
-    articleRepository.findPublishedByExam(exam.id, 6),
+    articleRepository.findPublishedByExam(exam.id, 12),
     assessmentRepository.findPublicByExam(exam.id, 4),
     assessmentRepository.findOpenMocksForExams([exam.id], 4),
     userId ? assessmentRepository.getUserProgress(userId, 'exam') : Promise.resolve(null),
+    notificationRepository.listBoardByExam(exam.id, BOARD_NOTIFICATION_LIMIT),
+    samplePaperRepository.listPublishedByExam(exam.id),
   ]);
 
   const questionCounts = await questionRepository.countPublishedByNodes([...collectIds(syllabus)], exam.id);
 
   const subjects: LandingSubject[] = syllabus.map((subject) => ({
     id: subject.id,
-    name: shortSubjectName(subject.name),
-    key: subjectKeyFor(subject.slug),
+    slug: subject.slug,
+    name: board.shortSubjectName(subject.name),
+    key: board.subjectKeyFor(subject.slug),
     questionCount: questionCounts.get(subject.id) ?? 0,
     articleCount: articleCounts.get(subject.id) ?? 0,
     practiceHref: practiceHref(exam.slug, subject.id),
@@ -104,6 +112,7 @@ export async function getCbseClass10LandingData(exam: LandingExam, userId: strin
 
   return {
     exam,
+    board,
     subjects,
     stats: spotlight.stats,
     dailyProblem: spotlight.dailyProblem,
@@ -111,12 +120,18 @@ export async function getCbseClass10LandingData(exam: LandingExam, userId: strin
     mocks,
     progress: progressGroups?.find((g) => g.meta === exam.slug) ?? null,
     signedIn: !!userId,
+    // `isNew` is decided here (request time) rather than in a component, so render stays pure.
+    notifications: notifications.map((n) => ({ ...n, isNew: Date.now() - n.publishedAt.getTime() < NEW_NOTICE_DAYS * 86_400_000 })),
+    samplePaperCount: samplePapers.length,
     links: {
       practice: practiceHref(exam.slug),
       practiceHub: `/practice/exams/${exam.slug}`,
+      /** Every published note for the exam on the blog (the landing's notes page links here for the full list). */
       notes: blogsPath(exam.slug),
+      samplePapers: samplePapersPath(exam.slug),
+      notifications: noticeHref(exam.slug),
     },
   };
 }
 
-export type CbseClass10LandingData = Awaited<ReturnType<typeof getCbseClass10LandingData>>;
+export type CbseLandingData = Awaited<ReturnType<typeof getCbseLandingData>>;

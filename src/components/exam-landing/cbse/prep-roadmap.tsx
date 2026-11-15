@@ -1,23 +1,24 @@
 import { CheckCircle2, Map as MapIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LandingSection, SectionHeader } from '@/components/exam-landing/shared/section-header';
-import { ROADMAP, type RoadmapPhase } from './content';
+import type { CbseBoard, RoadmapPhase } from '@/content/exams/cbse/types';
 
-// The Class 10 year as five phases, with the student's current phase (by today's month) marked.
-export function PrepRoadmap({ current }: { current: RoadmapPhase }) {
-  const currentIndex = ROADMAP.findIndex((p) => p.id === current.id);
+// The board year as phases, with the student's current phase (by today's month) marked.
+export function PrepRoadmap({ board, current, muted = true }: { board: CbseBoard; current: RoadmapPhase; muted?: boolean }) {
+  const roadmap = board.roadmap;
+  const currentIndex = roadmap.findIndex((p) => p.id === current.id);
 
   return (
-    <LandingSection id="roadmap" muted>
+    <LandingSection id="roadmap" muted={muted}>
       <SectionHeader
         eyebrow="Study plan"
         icon={<MapIcon className="h-3.5 w-3.5" />}
-        title="Your Class 10 roadmap"
+        title={`Your ${board.shortLabel} study plan`}
         description="What to focus on in each part of the year, from the first chapter to the board exam."
       />
 
-      <ol className="mt-8 grid gap-4 md:grid-cols-5">
-        {ROADMAP.map((phase, i) => {
+      <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {roadmap.map((phase, i) => {
           const isCurrent = phase.id === current.id;
           const isDone = i < currentIndex;
           return (

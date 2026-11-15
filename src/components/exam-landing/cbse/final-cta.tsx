@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-export function FinalCta({ practiceHref }: { practiceHref: string }) {
+export function FinalCta({ practiceHref, syllabusHref }: { practiceHref: string; syllabusHref: string }) {
   return (
     <section className="bg-background pb-16">
       <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
@@ -17,7 +17,7 @@ export function FinalCta({ practiceHref }: { practiceHref: string }) {
               <Link href={practiceHref}>Start practising</Link>
             </Button>
             <Button size="lg" variant="outline" className="rounded-full border-primary-foreground/40 bg-transparent text-primary-foreground hover:bg-primary-foreground/10" asChild>
-              <a href="#syllabus">Choose a chapter</a>
+              <Link href={syllabusHref}>Choose a chapter</Link>
             </Button>
           </div>
         </div>

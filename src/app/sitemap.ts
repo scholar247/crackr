@@ -5,15 +5,17 @@ import { SITE_URL as BASE_URL } from '@/lib/site-config';
 import { EXAM_LANDINGS } from '@/components/exam-landing/registry';
 import { samplePaperRepository } from '@/server/repositories/sample-paper.repository';
 import { samplePapersPath } from '@/lib/sample-papers';
+import { notificationRepository } from '@/server/repositories/notification.repository';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articles, exams, samplePapers] = await Promise.all([
+  const [articles, exams, samplePapers, notificationsUpdated] = await Promise.all([
     articleRepository.findPublished(),
     taxonomyRepository.listPublicExams(),
     samplePaperRepository.listPublishedForSitemap(),
+    notificationRepository.latestPublishedAtByExam(),
   ]);
 
   const articleEntries: MetadataRoute.Sitemap = articles.map((article) => ({
@@ -23,12 +25,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  const examEntries: MetadataRoute.Sitemap = exams.map(({ exam }) => ({
-    url: `${BASE_URL}/exams/${exam.slug}`,
-    lastModified: exam.updatedAt,
-    changeFrequency: 'weekly',
-    priority: 0.7,
-  }));
+  // An exam home page changes whenever a notification on its board does, so date it by
+  // whichever is newer.
+  const examEntries: MetadataRoute.Sitemap = exams.map(({ exam }) => {
+    const noticeUpdated = notificationsUpdated.get(exam.id);
+    return {
+      url: `${BASE_URL}/exams/${exam.slug}`,
+      lastModified: noticeUpdated && noticeUpdated > exam.updatedAt ? noticeUpdated : exam.updatedAt,
+      changeFrequency: noticeUpdated ? ('daily' as const) : ('weekly' as const),
+      priority: 0.7,
+    };
+  });
 
   // Inner pages of exams with a purpose-built landing (e.g. /exams/nimcet/syllabus), only
   // for exams that are publicly listed.

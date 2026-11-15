@@ -1006,3 +1006,10 @@ body {
   border-radius: 9999px 9999px 0 0;
 }
 
+
+/* Notification ticker: the headline list is rendered twice side by side, so sliding the
+   track by half its width loops seamlessly. */
+@keyframes notice-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
