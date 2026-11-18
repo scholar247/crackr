@@ -39,6 +39,8 @@ export interface MindMapLayout {
   nodes: LaidOutNode[];
   links: LaidOutLink[];
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
+  /** Box of the central chapter node; absent → SIZES.center around the origin (radial). */
+  centre?: { x: number; y: number; w: number; h: number };
 }
 
 const sizeFor = (depth: number) => (depth === 1 ? SIZES.topic : SIZES.sub);
@@ -196,4 +198,55 @@ export function quizTargets(roots: MindMapTreeNode[]): string[] {
   };
   visit(roots, 1);
   return deep.length > 0 ? deep : roots.map((r) => r.id);
+}
+
+// ── Vertical tree (phones) ─────────────────────────────────────────────────────
+// On narrow screens a two-sided canvas means constant panning and pinching. The vertical
+// tree instead stacks the chapter on top and every visible node in its own full-width row,
+// children indented under their parent with elbow connectors — it scrolls with the page
+// like any list, and every row is a large tap target.
+
+export const VERTICAL = { centreH: 76, topicH: 56, subH: 48, gap: 10, indent: 24, trunk: 14 } as const;
+
+function elbow(ax: number, ay: number, x: number, cy: number) {
+  const r = Math.max(0, Math.min(10, x - ax, cy - ay));
+  return `M ${ax} ${ay} V ${cy - r} Q ${ax} ${cy} ${ax + r} ${cy} H ${x}`;
+}
+
+export function layoutVertical(roots: MindMapTreeNode[], expanded: ReadonlySet<string>, width: number): MindMapLayout {
+  const w = Math.max(240, width);
+  const nodes: LaidOutNode[] = [];
+  const links: LaidOutLink[] = [];
+  const centre = { x: 0, y: 0, w, h: VERTICAL.centreH };
+  let cursor = centre.h + VERTICAL.gap * 2;
+
+  const place = (n: MindMapTreeNode, depth: number, branch: number, anchor: { id: string | null; ax: number; ay: number }) => {
+    const x = VERTICAL.trunk * 2 + (depth - 1) * VERTICAL.indent;
+    const h = depth === 1 ? VERTICAL.topicH : VERTICAL.subH;
+    const y = cursor;
+    cursor += h + VERTICAL.gap;
+    const isOpen = expanded.has(n.id) && n.children.length > 0;
+    nodes.push({ id: n.id, label: n.label, depth, side: 1, branch, x, y, w: w - x, h, parentId: anchor.id, childCount: n.children.length, expanded: isOpen });
+    links.push({ id: n.id, d: elbow(anchor.ax, anchor.ay, x, y + h / 2), branch, depth });
+    if (!isOpen) return;
+    for (const c of n.children) place(c, depth + 1, branch, { id: n.id, ax: x + VERTICAL.trunk, ay: y + h });
+  };
+  roots.forEach((r, i) => place(r, 1, i, { id: null, ax: VERTICAL.trunk, ay: centre.h }));
+
+  return { nodes, links, centre, bounds: { minX: 0, minY: 0, maxX: w, maxY: nodes.length ? cursor - VERTICAL.gap : centre.h } };
+}
+
+// ── Progress & topic helpers ───────────────────────────────────────────────────
+
+/** How many nodes of `root`'s branch (root included) are in `done`. */
+export function subtreeProgress(root: MindMapTreeNode, done: ReadonlySet<string>): { done: number; total: number } {
+  const ids = subtreeIds(root);
+  let count = 0;
+  for (const id of ids) if (done.has(id)) count++;
+  return { done: count, total: ids.size };
+}
+
+/** The main topic (root) a node belongs to. */
+export function topicOf(roots: MindMapTreeNode[], id: string): MindMapTreeNode | null {
+  return roots.find((r) => subtreeIds(r).has(id)) ?? null;
 }

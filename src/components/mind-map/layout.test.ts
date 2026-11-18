@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { assignSides, branchBounds, expandableIds, fitView, layoutMindMap, quizTargets, searchTree, subtreeIds, SIZES } from './layout';
+import { assignSides, branchBounds, expandableIds, fitView, layoutMindMap, layoutVertical, quizTargets, searchTree, subtreeIds, subtreeProgress, topicOf, SIZES } from './layout';
 import type { MindMapTreeNode } from '@/lib/mind-maps';
 
 const n = (id: string, children: MindMapTreeNode[] = [], description: string | null = null): MindMapTreeNode => ({ id, label: id, description, content: null, curriculumNodeId: null, children });
@@ -116,4 +116,51 @@ describe('quizTargets', () => {
     assert.deepEqual(quizTargets([n('A'), n('B')]), ['A', 'B']);
   });
   it('has nothing to hide in an empty map', () => assert.deepEqual(quizTargets([]), []));
+});
+
+describe('layoutVertical', () => {
+  const l = layoutVertical(tree, expandableIds(tree), 360);
+
+  it('stacks every visible node in its own row, in reading order', () => {
+    assert.equal(l.nodes.length, 10);
+    assert.deepEqual(
+      l.nodes.map((x) => x.id),
+      ['Nutrition', 'Autotrophic', 'Heterotrophic', 'Holozoic', 'Respiration', 'Aerobic', 'Anaerobic', 'Transportation', 'Excretion', 'Kidney'],
+    );
+    for (let i = 1; i < l.nodes.length; i++) assert.ok(l.nodes[i].y >= l.nodes[i - 1].y + l.nodes[i - 1].h, 'rows never overlap');
+    assert.ok(l.nodes[0].y >= l.centre!.h, 'below the chapter card');
+  });
+
+  it('indents by depth and fills the width', () => {
+    const byId = new Map(l.nodes.map((x) => [x.id, x]));
+    assert.ok(byId.get('Autotrophic')!.x > byId.get('Nutrition')!.x);
+    assert.ok(byId.get('Holozoic')!.x > byId.get('Heterotrophic')!.x);
+    for (const x of l.nodes) assert.equal(x.x + x.w, 360);
+    assert.equal(l.bounds.maxY, l.nodes.at(-1)!.y + l.nodes.at(-1)!.h);
+  });
+
+  it('shows only topics when collapsed, and keeps branch colours', () => {
+    const c = layoutVertical(tree, new Set(), 360);
+    assert.equal(c.nodes.length, 4);
+    assert.deepEqual(
+      c.nodes.map((x) => x.branch),
+      [0, 1, 2, 3],
+    );
+    assert.equal(l.nodes.find((x) => x.id === 'Holozoic')!.branch, 0);
+  });
+
+  it('has one connector per node and a minimum width', () => {
+    assert.equal(l.links.length, l.nodes.length);
+    assert.equal(layoutVertical(tree, new Set(), 100).centre!.w, 240);
+  });
+});
+
+describe('progress helpers', () => {
+  it('counts done nodes within a branch', () => {
+    assert.deepEqual(subtreeProgress(tree[0], new Set(['Nutrition', 'Holozoic', 'Kidney'])), { done: 2, total: 4 });
+  });
+  it('finds the topic a node belongs to', () => {
+    assert.equal(topicOf(tree, 'Holozoic')?.id, 'Nutrition');
+    assert.equal(topicOf(tree, 'missing'), null);
+  });
 });
