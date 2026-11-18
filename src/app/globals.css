@@ -1039,3 +1039,27 @@ body {
     transition: none !important;
   }
 }
+
+/* Mind map quiz: content that lists the answers is concealed while a quiz runs. The
+   children are blurred (not the container), so the notice on the container stays sharp. */
+html[data-mindmap-quiz] [data-quiz-conceal] {
+  position: relative;
+  user-select: none;
+}
+html[data-mindmap-quiz] [data-quiz-conceal] > * {
+  filter: blur(7px);
+  pointer-events: none;
+}
+html[data-mindmap-quiz] [data-quiz-conceal]::after {
+  content: 'Hidden while you take the quiz';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}

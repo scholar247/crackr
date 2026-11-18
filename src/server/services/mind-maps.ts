@@ -261,8 +261,30 @@ const loadChapter = cache(async (examId: string, examSlug: string, segment: stri
     chapterResources: resourcesFor(chapter.id)!,
     prev: position > 0 ? siblings[position - 1] : null,
     next: position >= 0 && position < siblings.length - 1 ? siblings[position + 1] : null,
+    focusIndex: focusIndexFor(chapter, snapshot.nodes),
   };
 });
+
+/**
+ * Curriculum slug → map node id, for `?focus=<slug>` links (e.g. a topic on the syllabus
+ * page opening the map centred on that topic).
+ */
+function focusIndexFor(chapter: SyllabusNode, nodes: MindMapTreeNode[]): Record<string, string> {
+  const slugById = new Map<string, string>();
+  const collect = (n: SyllabusNode) => {
+    for (const c of n.children) {
+      slugById.set(c.id, c.slug);
+      collect(c);
+    }
+  };
+  collect(chapter);
+  const index: Record<string, string> = {};
+  walkTree(nodes, (n) => {
+    const slug = n.curriculumNodeId ? slugById.get(n.curriculumNodeId) : undefined;
+    if (slug && !(slug in index)) index[slug] = n.id;
+  });
+  return index;
+}
 
 export type ChapterMindMap = NonNullable<Awaited<ReturnType<typeof loadChapter>>>;
 

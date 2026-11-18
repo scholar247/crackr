@@ -329,3 +329,17 @@ export function mindMapSitemapPaths(
   }
   return [...newest].map(([path, v]) => ({ path, ...v }));
 }
+
+/** Query param that opens a chapter mind map focused on one topic (by curriculum slug). */
+export const MIND_MAP_FOCUS_PARAM = 'focus';
+
+/** Anchor of the interactive map on a chapter page. */
+export const MIND_MAP_ANCHOR = 'mind-map';
+
+/**
+ * Link that opens a chapter's mind map with a topic expanded, selected and centred — e.g.
+ * from the syllabus. The canonical URL stays the plain chapter page.
+ */
+export function mindMapFocusHref(chapterMindMapHref: string, curriculumSlug: string): string {
+  return `${chapterMindMapHref}?${MIND_MAP_FOCUS_PARAM}=${encodeURIComponent(curriculumSlug)}#${MIND_MAP_ANCHOR}`;
+}

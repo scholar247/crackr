@@ -12,7 +12,7 @@ import { MindMapMarkdown } from '@/components/mind-map/markdown';
 import { RevisionChecklist } from '@/components/mind-map/revision-checklist';
 import { colourFor } from '@/components/mind-map/palette';
 import { cn } from '@/lib/utils';
-import { countNodes, mindMapsPath, type MindMapFaq, type MindMapTreeNode } from '@/lib/mind-maps';
+import { MIND_MAP_ANCHOR, countNodes, mindMapsPath, type MindMapFaq, type MindMapTreeNode } from '@/lib/mind-maps';
 import { loadChapterMindMap, loadMindMapIndex, type ChapterMindMap, type MindMapIndex as Index, type NodeResources } from '@/server/services/mind-maps';
 import type { CbseBoard } from '@/content/exams/cbse/types';
 import { CbsePageShell } from '../page-shell';
@@ -208,7 +208,7 @@ function ChapterPage({ board, data }: { board: CbseBoard; data: ChapterMindMap }
       title={title}
       intro={intro}
     >
-      <section aria-label={`${data.chapter.name} interactive mind map`}>
+      <section id={MIND_MAP_ANCHOR} aria-label={`${data.chapter.name} interactive mind map`} className="scroll-mt-32">
         <MindMap
           title={{ eyebrow: `CBSE ${c}`, subject, chapter: data.chapter.name }}
           nodes={topics}
@@ -216,13 +216,15 @@ function ChapterPage({ board, data }: { board: CbseBoard; data: ChapterMindMap }
           storageKey={`mindmap-explored:${board.examSlug}:${data.chapter.id}`}
           analytics={analytics}
           shareUrl={absoluteUrl(path)}
+          focusIndex={data.focusIndex}
         />
         <p className="mt-2 text-xs text-muted-foreground">Tap a topic to expand it and see its practice questions. On a phone, drag to move and pinch to zoom.</p>
       </section>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
         <PageSection id="topics" title={`Topics in ${data.chapter.name}`} description="Every branch of the mind map, with its subtopics and where to practise.">
-          <div className="space-y-4">
+          {/* Blurred while a quiz is running on the map above (it lists the answers). */}
+          <div className="space-y-4" data-quiz-conceal>
             {topics.map((t, i) => (
               <article key={t.id} id={`topic-${t.id}`} className="scroll-mt-32 rounded-2xl border border-border bg-card p-5">
                 <h3 className="flex items-center gap-2 font-semibold text-foreground">
@@ -289,7 +291,7 @@ function ChapterPage({ board, data }: { board: CbseBoard; data: ChapterMindMap }
 
       {snapshot.revisionNotes && (
         <PageSection id="quick-revision" title={`${data.chapter.name}: quick revision`} description="Key definitions, formulas and facts to go over before the exam.">
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6" data-quiz-conceal>
             <MindMapMarkdown markdown={snapshot.revisionNotes} within="section" />
           </div>
         </PageSection>

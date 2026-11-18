@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   BookOpen,
+  Brain,
   Check,
+  CheckCircle2,
+  Eye,
   ChevronDown,
   ChevronUp,
   Crosshair,
@@ -17,19 +21,21 @@ import {
   Minimize2,
   MoreHorizontal,
   Printer,
+  RotateCcw,
   Scan,
   Search,
   Target,
   UnfoldVertical,
   X,
+  XCircle,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
-import type { MindMapTreeNode } from '@/lib/mind-maps';
+import { MIND_MAP_FOCUS_PARAM, type MindMapTreeNode } from '@/lib/mind-maps';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { SIZES, expandableIds, fitView, layoutMindMap, searchTree, type LaidOutNode } from './layout';
+import { SIZES, branchBounds, expandableIds, fitView, layoutMindMap, quizTargets, searchTree, subtreeIds, type LaidOutNode } from './layout';
 import { CENTRE_CLASSES, colourFor } from './palette';
 
 // Markdown (with maths) only loads when a node with extra content is opened.
@@ -55,6 +61,11 @@ interface MindMapProps {
   analytics?: { exam: string; chapter: string };
   /** Canonical URL for "copy link"/share. */
   shareUrl?: string;
+  /**
+   * Curriculum slug → node id. With `?focus=<slug>` in the URL the map opens on that node:
+   * ancestors expanded, node selected, view centred (e.g. a topic link from the syllabus).
+   */
+  focusIndex?: Record<string, string>;
   className?: string;
 }
 
@@ -103,9 +114,53 @@ function subscribeExplored(onChange: () => void) {
   return () => exploredListeners.delete(onChange);
 }
 
+// ── Quiz results (per visitor, per map) ────────────────────────────────────────
+// "Knew it" / "Missed" per hidden node, kept on the device like explored nodes.
+interface QuizResults {
+  knew: Set<string>;
+  missed: Set<string>;
+}
+const EMPTY_QUIZ: QuizResults = { knew: new Set(), missed: new Set() };
+const quizListeners = new Set<() => void>();
+const quizCache = new Map<string, { raw: string | null; value: QuizResults }>();
+
+function readQuiz(key: string): QuizResults {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(key);
+  } catch {
+    return EMPTY_QUIZ;
+  }
+  const hit = quizCache.get(key);
+  if (hit && hit.raw === raw) return hit.value;
+  let value = EMPTY_QUIZ;
+  try {
+    const parsed = raw ? (JSON.parse(raw) as { knew?: string[]; missed?: string[] }) : {};
+    value = { knew: new Set(parsed.knew ?? []), missed: new Set(parsed.missed ?? []) };
+  } catch {
+    value = { knew: new Set(), missed: new Set() };
+  }
+  quizCache.set(key, { raw, value });
+  return value;
+}
+
+function writeQuiz(key: string, value: QuizResults) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ knew: [...value.knew], missed: [...value.missed] }));
+  } catch {
+    return;
+  }
+  for (const l of quizListeners) l();
+}
+
+function subscribeQuiz(onChange: () => void) {
+  quizListeners.add(onChange);
+  return () => quizListeners.delete(onChange);
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function MindMap({ title, nodes, resources = {}, storageKey, analytics, shareUrl, className }: MindMapProps) {
+export function MindMap({ title, nodes, resources = {}, storageKey, analytics, shareUrl, focusIndex, className }: MindMapProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -124,8 +179,25 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
   }, [nodes]);
   const totalNodes = index.size;
 
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // `?focus=<slug>` deep link. useSearchParams is available during the server render of
+  // these (dynamic) pages, so the focused state is identical in the HTML and on hydration.
+  const searchParams = useSearchParams();
+  const [focusId] = useState<string | null>(() => {
+    const key = searchParams.get(MIND_MAP_FOCUS_PARAM);
+    const id = key ? focusIndex?.[key] : undefined;
+    return id && index.has(id) ? id : null;
+  });
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    const open = new Set<string>();
+    if (!focusId) return open;
+    // Reveal the node (its ancestors) and show its own children too.
+    for (let p = index.get(focusId)?.parentId ?? null; p; p = index.get(p)?.parentId ?? null) open.add(p);
+    if ((index.get(focusId)?.node.children.length ?? 0) > 0) open.add(focusId);
+    return open;
+  });
+  const [selectedId, setSelectedId] = useState<string | null>(focusId);
+  /** Node to centre on after the first fit (consumed once). */
+  const centreTarget = useRef(focusId);
   const [view, setView] = useState({ k: 0.85, tx: 0, ty: 0 });
   const [fullscreen, setFullscreen] = useState(false);
   const [query, setQuery] = useState('');
@@ -134,6 +206,10 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
 
   const layout = useMemo(() => layoutMindMap(nodes, expanded), [nodes, expanded]);
   const byId = useMemo(() => new Map(layout.nodes.map((n) => [n.id, n])), [layout]);
+  const storageKeyRef = useRef(storageKey);
+  useEffect(() => {
+    storageKeyRef.current = storageKey;
+  }, [storageKey]);
   // Latest layout for callbacks that run after a re-render (search, keyboard, fullscreen).
   const layoutRef = useRef(byId);
   const layoutBoundsRef = useRef(layout.bounds);
@@ -146,6 +222,23 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
   const searching = query.trim().length >= 2;
 
   const explored = useSyncExternalStore(subscribeExplored, () => (storageKey ? readExplored(storageKey) : EMPTY_SET), () => EMPTY_SET);
+
+  // ── Quiz mode: subtopics hidden behind cards; reveal, then mark "knew it" / "missed" ──
+  const [quiz, setQuiz] = useState(false);
+  // While quizzing, flag the page so content listing the answers (the topic outline and
+  // revision notes, marked data-quiz-conceal) is blurred — see globals.css. Set only in the
+  // browser after a student starts a quiz, so the server HTML crawlers see is unaffected.
+  useEffect(() => {
+    if (!quiz) return;
+    document.documentElement.setAttribute('data-mindmap-quiz', '');
+    return () => document.documentElement.removeAttribute('data-mindmap-quiz');
+  }, [quiz]);
+  const [revealed, setRevealed] = useState<Set<string>>(() => new Set());
+  const quizKey = `mindmap-quiz:${storageKey ?? 'preview'}`;
+  const quizResults = useSyncExternalStore(subscribeQuiz, () => readQuiz(quizKey), () => EMPTY_QUIZ);
+  const targets = useMemo(() => quizTargets(nodes), [nodes]);
+  const targetSet = useMemo(() => new Set(targets), [targets]);
+  const isHidden = (id: string) => quiz && targetSet.has(id) && !revealed.has(id);
 
   // ── Analytics (each fires once per occurrence) ──
   const viewedSent = useRef(false);
@@ -177,7 +270,17 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
     const observer = new ResizeObserver(() => {
       if (!pendingFit.current) return;
       pendingFit.current = false;
-      setView(fitView(layoutBoundsRef.current, { w: el.clientWidth, h: el.clientHeight }));
+      const fitted = fitView(layoutBoundsRef.current, { w: el.clientWidth, h: el.clientHeight });
+      const target = centreTarget.current ? layoutRef.current.get(centreTarget.current) : undefined;
+      if (target) {
+        // Deep link: centre the focused node at a readable zoom instead of fitting everything.
+        centreTarget.current = null;
+        const k = Math.min(1.1, Math.max(0.8, fitted.k));
+        setView({ k, tx: -(target.x + target.w / 2) * k, ty: -(target.y + target.h / 2) * k });
+        if (storageKeyRef.current) markExplored(storageKeyRef.current, target.id);
+      } else {
+        setView(fitted);
+      }
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -303,13 +406,73 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
     });
   };
 
+  /**
+   * Focus mode: open a main topic's whole branch (every level), collapse the other topics,
+   * and frame that branch with the chapter node — one clean topic at a time.
+   */
+  const focusBranch = (id: string) => {
+    const entry = index.get(id);
+    if (!entry) return;
+    const next = expandableIds([entry.node]);
+    setExpanded(next);
+    setView(fitView(branchBounds(layoutMindMap(nodes, next), subtreeIds(entry.node)), viewportSize(), { padding: 72, min: 0.3, max: 1.1 }));
+    if (analytics) trackEvent('mindmap_node_expanded', { ...analytics, node: entry.node.label, mode: 'focus' });
+  };
+  /** Back to the overview: only the main topics around the chapter. */
+  const showOverview = () => setExpandedAndFit(new Set());
+
+  const reveal = (id: string) => {
+    setRevealed((prev) => new Set([...prev, id]));
+    select(id);
+  };
+
   const onNodeClick = (n: LaidOutNode) => {
-    if (n.childCount > 0) {
+    // In a quiz, the first tap on a hidden card reveals it.
+    if (isHidden(n.id)) {
+      reveal(n.id);
+      return;
+    }
+    if (n.depth === 1 && n.childCount > 0) {
+      if (n.expanded) showOverview();
+      else focusBranch(n.id);
+    } else if (n.childCount > 0) {
       const opening = !expanded.has(n.id);
       toggle(n.id);
       if (opening) keepBranchInView(n.id, new Set([...expanded, n.id]));
     }
     select(n.id);
+  };
+
+  const startQuiz = () => {
+    onQueryChange('');
+    setRevealed(new Set());
+    setSelectedId(null);
+    setQuiz(true);
+    showOverview();
+    if (analytics) trackEvent('mindmap_quiz_started', { ...analytics, cards: targets.length });
+  };
+  const exitQuiz = () => {
+    setQuiz(false);
+    setRevealed(new Set());
+  };
+  const revealAll = () => setRevealed(new Set(targets));
+  const resetQuiz = () => {
+    writeQuiz(quizKey, { knew: new Set(), missed: new Set() });
+    setRevealed(new Set());
+    setSelectedId(null);
+  };
+
+  /** Record a self-check, then move on to the next hidden card in the same group. */
+  const answer = (id: string, knew: boolean) => {
+    const next: QuizResults = { knew: new Set(quizResults.knew), missed: new Set(quizResults.missed) };
+    next.knew.delete(id);
+    next.missed.delete(id);
+    (knew ? next.knew : next.missed).add(id);
+    writeQuiz(quizKey, next);
+    if (analytics) trackEvent('mindmap_quiz_answered', { ...analytics, result: knew ? 'knew' : 'missed' });
+    const entry = index.get(id);
+    const upcoming = entry?.siblings.find((s) => s.id !== id && targetSet.has(s.id) && !revealed.has(s.id));
+    setSelectedId(upcoming?.id ?? null);
   };
 
   // ── Search: reveal matches (expand their ancestors), step through them ──
@@ -356,12 +519,16 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
     if (e.key === outward) {
       e.preventDefault();
       if (n.childCount === 0) return;
-      if (!n.expanded) toggle(n.id);
-      else focusNode(entry.node.children[0]?.id);
+      if (!n.expanded) {
+        if (n.depth === 1) focusBranch(n.id);
+        else toggle(n.id);
+      } else focusNode(entry.node.children[0]?.id);
     } else if (e.key === inward) {
       e.preventDefault();
-      if (n.expanded) toggle(n.id);
-      else focusNode(entry.parentId ?? undefined);
+      if (n.expanded) {
+        if (n.depth === 1) showOverview();
+        else toggle(n.id);
+      } else focusNode(entry.parentId ?? undefined);
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       // Main topics sit on two sides: move among those on the same side, like the eye does.
@@ -400,7 +567,8 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
   const print = (kind: 'print' | 'pdf') => {
     const all = expandableIds(nodes);
     const fullLayout = layoutMindMap(nodes, all);
-    const before = { expanded, view };
+    const before = { expanded, view, quiz };
+    setQuiz(false); // printouts always show the real labels
     setExpanded(all);
     setView(fitView(fullLayout.bounds, PRINT_BOX, { padding: 24, min: 0.1, max: 1 }));
     const pageStyle = document.createElement('style');
@@ -412,6 +580,7 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
       pageStyle.remove();
       setExpanded(before.expanded);
       setView(before.view);
+      setQuiz(before.quiz);
       window.removeEventListener('afterprint', cleanup);
     };
     window.addEventListener('afterprint', cleanup);
@@ -440,6 +609,10 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
   const selectedLayout = selectedId ? byId.get(selectedId) : undefined;
   const selectedResources = selectedId ? resources[selectedId] : undefined;
   const exploredCount = useMemo(() => [...explored].filter((id) => index.has(id)).length, [explored, index]);
+  const knewCount = targets.filter((id) => quizResults.knew.has(id)).length;
+  const missedCount = targets.filter((id) => quizResults.missed.has(id)).length;
+  const selectedHidden = selectedId ? isHidden(selectedId) : false;
+  const selectedIsQuizCard = !!selectedId && quiz && targetSet.has(selectedId);
 
   return (
     <div
@@ -511,6 +684,8 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
             const res = resources[n.id];
             const isSelected = selectedId === n.id;
             const isMatch = matchSet.has(n.id);
+            const hidden = isHidden(n.id);
+            const quizMark = quiz && targetSet.has(n.id) ? (quizResults.knew.has(n.id) ? 'knew' : quizResults.missed.has(n.id) ? 'missed' : null) : null;
             const hint = [n.childCount > 0 ? `${n.childCount} subtopic${n.childCount === 1 ? '' : 's'}` : null, res && res.mcqs > 0 ? `${res.mcqs} MCQs` : null]
               .filter(Boolean)
               .join(' · ');
@@ -530,7 +705,11 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                   onClick={() => onNodeClick(n)}
                   onKeyDown={(e) => onNodeKeyDown(e, n)}
                   aria-expanded={n.childCount > 0 ? n.expanded : undefined}
-                  aria-label={`${n.label}${hint ? `, ${hint}` : ''}${n.childCount > 0 ? (n.expanded ? ', expanded' : ', collapsed') : ''}`}
+                  aria-label={
+                    hidden
+                      ? `Hidden ${n.depth === 1 ? 'topic' : 'subtopic'} — recall it, then tap to reveal`
+                      : `${n.label}${hint ? `, ${hint}` : ''}${n.childCount > 0 ? (n.expanded ? ', expanded' : ', collapsed') : ''}`
+                  }
                   className={cn(
                     'relative flex h-full w-full items-center gap-2 rounded-xl text-left shadow-sm transition-[box-shadow,transform,opacity] duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95',
                     n.depth === 1 ? cn('border-2 px-3', colour.topic) : cn('border px-3', colour.sub),
@@ -538,11 +717,25 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                     isSelected && cn('ring-2 ring-offset-2 ring-offset-background', colour.ring),
                     isMatch && 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-background',
                     searching && !isMatch && 'opacity-40',
+                    hidden && 'border-dashed',
                   )}
                 >
                   {n.depth > 1 && <span className={cn('h-2 w-2 shrink-0 rounded-full', colour.dot)} aria-hidden />}
-                  <span className={cn('line-clamp-2 min-w-0 flex-1 leading-snug', n.depth === 1 ? 'text-sm font-semibold' : 'text-[13px] font-medium')}>{n.label}</span>
-                  {explored.has(n.id) && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />}
+                  {hidden ? (
+                    // Placeholder bars instead of the label; the real text isn't rendered at all.
+                    <span className="flex min-w-0 flex-1 items-center gap-2" aria-hidden>
+                      <span className="flex-1 space-y-1.5">
+                        <span className="block h-2 w-4/5 rounded-full bg-current opacity-20" />
+                        <span className="block h-2 w-1/2 rounded-full bg-current opacity-20" />
+                      </span>
+                      <span className="shrink-0 text-[11px] font-semibold opacity-60">Tap</span>
+                    </span>
+                  ) : (
+                    <span className={cn('line-clamp-2 min-w-0 flex-1 leading-snug', n.depth === 1 ? 'text-sm font-semibold' : 'text-[13px] font-medium')}>{n.label}</span>
+                  )}
+                  {quizMark === 'knew' && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="You knew this" />}
+                  {quizMark === 'missed' && <XCircle className="h-4 w-4 shrink-0 text-warning" aria-label="You missed this" />}
+                  {!quiz && explored.has(n.id) && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />}
                   {n.childCount > 0 && (
                     <span
                       className={cn(
@@ -558,7 +751,7 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                 </button>
 
                 {/* Hover card */}
-                {(entry?.node.description || hint) && (
+                {!hidden && (entry?.node.description || hint) && (
                   <div
                     role="tooltip"
                     className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 mb-2 w-60 -translate-x-1/2 rounded-lg border border-border bg-popover p-2.5 text-xs text-popover-foreground opacity-0 shadow-lg transition-opacity delay-300 group-hover:visible group-hover:opacity-100"
@@ -575,6 +768,27 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
 
       {/* Top toolbar */}
       <div data-mindmap-chrome className="absolute inset-x-0 top-0 flex flex-wrap items-center gap-2 p-3">
+        {quiz ? (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 shadow-sm backdrop-blur sm:max-w-md">
+            <Brain className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span className="text-sm font-semibold text-foreground">Quiz</span>
+            <span className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{knewCount}</span> knew · <span className="font-semibold text-warning">{missedCount}</span> missed ·{' '}
+              {targets.length} cards
+            </span>
+            <span className="ml-auto flex items-center gap-1">
+              <button type="button" onClick={revealAll} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium hover:bg-background/60" title="Reveal every card">
+                <Eye className="h-3.5 w-3.5" /> Reveal all
+              </button>
+              <button type="button" onClick={resetQuiz} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium hover:bg-background/60" title="Clear your results and start again">
+                <RotateCcw className="h-3.5 w-3.5" /> Reset
+              </button>
+              <button type="button" onClick={exitQuiz} className="flex items-center gap-1 rounded-md bg-background px-2 py-1 text-xs font-semibold hover:bg-background/80">
+                <X className="h-3.5 w-3.5" /> Exit
+              </button>
+            </span>
+          </div>
+        ) : (
         <div className="flex min-w-0 flex-1 items-center gap-1 rounded-xl border border-border bg-card/95 px-2 shadow-sm backdrop-blur sm:max-w-xs">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           <input
@@ -608,12 +822,23 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
             </>
           )}
         </div>
+        )}
 
         <div className="ml-auto flex items-center gap-1 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
           {storageKey && totalNodes > 0 && (
             <span className="hidden px-2 text-xs text-muted-foreground tabular-nums md:inline" title="Topics you've opened on this device">
               Explored {exploredCount}/{totalNodes}
             </span>
+          )}
+          {targets.length > 0 && !quiz && (
+            <button
+              type="button"
+              onClick={startQuiz}
+              title="Hide the subtopics and test your recall"
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <Brain className="h-4 w-4" /> Quiz me
+            </button>
           )}
           <ToolButton label="Expand all" onClick={expandAll} icon={<UnfoldVertical className="h-4 w-4" />} text="Expand all" />
           <ToolButton label="Collapse all" onClick={collapseAll} icon={<FoldVertical className="h-4 w-4" />} text="Collapse" />
@@ -651,6 +876,14 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
         <span className="hidden pr-2 pl-1 text-[11px] text-muted-foreground lg:inline">Drag to move · Ctrl + scroll to zoom</span>
       </div>
 
+      {quiz && expanded.size === 0 && !selectedId && (
+        <div data-mindmap-chrome className="pointer-events-none absolute inset-x-0 bottom-16 flex justify-center px-3">
+          <p className="rounded-full border border-primary/30 bg-card/95 px-4 py-2 text-center text-xs text-foreground shadow-sm backdrop-blur">
+            Pick a topic, recall its subtopics, then tap each card to check yourself.
+          </p>
+        </div>
+      )}
+
       {/* Details panel for the selected node */}
       {selected && selectedLayout && (
         <aside
@@ -663,7 +896,7 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
               {selected.path.length > 0 && <p className="truncate text-[11px] text-muted-foreground">{[title.chapter, ...selected.path].join(' › ')}</p>}
               <h3 className="mt-0.5 flex items-center gap-2 font-semibold text-foreground">
                 <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', colourFor(selectedLayout.branch).dot)} aria-hidden />
-                {selected.node.label}
+                {selectedHidden ? 'What is this?' : selected.node.label}
               </h3>
             </div>
             <button type="button" onClick={() => setSelectedId(null)} aria-label="Close details" className="rounded-md p-1 text-muted-foreground hover:bg-muted">
@@ -671,6 +904,48 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
             </button>
           </div>
 
+          {selectedHidden ? (
+            <div className="mt-2">
+              <p className="text-body-sm text-muted-foreground">Recall this subtopic — say it or jot it down — then reveal it to check.</p>
+              <button
+                type="button"
+                onClick={() => reveal(selected.node.id)}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <Eye className="h-3.5 w-3.5" /> Reveal
+              </button>
+            </div>
+          ) : (
+            <>
+          {selectedIsQuizCard && (
+            <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <p className="text-xs font-semibold text-foreground">Did you remember it?</p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => answer(selected.node.id, true)}
+                  aria-pressed={quizResults.knew.has(selected.node.id)}
+                  className={cn(
+                    'inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                    quizResults.knew.has(selected.node.id) ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-emerald-500/50 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300',
+                  )}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Knew it
+                </button>
+                <button
+                  type="button"
+                  onClick={() => answer(selected.node.id, false)}
+                  aria-pressed={quizResults.missed.has(selected.node.id)}
+                  className={cn(
+                    'inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                    quizResults.missed.has(selected.node.id) ? 'border-warning bg-warning text-background' : 'border-warning/50 text-warning hover:bg-warning/10',
+                  )}
+                >
+                  <XCircle className="h-3.5 w-3.5" /> Missed
+                </button>
+              </div>
+            </div>
+          )}
           {selected.node.description && <p className="text-body-sm mt-2 text-muted-foreground">{selected.node.description}</p>}
           {selected.node.content && (
             <div className="mt-3 text-sm [&_.blog-content]:text-sm">
@@ -713,6 +988,8 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
               </button>
             )}
           </div>
+            </>
+          )}
         </aside>
       )}
     </div>

@@ -158,3 +158,42 @@ export function searchTree(roots: MindMapTreeNode[], query: string) {
   visit(roots, []);
   return { matches, reveal };
 }
+
+/** Ids of every node in `root`'s subtree (root included). */
+export function subtreeIds(root: MindMapTreeNode, out = new Set<string>()): Set<string> {
+  out.add(root.id);
+  for (const c of root.children) subtreeIds(c, out);
+  return out;
+}
+
+/**
+ * Bounds of the laid-out boxes in `ids` plus the central node — what focus mode frames, so
+ * the open branch is shown together with the chapter it hangs off.
+ */
+export function branchBounds(layout: MindMapLayout, ids: ReadonlySet<string>): MindMapLayout['bounds'] {
+  const b = { minX: -SIZES.center.w / 2, minY: -SIZES.center.h / 2, maxX: SIZES.center.w / 2, maxY: SIZES.center.h / 2 };
+  for (const n of layout.nodes) {
+    if (!ids.has(n.id)) continue;
+    b.minX = Math.min(b.minX, n.x);
+    b.minY = Math.min(b.minY, n.y);
+    b.maxX = Math.max(b.maxX, n.x + n.w);
+    b.maxY = Math.max(b.maxY, n.y + n.h);
+  }
+  return b;
+}
+
+/**
+ * Nodes hidden in quiz mode: every subtopic (main topics stay visible as cues). A chapter
+ * with no subtopics hides its main topics instead, so there is always something to recall.
+ */
+export function quizTargets(roots: MindMapTreeNode[]): string[] {
+  const deep: string[] = [];
+  const visit = (nodes: MindMapTreeNode[], depth: number) => {
+    for (const n of nodes) {
+      if (depth >= 2) deep.push(n.id);
+      visit(n.children, depth + 1);
+    }
+  };
+  visit(roots, 1);
+  return deep.length > 0 ? deep : roots.map((r) => r.id);
+}

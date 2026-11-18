@@ -1,6 +1,7 @@
 import type { ExamLanding, ExamSubpage } from '@/components/exam-landing/registry';
 import type { CbseBoard } from '@/content/exams/cbse/types';
 import { getCbseLandingData } from '@/server/services/exam-landing/cbse';
+import { mindMapRepository } from '@/server/repositories/mind-map.repository';
 import { getStreakSummary } from '@/server/services/daily-streak';
 import { istDayKey } from '@/lib/ist-date';
 import { CbseLanding } from './cbse-landing';
@@ -22,11 +23,17 @@ export function cbseLanding(board: CbseBoard): ExamLanding {
 
   const PAGES: Record<string, ExamSubpage> = {
     syllabus: {
-      metadata: cbseMeta(
-        cbsePath(slug, 'syllabus'),
-        `${label} Syllabus ${session}: Subject & Chapter-wise`,
-        `Complete ${label} syllabus for ${session}: every chapter and topic in ${board.coreSubjects}, with chapter-wise practice questions and notes.`,
-      ),
+      // Mentions mind maps only once some are actually published for this class.
+      metadata: async (exam) => {
+        const maps = (await mindMapRepository.listPublishedByExam(exam.id)).length;
+        return cbseMeta(
+          cbsePath(slug, 'syllabus'),
+          maps > 0 ? `${label} Syllabus ${session}: Chapter-wise with Mind Maps` : `${label} Syllabus ${session}: Subject & Chapter-wise`,
+          maps > 0
+            ? `${label} syllabus ${session}, chapter by chapter with every topic — plus interactive mind maps for ${maps} chapter${maps === 1 ? '' : 's'}, practice MCQs and notes.`
+            : `Complete ${label} syllabus ${session}: every subject, chapter and topic, with chapter-wise practice questions and notes.`,
+        );
+      },
       render: async (exam, { userId }) => <CbseSyllabusPage data={await getCbseLandingData(exam, userId, board)} />,
     },
     'paper-pattern': {

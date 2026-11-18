@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { assignSides, expandableIds, fitView, layoutMindMap, searchTree, SIZES } from './layout';
+import { assignSides, branchBounds, expandableIds, fitView, layoutMindMap, quizTargets, searchTree, subtreeIds, SIZES } from './layout';
 import type { MindMapTreeNode } from '@/lib/mind-maps';
 
 const n = (id: string, children: MindMapTreeNode[] = [], description: string | null = null): MindMapTreeNode => ({ id, label: id, description, content: null, curriculumNodeId: null, children });
@@ -89,4 +89,31 @@ describe('searchTree', () => {
     assert.deepEqual(searchTree([n('A', [], 'Releases ENERGY')], 'energy').matches, ['A']);
   });
   it('ignores queries shorter than two characters', () => assert.deepEqual(searchTree(tree, 'a').matches, []));
+});
+
+describe('focus mode helpers', () => {
+  it('collects a whole branch, so one click can open every level of a topic', () => {
+    const nutrition = tree[0];
+    assert.deepEqual([...subtreeIds(nutrition)].sort(), ['Autotrophic', 'Heterotrophic', 'Holozoic', 'Nutrition']);
+    assert.deepEqual([...expandableIds([nutrition])].sort(), ['Heterotrophic', 'Nutrition'], 'the topic and its nested parent open together');
+  });
+
+  it('frames only the open branch plus the central node', () => {
+    const open = expandableIds([tree[0]]);
+    const l = layoutMindMap(tree, open);
+    const b = branchBounds(l, subtreeIds(tree[0]));
+    const nutritionBoxes = l.nodes.filter((x) => subtreeIds(tree[0]).has(x.id));
+    for (const x of nutritionBoxes) assert.ok(x.x >= b.minX && x.x + x.w <= b.maxX && x.y >= b.minY && x.y + x.h <= b.maxY);
+    assert.ok(b.minX <= -SIZES.center.w / 2 && b.maxX >= SIZES.center.w / 2, 'includes the chapter node');
+  });
+});
+
+describe('quizTargets', () => {
+  it('hides every subtopic and keeps main topics as cues', () => {
+    assert.deepEqual(quizTargets(tree).sort(), ['Aerobic', 'Anaerobic', 'Autotrophic', 'Heterotrophic', 'Holozoic', 'Kidney']);
+  });
+  it('hides main topics when a chapter has no subtopics', () => {
+    assert.deepEqual(quizTargets([n('A'), n('B')]), ['A', 'B']);
+  });
+  it('has nothing to hide in an empty map', () => assert.deepEqual(quizTargets([]), []));
 });
