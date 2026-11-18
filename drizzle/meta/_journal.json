@@ -127,6 +127,55 @@
       "when": 1791099512923,
       "tag": "0017_page_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1794662323171,
+      "tag": "0018_sample_papers",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1794666188037,
+      "tag": "0019_sample_paper_downloads",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1794725178017,
+      "tag": "0020_exam_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1794747296397,
+      "tag": "0021_daily_question_streaks",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1794756743556,
+      "tag": "0022_mind_maps",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1795017686446,
+      "tag": "0023_mind_map_styles",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1795020120574,
+      "tag": "0024_mind_map_versions",
+      "breakpoints": true
     }
   ]
 }

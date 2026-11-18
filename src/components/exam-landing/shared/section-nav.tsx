@@ -30,7 +30,7 @@ export function SectionNav({ items }: { items: SectionNavItem[] }) {
   }, [items]);
 
   return (
-    <nav aria-label="On this page" className="sticky top-16 z-30 border-b border-border bg-background/95 backdrop-blur">
+    <nav aria-label="On this page" className="sticky top-14 z-30 border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-page gap-1 overflow-x-auto px-4 sm:px-6 lg:px-8 [&::-webkit-scrollbar]:hidden">
         {items.map((item) => (
           <a

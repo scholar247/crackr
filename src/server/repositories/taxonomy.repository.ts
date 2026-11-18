@@ -362,6 +362,7 @@ interface DescendantRow extends Record<string, unknown> {
   name: string;
   slug: string;
   parentId: string | null;
+  sortOrder: number | null;
 }
 
 async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
@@ -396,7 +397,7 @@ async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
       FROM ${curriculumEdges} edge
       INNER JOIN reachable r ON r.id = edge.parent_node_id
     )
-    SELECT cn.id, cn.node_type AS "nodeType", cn.name, cn.slug, edge.parent_node_id AS "parentId"
+    SELECT cn.id, cn.node_type AS "nodeType", cn.name, cn.slug, edge.parent_node_id AS "parentId", edge.sort_order AS "sortOrder"
     FROM reachable r
     INNER JOIN ${curriculumNodes} cn ON cn.id = r.id
     LEFT JOIN ${curriculumEdges} edge ON edge.child_node_id = cn.id AND edge.parent_node_id IN (SELECT id FROM reachable)
@@ -410,13 +411,24 @@ async function getSyllabusTree(examId: string): Promise<SyllabusNode[]> {
       byId.set(row.id, { id: row.id, nodeType: row.nodeType, name: row.name, slug: row.slug, children: [] });
     }
   }
+  // Edge sort order per (parent, child) — a node shared by several parents can sit at a
+  // different position under each.
+  const orderOf = new Map<string, number>();
   for (const row of rows) {
     const node = byId.get(row.id)!;
     if (row.parentId && byId.has(row.parentId)) {
       byId.get(row.parentId)!.children.push(node);
+      orderOf.set(`${row.parentId}:${row.id}`, Number(row.sortOrder ?? 0));
     } else if (!row.parentId) {
       roots.push(node);
     }
+  }
+
+  // Siblings by curriculum_edges.sort_order. Array#sort is stable, so siblings that share an
+  // order (all-zero in older data) keep the order they had before — only explicitly ordered
+  // siblings move.
+  for (const parent of byId.values()) {
+    if (parent.children.length > 1) parent.children.sort((a, b) => (orderOf.get(`${parent.id}:${a.id}`) ?? 0) - (orderOf.get(`${parent.id}:${b.id}`) ?? 0));
   }
 
   return roots;

@@ -1,27 +1,18 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ArrowRight } from 'lucide-react';
-import { Breadcrumbs, type Crumb } from '@/components/exam-landing/shared/breadcrumbs';
+import type { Crumb } from '@/components/exam-landing/shared/breadcrumbs';
+import { ExamPageShell, type NextStep } from '@/components/exam-landing/shared/exam-page-shell';
 import { NIMCET_PATH } from '@/content/exams/nimcet/guidance';
 import { NimcetNav, type NimcetNavKey } from './nimcet-nav';
 
-export interface NextStep {
-  label: string;
-  description: string;
-  href: string;
-}
+export { PageSection, type NextStep } from '@/components/exam-landing/shared/exam-page-shell';
 
-// Frame for every NIMCET inner page: section menu, breadcrumbs, the page's single H1 and
-// intro, the body, then "where to go next" links so no page is a dead end.
+// Frame for every NIMCET inner page: the shared exam page shell with the NIMCET menu and
+// the Home › Exams › NIMCET trail.
 export function NimcetPageShell({
   nav,
   crumbs,
-  eyebrow,
-  title,
-  intro,
-  aside,
   nextSteps,
-  children,
+  ...rest
 }: {
   nav?: NimcetNavKey;
   /** Crumbs after Home › Exams › NIMCET. */
@@ -34,67 +25,13 @@ export function NimcetPageShell({
   children: ReactNode;
 }) {
   return (
-    <main>
-      <NimcetNav current={nav} />
-      <header className="bg-background">
-        <div className="mx-auto max-w-page px-4 pt-6 pb-8 sm:px-6 lg:px-8">
-          <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Exams', href: '/exams' }, { label: 'NIMCET', href: NIMCET_PATH }, ...crumbs]} />
-          <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              {eyebrow && <p className="text-label-caps uppercase tracking-wider text-primary">{eyebrow}</p>}
-              <h1 className="text-headline-xl mt-1 text-foreground max-sm:text-[2rem] max-sm:leading-10">{title}</h1>
-              <div className="text-body-lg mt-3 text-muted-foreground">{intro}</div>
-            </div>
-            {aside}
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-page space-y-12 px-4 pb-14 sm:px-6 lg:px-8">{children}</div>
-
-      <section aria-labelledby="next-steps" className="border-t border-border bg-surface-container-lowest">
-        <div className="mx-auto max-w-page px-4 py-12 sm:px-6 lg:px-8">
-          <h2 id="next-steps" className="text-headline-md text-foreground">
-            Continue your NIMCET preparation
-          </h2>
-          <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {nextSteps.map((s) => (
-              <li key={s.href}>
-                <Link
-                  href={s.href}
-                  className="group flex h-full items-start justify-between gap-3 rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <span>
-                    <span className="block font-semibold text-foreground">{s.label}</span>
-                    <span className="text-body-sm mt-1 block text-muted-foreground">{s.description}</span>
-                  </span>
-                  <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-    </main>
-  );
-}
-
-/** A titled block inside an inner page. */
-export function PageSection({ id, title, description, action, children }: { id?: string; title: string; description?: ReactNode; action?: ReactNode; children: ReactNode }) {
-  const headingId = id ? `${id}-heading` : undefined;
-  return (
-    <section id={id} aria-labelledby={headingId} className="scroll-mt-32">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="max-w-2xl">
-          <h2 id={headingId} className="text-headline-md text-foreground">
-            {title}
-          </h2>
-          {description && <div className="text-body-md mt-1.5 text-muted-foreground">{description}</div>}
-        </div>
-        {action}
-      </div>
-      <div className="mt-5">{children}</div>
-    </section>
+    <ExamPageShell
+      {...rest}
+      nav={<NimcetNav current={nav} />}
+      crumbs={[{ label: 'Home', href: '/' }, { label: 'Exams', href: '/exams' }, { label: 'NIMCET', href: NIMCET_PATH }, ...crumbs]}
+      nextStepsTitle="Continue your NIMCET preparation"
+      nextSteps={nextSteps}
+    />
   );
 }
 

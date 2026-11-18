@@ -2,14 +2,18 @@ import Link from 'next/link';
 import { Mail, MessageCircle, Send, Globe } from 'lucide-react';
 import { Logo } from './logo';
 import { SITE_NAME, SITE_EMAIL } from '@/lib/site-config';
+import { getSamplePaperLinks } from '@/server/services/sample-papers';
 
-export function SiteFooter() {
+export async function SiteFooter() {
   const year = new Date().getFullYear();
+  // Only exams with published papers, so the footer never links to a 404. A failed lookup
+  // (DB down) must not take the whole page with it — just drop the column.
+  const samplePaperLinks = await getSamplePaperLinks().catch(() => []);
 
   return (
     <footer className="border-t border-border bg-background">
       <div className="mx-auto max-w-page px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className={`grid grid-cols-2 gap-8 ${samplePaperLinks.length ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
           <div className="col-span-2">
             <Link href="/" className="mb-3 flex shrink-0 items-center">
               <Logo width={144} height={30} />
@@ -38,6 +42,16 @@ export function SiteFooter() {
             <FooterLink href="/exams">Exams</FooterLink>
             <FooterLink href="/blogs">Blog</FooterLink>
           </FooterColumn>
+
+          {samplePaperLinks.length > 0 && (
+            <FooterColumn title="Sample Papers">
+              {samplePaperLinks.map((l) => (
+                <FooterLink key={l.href} href={l.href}>
+                  {l.label}
+                </FooterLink>
+              ))}
+            </FooterColumn>
+          )}
 
           <FooterColumn title="Company">
             <FooterLink href="/about">About</FooterLink>

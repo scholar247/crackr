@@ -46,7 +46,7 @@ export function UserMenu({ showDashboard = false }: UserMenuProps) {
             <AvatarImage src={image ?? ''} alt={name ?? ''} />
             <AvatarFallback className="text-xs font-semibold">{initials}</AvatarFallback>
           </Avatar>
-          <div className="hidden md:flex flex-col items-start text-left">
+          <div className="hidden min-w-0 flex-col items-start text-left xl:flex">
             <span className="text-sm font-medium leading-none">{name}</span>
             <span className="text-xs text-muted-foreground mt-0.5">{email}</span>
           </div>

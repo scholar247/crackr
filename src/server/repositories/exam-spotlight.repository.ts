@@ -2,6 +2,8 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { assessments, articles, contentExamMap, contentNodeMap, questions, exams } from '@/server/db/schema';
 import { taxonomyRepository } from './taxonomy.repository';
+import { dailyQuestionRepository } from './daily-question.repository';
+import { istDayKey } from '@/lib/ist-date';
 
 // Calendar day in IST — the audience is Indian exam aspirants, so "today's problem"
 // should roll over at their midnight, not the server's.
@@ -113,9 +115,18 @@ async function getStats(examId: string): Promise<ExamSpotlightStats> {
   };
 }
 
-// One question per exam per IST day: ids sorted, indexed by day number, so every visitor
-// sees the same problem until the day rolls over (and it rotates through the whole pool).
-async function getDailyProblem(examId: string): Promise<DailyProblem | null> {
+// ── Question of the day ─────────────────────────────────────────────────────────
+// One question per exam per IST day. The pick is made once per exam per day (ids sorted,
+// indexed by day number, so it rotates through the whole pool) and stored in
+// daily_questions; after that every request reads it by primary key. A short per-instance
+// memo skips even that read on hot pages, while still picking up admin edits to the
+// question within a few minutes.
+
+const PICK_MEMO_TTL_MS = 5 * 60 * 1000;
+const pickMemo = new Map<string, { day: number; at: number; problem: DailyProblem | null }>();
+
+/** The O(pool) part — runs at most once per exam per day (plus if a pick is unpublished). */
+async function pickFromPool(examId: string, day: number, excludeId?: number | null): Promise<number | null> {
   const rows = await db
     .select({ id: questions.id })
     .from(questions)
@@ -123,11 +134,34 @@ async function getDailyProblem(examId: string): Promise<DailyProblem | null> {
     .where(and(eq(contentExamMap.examId, examId), eq(questions.status, 'PUBLISHED'), eq(questions.visibility, 'PUBLIC')))
     .groupBy(questions.id)
     .orderBy(questions.id);
-  if (rows.length === 0) return null;
+  const pool = excludeId ? rows.filter((r) => r.id !== excludeId) : rows;
+  return pool.length ? pool[day % pool.length].id : null;
+}
 
-  const chosen = rows[istDayNumber() % rows.length];
-  const [q] = await db.select().from(questions).where(eq(questions.id, chosen.id)).limit(1);
-  if (!q) return null;
+async function loadPublishedQuestion(id: number) {
+  const [q] = await db
+    .select()
+    .from(questions)
+    .where(and(eq(questions.id, id), eq(questions.status, 'PUBLISHED'), eq(questions.visibility, 'PUBLIC')))
+    .limit(1);
+  return q ?? null;
+}
+
+async function loadDailyProblem(examId: string, day: number): Promise<DailyProblem | null> {
+  const dayKey = istDayKey();
+  const stored = await dailyQuestionRepository.findPick(examId, dayKey);
+  let q = stored ? await loadPublishedQuestion(stored) : null;
+
+  if (!q) {
+    // First request of the day — or today's pick was unpublished/deleted since: pick again.
+    const chosen = await pickFromPool(examId, day, stored);
+    if (!chosen) return null;
+    let id = chosen;
+    if (stored === undefined) id = await dailyQuestionRepository.savePick(examId, dayKey, chosen);
+    else await dailyQuestionRepository.replacePick(examId, dayKey, chosen);
+    q = await loadPublishedQuestion(id);
+    if (!q) return null;
+  }
 
   return {
     id: q.id,
@@ -137,6 +171,15 @@ async function getDailyProblem(examId: string): Promise<DailyProblem | null> {
     difficulty: q.difficulty,
     nextRefreshAt: nextIstMidnight().toISOString(),
   };
+}
+
+async function getDailyProblem(examId: string): Promise<DailyProblem | null> {
+  const day = istDayNumber();
+  const hit = pickMemo.get(examId);
+  if (hit && hit.day === day && Date.now() - hit.at < PICK_MEMO_TTL_MS) return hit.problem;
+  const problem = await loadDailyProblem(examId, day);
+  pickMemo.set(examId, { day, at: Date.now(), problem });
+  return problem;
 }
 
 async function getSpotlight(examId: string) {
@@ -265,6 +308,7 @@ export type ExamSpotlight = Awaited<ReturnType<typeof getSpotlight>>;
 
 export const examSpotlightRepository = {
   getSpotlight,
+  getDailyProblem,
   getStats,
   getAllExamSummaries,
   getProgramStats,

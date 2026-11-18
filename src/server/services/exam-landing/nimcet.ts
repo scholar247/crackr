@@ -6,7 +6,7 @@ import { questionRepository } from '@/server/repositories/question.repository';
 import { blogsPath } from '@/server/services/blog-browse';
 import { SYLLABUS, type SyllabusSubject, type SyllabusUnit } from '@/content/exams/nimcet/syllabus';
 import { NIMCET_PATH } from '@/content/exams/nimcet/guidance';
-import type { LandingExam } from './cbse-class-10';
+import type { LandingExam } from './cbse';
 
 // Joins the official NIMCET syllabus (content/exams/nimcet) to what SyllabuzAI actually has
 // for it — published questions, notes, mocks and the viewer's own progress — through the

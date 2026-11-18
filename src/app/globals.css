@@ -1006,3 +1006,106 @@ body {
   border-radius: 9999px 9999px 0 0;
 }
 
+
+/* Notification ticker: the headline list is rendered twice side by side, so sliding the
+   track by half its width loops seamlessly. */
+@keyframes notice-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Mind map print/PDF: only the map is printed, fully expanded and fitted to an A4
+   landscape page by the component (which also injects the @page rule while printing).
+   Vector output — the real HTML/SVG, not a screenshot. */
+@media print {
+  html.mindmap-printing body * { visibility: hidden !important; }
+  html.mindmap-printing [data-mindmap-print-root],
+  html.mindmap-printing [data-mindmap-print-root] * { visibility: visible !important; }
+  html.mindmap-printing [data-mindmap-print-root] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+  }
+  html.mindmap-printing [data-mindmap-chrome],
+  html.mindmap-printing [role='tooltip'] { display: none !important; }
+  html.mindmap-printing [data-mindmap-print-root] * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Mind map quiz: content that lists the answers is concealed while a quiz runs. The
+   children are blurred (not the container), so the notice on the container stays sharp. */
+html[data-mindmap-quiz] [data-quiz-conceal] {
+  position: relative;
+  user-select: none;
+}
+html[data-mindmap-quiz] [data-quiz-conceal] > * {
+  filter: blur(7px);
+  pointer-events: none;
+}
+html[data-mindmap-quiz] [data-quiz-conceal]::after {
+  content: 'Hidden while you take the quiz';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Mind map delight — every animation here is opt-in for motion-tolerant users. */
+@media (prefers-reduced-motion: no-preference) {
+  /* Branches "draw" themselves when they appear (paths use pathLength="1"). */
+  .mm-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: mm-draw 0.55s ease-out forwards;
+  }
+  @keyframes mm-draw {
+    to { stroke-dashoffset: 0; }
+  }
+  .mm-confetti {
+    animation: mm-confetti 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  }
+  @keyframes mm-confetti {
+    0% { transform: translate(0, 0) rotate(0deg) scale(0.6); opacity: 1; }
+    70% { opacity: 1; }
+    100% { transform: translate(var(--dx), calc(var(--dy) + 120px)) rotate(var(--rot)) scale(1); opacity: 0; }
+  }
+}
+/* Printouts always show fully drawn branches. */
+@media print {
+  .mm-draw { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
+}
+
+/* Exam home: soft floating glow blobs in the hero (decorative; motion-safe only). */
+@media (prefers-reduced-motion: no-preference) {
+  .exam-float {
+    animation: exam-float 14s ease-in-out infinite;
+  }
+  .exam-float-slow {
+    animation: exam-float 20s ease-in-out infinite reverse;
+  }
+  @keyframes exam-float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(24px, -18px) scale(1.06); }
+  }
+  .exam-pop {
+    animation: exam-pop 3.2s ease-in-out infinite;
+  }
+  @keyframes exam-pop {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+}
