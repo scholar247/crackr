@@ -12,7 +12,40 @@ export const MIND_MAP_STATUS_LABELS: Record<MindMapStatus, string> = {
 };
 
 /** Limits that keep maps readable and requests bounded. */
-export const MIND_MAP_LIMITS = { maxNodes: 400, maxDepth: 6, label: 160, description: 500, content: 20_000 } as const;
+export const MIND_MAP_LIMITS = { maxNodes: 400, maxDepth: 6, label: 300, description: 500, content: 20_000, tags: 4, tag: 24 } as const;
+
+/** Visual theme of a map. COLOUR: a colour per branch. CLASSIC: monochrome, print-first. */
+export const MIND_MAP_THEMES = ['COLOUR', 'CLASSIC'] as const;
+export type MindMapTheme = (typeof MIND_MAP_THEMES)[number];
+
+/**
+ * Per-node presentation. `heading` renders the node as a title for the facts that follow it;
+ * `border` marks sub-lists (e.g. eligibility criteria); `highlight` is a marker-pen emphasis.
+ */
+export interface MindMapNodeStyle {
+  heading?: boolean;
+  border?: 'dashed' | 'dotted';
+  highlight?: boolean;
+}
+
+/** Optional per-node extras (all absent on maps saved before they existed). */
+export interface MindMapNodeExtras {
+  /** Hindi label, shown when the reader switches language. */
+  labelHi?: string | null;
+  style?: MindMapNodeStyle | null;
+  /** Short labels such as "PYQ 2023", "Important". */
+  tags?: string[] | null;
+}
+
+/** Drops empty style flags and blank tags so stored values stay minimal (null when empty). */
+export function normaliseExtras(e: MindMapNodeExtras): Required<MindMapNodeExtras> {
+  const style: MindMapNodeStyle = {};
+  if (e.style?.heading) style.heading = true;
+  if (e.style?.border) style.border = e.style.border;
+  if (e.style?.highlight) style.highlight = true;
+  const tags = [...new Set((e.tags ?? []).map((t) => t.trim()).filter(Boolean))].slice(0, MIND_MAP_LIMITS.tags);
+  return { labelHi: e.labelHi?.trim() || null, style: Object.keys(style).length ? style : null, tags: tags.length ? tags : null };
+}
 
 export interface MindMapFaq {
   question: string;
@@ -28,6 +61,9 @@ export interface FlatMindMapNode {
   description: string | null;
   content: string | null;
   displayOrder: number;
+  labelHi?: string | null;
+  style?: MindMapNodeStyle | null;
+  tags?: string[] | null;
 }
 
 /** A node as rendered: nested. */
@@ -38,6 +74,9 @@ export interface MindMapTreeNode {
   content: string | null;
   curriculumNodeId: string | null;
   children: MindMapTreeNode[];
+  labelHi?: string | null;
+  style?: MindMapNodeStyle | null;
+  tags?: string[] | null;
 }
 
 /** Frozen copy of a map at publish time — the only thing public pages read. */
@@ -49,6 +88,8 @@ export interface MindMapSnapshot {
   revisionNotes: string | null;
   faqs: MindMapFaq[];
   nodes: MindMapTreeNode[];
+  /** Absent on snapshots published before themes existed (→ COLOUR). */
+  theme?: MindMapTheme;
 }
 
 // ── Status workflow ────────────────────────────────────────────────────────────
@@ -89,6 +130,7 @@ export function buildTree(rows: FlatMindMapNode[]): MindMapTreeNode[] {
       content: r.content,
       curriculumNodeId: r.curriculumNodeId,
       children: [],
+      ...normaliseExtras(r),
       order: r.displayOrder,
       parentId: r.parentId,
     });
@@ -101,12 +143,13 @@ export function buildTree(rows: FlatMindMapNode[]): MindMapTreeNode[] {
   const strip = (nodes: (MindMapTreeNode & { order?: number })[]): MindMapTreeNode[] =>
     [...nodes]
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-      .map(({ id, label, description, content, curriculumNodeId, children }) => ({
+      .map(({ id, label, description, content, curriculumNodeId, children, labelHi, style, tags }) => ({
         id,
         label,
         description,
         content,
         curriculumNodeId,
+        ...normaliseExtras({ labelHi, style, tags }),
         children: strip(children as (MindMapTreeNode & { order?: number })[]),
       }));
   return strip(roots);
@@ -115,7 +158,7 @@ export function buildTree(rows: FlatMindMapNode[]): MindMapTreeNode[] {
 /** Nested tree → flat rows (parents before children, displayOrder = sibling index). */
 export function flattenTree(nodes: MindMapTreeNode[], parentId: string | null = null, out: FlatMindMapNode[] = []): FlatMindMapNode[] {
   nodes.forEach((n, i) => {
-    out.push({ id: n.id, parentId, curriculumNodeId: n.curriculumNodeId, label: n.label, description: n.description, content: n.content, displayOrder: i });
+    out.push({ id: n.id, parentId, curriculumNodeId: n.curriculumNodeId, label: n.label, description: n.description, content: n.content, displayOrder: i, ...normaliseExtras(n) });
     flattenTree(n.children, n.id, out);
   });
   return out;
@@ -191,6 +234,8 @@ export interface MindMapDiff {
   moved: string[];
   descriptionsChanged: string[];
   contentChanged: string[];
+  /** Hindi label, style or tags changed. */
+  formattingChanged: string[];
   hasChanges: boolean;
 }
 
@@ -219,7 +264,7 @@ export function diffMindMaps(published: MindMapTreeNode[] | null, draft: MindMap
   };
   const before = index(published ?? []);
   const after = index(draft);
-  const diff: MindMapDiff = { added: [], removed: [], renamed: [], moved: [], descriptionsChanged: [], contentChanged: [], hasChanges: false };
+  const diff: MindMapDiff = { added: [], removed: [], renamed: [], moved: [], descriptionsChanged: [], contentChanged: [], formattingChanged: [], hasChanges: false };
 
   for (const [id, a] of after) {
     const b = before.get(id);
@@ -231,6 +276,7 @@ export function diffMindMaps(published: MindMapTreeNode[] | null, draft: MindMap
     if (b.parentId !== a.parentId || relativeIndex(before, b.parentId, id, after) !== relativeIndex(after, a.parentId, id, before)) diff.moved.push(a.node.label);
     if ((b.node.description ?? '') !== (a.node.description ?? '')) diff.descriptionsChanged.push(a.node.label);
     if ((b.node.content ?? '') !== (a.node.content ?? '')) diff.contentChanged.push(a.node.label);
+    if (JSON.stringify(normaliseExtras(b.node)) !== JSON.stringify(normaliseExtras(a.node))) diff.formattingChanged.push(a.node.label);
   }
   for (const [id, b] of before) if (!after.has(id)) diff.removed.push(b.node.label);
 

@@ -45,7 +45,9 @@ import {
   type MindMapAction,
   type MindMapFaq,
   type MindMapStatus,
+  type MindMapTheme,
   type MindMapTreeNode,
+  MIND_MAP_LIMITS,
 } from '@/lib/mind-maps';
 import { addChild, addMissingCurriculum, indentNode, moveNode, newNode, outdentNode, removeNode, updateNode } from '@/lib/mind-map-tree-ops';
 import { STATUS_BADGE } from '../mind-maps-client';
@@ -59,6 +61,7 @@ interface EditorData {
     intro: string | null;
     revisionNotes: string | null;
     faqs: MindMapFaq[] | null;
+    theme: MindMapTheme;
     publishedAt: string | null;
     updatedAt: string;
   };
@@ -77,6 +80,7 @@ interface Fields {
   intro: string;
   revisionNotes: string;
   faqs: MindMapFaq[];
+  theme: MindMapTheme;
 }
 
 const ACTION_LABELS: Record<MindMapAction, string> = {
@@ -96,7 +100,7 @@ async function api<T>(url: string, method = 'GET', body?: unknown): Promise<T> {
 }
 
 function fieldsFrom(map: EditorData['map']): Fields {
-  return { seoTitle: map.seoTitle ?? '', seoDescription: map.seoDescription ?? '', intro: map.intro ?? '', revisionNotes: map.revisionNotes ?? '', faqs: map.faqs ?? [] };
+  return { seoTitle: map.seoTitle ?? '', seoDescription: map.seoDescription ?? '', intro: map.intro ?? '', revisionNotes: map.revisionNotes ?? '', faqs: map.faqs ?? [], theme: map.theme ?? 'COLOUR' };
 }
 
 /** Curriculum items flattened with depth, for the "linked topic" picker. */
@@ -150,6 +154,7 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
     revisionNotes: fields.revisionNotes || null,
     faqs: fields.faqs.filter((f) => f.question.trim() && f.answer.trim()),
     nodes: flattenTree(tree),
+    theme: fields.theme,
   });
 
   const save = useMutation({
@@ -304,8 +309,23 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
             </div>
 
             <div className="xl:sticky xl:top-20 xl:self-start">
-              <p className="mb-2 text-sm font-medium text-foreground">Live preview</p>
-              {tree.length > 0 ? <MindMap title={title} nodes={tree} className="h-[560px] min-h-0" /> : <div className="flex h-60 items-center justify-center rounded-2xl border border-dashed border-border text-sm text-muted-foreground">Nothing to preview yet</div>}
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-foreground">Live preview</p>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  Default style
+                  <select
+                    value={fields.theme}
+                    disabled={archived}
+                    onChange={(e) => setField('theme', e.target.value as MindMapTheme)}
+                    className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                  >
+                    <option value="COLOUR">Colour branches</option>
+                    <option value="CLASSIC">Classic print (monochrome)</option>
+                  </select>
+                </label>
+              </div>
+              {/* Keyed by theme so switching the default re-applies it to the preview. */}
+              {tree.length > 0 ? <MindMap key={fields.theme} title={title} nodes={tree} theme={fields.theme} className="h-[560px] min-h-0" /> : <div className="flex h-60 items-center justify-center rounded-2xl border border-dashed border-border text-sm text-muted-foreground">Nothing to preview yet</div>}
             </div>
           </div>
         </TabsContent>
@@ -386,6 +406,7 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
                     ['Moved', diff.moved],
                     ['Description changed', diff.descriptionsChanged],
                     ['Content changed', diff.contentChanged],
+                    ['Hindi / style / tags changed', diff.formattingChanged],
                   ] as const
                 )
                   .filter(([, items]) => items.length > 0)
@@ -465,7 +486,7 @@ function TreeRows({
               <Input
                 value={n.label}
                 disabled={disabled}
-                maxLength={160}
+                maxLength={MIND_MAP_LIMITS.label}
                 onChange={(e) => onChange((t) => updateNode(t, n.id, { label: e.target.value }))}
                 aria-label="Node label"
                 className={cn('h-8 min-w-0 flex-1', depth === 0 && 'font-semibold')}
@@ -514,6 +535,58 @@ function TreeRows({
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Hindi label (shown when the reader switches to हिं)</Label>
+                  <Input value={n.labelHi ?? ''} disabled={disabled} maxLength={MIND_MAP_LIMITS.label} lang="hi" onChange={(e) => onChange((t) => updateNode(t, n.id, { labelHi: e.target.value || null }))} />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Style</Label>
+                    <select
+                      value={n.style?.heading ? 'heading' : (n.style?.border ?? 'normal')}
+                      disabled={disabled}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const style = { ...(n.style ?? {}), heading: v === 'heading' || undefined, border: v === 'dashed' || v === 'dotted' ? (v as 'dashed' | 'dotted') : undefined };
+                        onChange((t) => updateNode(t, n.id, { style }));
+                      }}
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    >
+                      <option value="normal">Normal box</option>
+                      <option value="heading">Heading (title for the facts after it)</option>
+                      <option value="dashed">Dashed border (sub-list, e.g. eligibility)</option>
+                      <option value="dotted">Dotted border</option>
+                    </select>
+                    <label className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={!!n.style?.highlight}
+                        disabled={disabled}
+                        onChange={(e) => onChange((t) => updateNode(t, n.id, { style: { ...(n.style ?? {}), highlight: e.target.checked || undefined } }))}
+                      />
+                      Highlight (marker pen)
+                    </label>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Tags (comma separated, max {MIND_MAP_LIMITS.tags})</Label>
+                    <Input
+                      defaultValue={(n.tags ?? []).join(', ')}
+                      disabled={disabled}
+                      placeholder="PYQ 2023, Important"
+                      onBlur={(e) =>
+                        onChange((t) =>
+                          updateNode(t, n.id, {
+                            tags: e.target.value
+                              .split(',')
+                              .map((x) => x.trim().slice(0, MIND_MAP_LIMITS.tag))
+                              .filter(Boolean)
+                              .slice(0, MIND_MAP_LIMITS.tags),
+                          }),
+                        )
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Short description (hover card, topic list)</Label>

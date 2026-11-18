@@ -2,7 +2,7 @@
 
 import { LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { colourFor } from './palette';
+import { CLASSIC_COLOUR, colourFor } from './palette';
 
 export interface TopicChip {
   id: string;
@@ -15,7 +15,19 @@ export interface TopicChip {
 // One-tap navigation across a chapter's main topics: "All" returns to the overview, a topic
 // opens just that branch. Each chip shows how much of its branch is done (explored, or
 // recalled in a quiz). Scrolls sideways on narrow screens.
-export function TopicChips({ topics, activeId, onSelect, progressLabel }: { topics: TopicChip[]; activeId: string | null; onSelect: (id: string | null) => void; progressLabel: string }) {
+export function TopicChips({
+  topics,
+  activeId,
+  onSelect,
+  progressLabel,
+  classic = false,
+}: {
+  topics: TopicChip[];
+  activeId: string | null;
+  onSelect: (id: string | null) => void;
+  progressLabel: string;
+  classic?: boolean;
+}) {
   if (topics.length < 2) return null;
   return (
     <nav aria-label="Jump to a topic" className="border-b border-border bg-card/80 backdrop-blur">
@@ -34,7 +46,7 @@ export function TopicChips({ topics, activeId, onSelect, progressLabel }: { topi
           </button>
         </li>
         {topics.map((t) => {
-          const colour = colourFor(t.branch);
+          const colour = classic ? CLASSIC_COLOUR : colourFor(t.branch);
           const active = activeId === t.id;
           const pct = t.total ? Math.round((t.done / t.total) * 100) : 0;
           return (

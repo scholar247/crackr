@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MIND_MAP_ACTIONS, MIND_MAP_LIMITS, MIND_MAP_STATUSES } from '@/lib/mind-maps';
+import { MIND_MAP_ACTIONS, MIND_MAP_LIMITS, MIND_MAP_STATUSES, MIND_MAP_THEMES } from '@/lib/mind-maps';
 import { findUnsafeMarkdownContent } from '@/lib/markdown-safety';
 
 const safeMarkdown = (max: number) =>
@@ -37,6 +37,17 @@ const NodeSchema = z
       .nullish()
       .transform((v) => (v ? v : null)),
     displayOrder: z.number().int().min(0).max(10_000),
+    labelHi: optionalText(MIND_MAP_LIMITS.label),
+    style: z
+      .object({ heading: z.boolean().optional(), border: z.enum(['dashed', 'dotted']).optional(), highlight: z.boolean().optional() })
+      .strict()
+      .nullish()
+      .transform((v) => v ?? null),
+    tags: z
+      .array(z.string().trim().min(1).max(MIND_MAP_LIMITS.tag))
+      .max(MIND_MAP_LIMITS.tags)
+      .nullish()
+      .transform((v) => (v && v.length ? v : null)),
   })
   .strict();
 
@@ -53,6 +64,7 @@ export const SaveMindMapSchema = z
       .array(z.object({ question: z.string().trim().min(5).max(300), answer: z.string().trim().min(5).max(2_000) }).strict())
       .max(20),
     nodes: z.array(NodeSchema).max(MIND_MAP_LIMITS.maxNodes),
+    theme: z.enum(MIND_MAP_THEMES).optional(),
   })
   .strict();
 

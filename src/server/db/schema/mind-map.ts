@@ -2,7 +2,7 @@ import { mysqlTable, mysqlEnum, varchar, text, int, json, timestamp, uniqueIndex
 import { randomUUID } from 'crypto';
 import { users } from './identity';
 import { curriculumNodes, exams } from './taxonomy';
-import { MIND_MAP_STATUSES, type MindMapFaq, type MindMapSnapshot } from '@/lib/mind-maps';
+import { MIND_MAP_STATUSES, MIND_MAP_THEMES, type MindMapFaq, type MindMapNodeStyle, type MindMapSnapshot } from '@/lib/mind-maps';
 
 // Chapter mind maps. The curriculum (curriculum_nodes / edges / exam_node_map) stays the
 // single source of truth: a map belongs to an existing CHAPTER node for an exam, and its
@@ -25,6 +25,7 @@ export const mindMaps = mysqlTable(
       .notNull()
       .references(() => curriculumNodes.id, { onDelete: 'cascade' }),
     status: mysqlEnum('status', MIND_MAP_STATUSES).notNull().default('DRAFT'),
+    theme: mysqlEnum('theme', MIND_MAP_THEMES).notNull().default('COLOUR'),
     seoTitle: varchar('seo_title', { length: 200 }),
     seoDescription: varchar('seo_description', { length: 320 }),
     intro: text('intro'),
@@ -58,7 +59,10 @@ export const mindMapNodes = mysqlTable(
     parentId: varchar('parent_id', { length: 36 }).references((): AnyMySqlColumn => mindMapNodes.id, { onDelete: 'cascade' }),
     /** The existing TOPIC/SUBTOPIC this node represents; null for an editor-added custom node. */
     curriculumNodeId: varchar('curriculum_node_id', { length: 36 }).references(() => curriculumNodes.id, { onDelete: 'set null' }),
-    label: varchar('label', { length: 160 }).notNull(),
+    label: varchar('label', { length: 300 }).notNull(),
+    labelHi: varchar('label_hi', { length: 300 }),
+    style: json('style').$type<MindMapNodeStyle>(),
+    tags: json('tags').$type<string[]>(),
     description: varchar('description', { length: 500 }),
     /** Markdown — optional extra learning content (definitions, formulas) for this node. */
     content: text('content'),

@@ -108,9 +108,14 @@ export function MindMapsClient() {
             Chapter mind maps generated from the curriculum (topics → subtopics). Edit the draft, send it for review, then publish — the public page only changes when you publish.
           </p>
         </div>
-        <Button onClick={() => setCreating(true)} disabled={exams.length === 0}>
-          <Plus className="mr-1.5 h-4 w-4" /> New mind map
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/mind-maps/samples">Style samples</Link>
+          </Button>
+          <Button onClick={() => setCreating(true)} disabled={exams.length === 0}>
+            <Plus className="mr-1.5 h-4 w-4" /> New mind map
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">

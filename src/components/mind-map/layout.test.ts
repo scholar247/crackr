@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { assignSides, branchBounds, expandableIds, fitView, layoutMindMap, layoutVertical, quizTargets, searchTree, subtreeIds, subtreeProgress, topicOf, SIZES } from './layout';
+import { assignSides, branchBounds, chooseColumns, expandableIds, fitView, layoutMindMap, layoutVertical, measureNode, quizTargets, searchTree, subtreeIds, subtreeProgress, textWidth, topicOf, wrapText, SIZES, TYPE } from './layout';
 import type { MindMapTreeNode } from '@/lib/mind-maps';
 
 const n = (id: string, children: MindMapTreeNode[] = [], description: string | null = null): MindMapTreeNode => ({ id, label: id, description, content: null, curriculumNodeId: null, children });
@@ -162,5 +162,93 @@ describe('progress helpers', () => {
   it('finds the topic a node belongs to', () => {
     assert.equal(topicOf(tree, 'Holozoic')?.id, 'Nutrition');
     assert.equal(topicOf(tree, 'missing'), null);
+  });
+});
+
+describe('text-sized boxes', () => {
+  it('wraps long facts onto more lines instead of widening forever', () => {
+    const short = measureNode({ label: 'Citizen of India' }, 2);
+    const long = measureNode({ label: 'The Vice-President shall be elected by the members of both Houses of Parliament (All MPs)' }, 2);
+    assert.ok(long.w <= TYPE.sub.maxW && long.w > short.w);
+    assert.ok(long.h > short.h, 'a long sentence takes more lines');
+    assert.equal(short.h, TYPE.sub.minH);
+  });
+
+  it('measures Devanagari, headings and tag rows', () => {
+    assert.ok(textWidth('उपराष्ट्रपति', 13) > 0);
+    assert.ok(textWidth('उपराष्ट्रपति', 13) < textWidth('उ प र ष ट र प त', 13), 'vowel signs add little width');
+    const plain = measureNode({ label: 'Election of Vice-President' }, 2);
+    const heading = measureNode({ label: 'Election of Vice-President', style: { heading: true } }, 2);
+    assert.ok(heading.h < plain.h, 'headings have a tighter box');
+    const label = 'Article 67: Term of office of Vice-President and removal';
+    assert.equal(measureNode({ label, tags: ['PYQ 2023'] }, 1).h - measureNode({ label }, 1).h, TYPE.tagRow);
+  });
+
+  it('breaks a single over-long word across lines', () => {
+    assert.ok(wrapText('x'.repeat(200), 100, 13).lines > 1);
+  });
+});
+
+describe('large maps', () => {
+  // A Parliament-sized map: 45 articles with 2–5 sentence-long facts each.
+  const fact = (a: number, i: number) => `Article ${a} fact ${i}: ${'a fairly long sentence of the kind found in polity notes '.slice(0, 30 + ((a * 7 + i * 13) % 70))}`;
+  const big = Array.from({ length: 45 }, (_, k) => n(`Article ${79 + k}`, Array.from({ length: 2 + (k % 4) }, (_, i) => n(fact(79 + k, i)))));
+  const overlaps = (boxes: { x: number; y: number; w: number; h: number }[]) => {
+    for (let i = 0; i < boxes.length; i++)
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i];
+        const b = boxes[j];
+        if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) return true;
+      }
+    return false;
+  };
+
+  it('lays out ~200 nodes with no two boxes overlapping, centre included', () => {
+    const l = layoutMindMap(big, expandableIds(big));
+    assert.ok(l.nodes.length >= 200);
+    const centre = { x: -SIZES.center.w / 2, y: -SIZES.center.h / 2, w: SIZES.center.w, h: SIZES.center.h };
+    assert.equal(overlaps([centre, ...l.nodes]), false);
+  });
+
+  it('balances the two sides', () => {
+    const l = layoutMindMap(big, expandableIds(big));
+    const right = l.nodes.filter((x) => x.side === 1).length;
+    assert.ok(Math.abs(right * 2 - l.nodes.length) < l.nodes.length * 0.1);
+  });
+
+  it('fits a fully expanded big map on a landscape page', () => {
+    const l = layoutMindMap(big, expandableIds(big));
+    const v = fitView(l.bounds, { w: 1123, h: 794 }, { padding: 24, min: 0.05, max: 1 });
+    assert.ok(v.k > 0.1, `scale ${v.k.toFixed(3)}`);
+  });
+
+  it('never overlaps in the vertical tree either', () => {
+    assert.equal(overlaps(layoutVertical(big, expandableIds(big), 360).nodes), false);
+  });
+});
+
+describe('two-column sides for big maps', () => {
+  const big = Array.from({ length: 45 }, (_, k) => n(`Article ${79 + k}`, Array.from({ length: 2 + (k % 4) }, (_, i) => n(`Article ${79 + k} fact ${i} with a reasonably long sentence to wrap`))));
+  const fit = (l: ReturnType<typeof layoutMindMap>) => fitView(l.bounds, { w: 1123, h: 794 }, { padding: 0, min: 0, max: 10 }).k;
+
+  it('uses extra columns for many topics and one for small maps', () => {
+    assert.ok(chooseColumns(big) >= 2);
+    assert.equal(chooseColumns(tree), 1);
+  });
+
+  it('fits a landscape page much better than a single tall column', () => {
+    const all = expandableIds(big);
+    assert.ok(fit(layoutMindMap(big, all)) > fit(layoutMindMap(big, all, { columns: 1 })) * 1.4);
+  });
+
+  it('keeps the bus corridor at y = 0 free of inner-column boxes', () => {
+    const l = layoutMindMap(big, expandableIds(big));
+    const busTopics = new Set(l.links.filter((x) => x.depth === 1 && x.d.includes(' V ')).map((x) => x.id));
+    assert.ok(busTopics.size > 0);
+    const innerIds = new Set(l.nodes.filter((x) => x.depth === 1 && !busTopics.has(x.id)).map((x) => x.id));
+    // Every box belonging to an inner-column subtree stays clear of y = 0.
+    const topicOfNode = new Map<string, string>();
+    for (const x of l.nodes) topicOfNode.set(x.id, x.depth === 1 ? x.id : topicOfNode.get(x.parentId!)!);
+    for (const x of l.nodes) if (innerIds.has(topicOfNode.get(x.id)!)) assert.ok(x.y + x.h <= 0 || x.y >= 0, `${x.id} crosses the corridor`);
   });
 });

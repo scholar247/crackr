@@ -2,6 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
+import NextImage from 'next/image';
+import { Noto_Sans_Devanagari } from 'next/font/google';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -18,6 +20,7 @@ import {
   FoldVertical,
   Info,
   Keyboard,
+  Palette,
   Link2,
   Maximize2,
   Minimize2,
@@ -36,15 +39,25 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
-import { MIND_MAP_FOCUS_PARAM, type MindMapTreeNode } from '@/lib/mind-maps';
+import { MIND_MAP_FOCUS_PARAM, type MindMapTheme, type MindMapTreeNode } from '@/lib/mind-maps';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { SIZES, branchBounds, expandableIds, fitView, layoutMindMap, layoutVertical, quizTargets, searchTree, subtreeIds, subtreeProgress, topicOf, type LaidOutNode } from './layout';
+import { SIZES, TYPE, typeFor, branchBounds, expandableIds, fitView, layoutMindMap, layoutVertical, quizTargets, searchTree, subtreeIds, subtreeProgress, topicOf, type LaidOutNode } from './layout';
 import { Confetti } from './confetti';
 import { ProgressRing } from './progress-ring';
 import { TopicChips } from './topic-chips';
-import { CENTRE_CLASSES, colourFor } from './palette';
+import { CENTRE_CLASSES, CLASSIC_CENTRE_CLASSES, CLASSIC_COLOUR, colourFor } from './palette';
 
 // Markdown (with maths) only loads when a node with extra content is opened.
+const devanagari = Noto_Sans_Devanagari({ subsets: ['devanagari'], weight: ['400', '600', '700'], variable: '--font-devanagari', display: 'swap' });
+
+/** The tree with Hindi labels where a node has one (others stay as they are). */
+function withHindi(nodes: MindMapTreeNode[]): MindMapTreeNode[] {
+  return nodes.map((n) => ({ ...n, label: n.labelHi || n.label, children: withHindi(n.children) }));
+}
+function anyHindi(nodes: MindMapTreeNode[]): boolean {
+  return nodes.some((n) => !!n.labelHi || anyHindi(n.children));
+}
+
 const BlogContent = dynamic(() => import('@/components/blog/blog-content').then((m) => m.BlogContent), { ssr: false });
 
 export interface NodeResources {
@@ -72,10 +85,12 @@ interface MindMapProps {
    * ancestors expanded, node selected, view centred (e.g. a topic link from the syllabus).
    */
   focusIndex?: Record<string, string>;
+  /** Initial look: a colour per branch, or the monochrome print style. Readers can switch. */
+  theme?: MindMapTheme;
   className?: string;
 }
 
-const MIN_ZOOM = 0.3;
+const MIN_ZOOM = 0.12; // low enough to see a whole 200-node map at once
 const MAX_ZOOM = 2.5;
 const clampZoom = (k: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, k));
 const PRINT_BOX = { w: 1040, h: 700 }; // A4 landscape at 96 dpi, minus margins
@@ -207,7 +222,13 @@ const scrollBehavior = (): ScrollBehavior => (window.matchMedia('(prefers-reduce
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function MindMap({ title, nodes, resources = {}, storageKey, analytics, shareUrl, focusIndex, className }: MindMapProps) {
+export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey, analytics, shareUrl, focusIndex, theme = 'COLOUR', className }: MindMapProps) {
+  const [classic, setClassic] = useState(theme === 'CLASSIC');
+  const paint = (branch: number) => (classic ? CLASSIC_COLOUR : colourFor(branch));
+  // Language: Hindi labels where the editor added them.
+  const hasHindi = useMemo(() => anyHindi(sourceNodes), [sourceNodes]);
+  const [lang, setLang] = useState<'en' | 'hi'>('en');
+  const nodes = useMemo(() => (lang === 'hi' ? withHindi(sourceNodes) : sourceNodes), [lang, sourceNodes]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -233,6 +254,17 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
     return m;
   }, [nodes]);
   const totalNodes = index.size;
+  const sourceIndex = useMemo(() => {
+    const m = new Map<string, MindMapTreeNode>();
+    const visit = (list: MindMapTreeNode[]) => {
+      for (const n of list) {
+        m.set(n.id, n);
+        visit(n.children);
+      }
+    };
+    visit(sourceNodes);
+    return m;
+  }, [sourceNodes]);
 
   // `?focus=<slug>` deep link. useSearchParams is available during the server render of
   // these (dynamic) pages, so the focused state is identical in the HTML and on hydration.
@@ -866,7 +898,7 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
             <div className="min-w-0">
               {selected.path.length > 0 && <p className="truncate text-[11px] text-muted-foreground">{[title.chapter, ...selected.path].join(' › ')}</p>}
               <h3 className="mt-0.5 flex items-center gap-2 font-semibold text-foreground">
-                <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', colourFor(selectedLayout.branch).dot)} aria-hidden />
+                <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', paint(selectedLayout.branch).dot)} aria-hidden />
                 {selectedHidden ? 'What is this?' : selected.node.label}
               </h3>
             </div>
@@ -917,6 +949,20 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                   <XCircle className="h-3.5 w-3.5" /> Missed
                 </button>
               </div>
+            </div>
+          )}
+          {(() => {
+            const src = sourceIndex.get(selected.node.id);
+            const other = lang === 'hi' ? src?.label : src?.labelHi;
+            return other && other !== selected.node.label ? <p className="mt-1 text-sm text-muted-foreground">{other}</p> : null;
+          })()}
+          {selected.node.tags && selected.node.tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {selected.node.tags.map((t) => (
+                <span key={t} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  {t}
+                </span>
+              ))}
             </div>
           )}
           {selected.node.description && <p className="text-body-sm mt-2 text-muted-foreground">{selected.node.description}</p>}
@@ -972,9 +1018,12 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
       data-mindmap-print-root
       className={cn(
         'relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface-container-lowest',
+        devanagari.variable,
         compact ? fullscreen && 'h-screen overflow-y-auto rounded-none' : fullscreen ? 'h-screen rounded-none' : 'h-[min(78vh,720px)] min-h-[480px]',
         className,
       )}
+      // Latin from the site font, Devanagari (Hindi / Hinglish) from Noto Sans Devanagari.
+      style={{ fontFamily: `var(--font-geist, ui-sans-serif), ${devanagari.style.fontFamily}, sans-serif` }}
     >
       {/* Print-only heading */}
       <div className="hidden p-4 print:block">
@@ -1075,8 +1124,24 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                 <Brain className="h-4 w-4" /> Quiz me
               </button>
             )}
+            {hasHindi && (
+              <div role="group" aria-label="Language" className="flex rounded-full border border-border p-0.5 text-xs font-semibold">
+                {(['en', 'hi'] as const).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => setLang(l)}
+                    aria-pressed={lang === l}
+                    className={cn('rounded-full px-2.5 py-1 transition-colors pointer-coarse:py-1.5', lang === l ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}
+                  >
+                    {l === 'en' ? 'EN' : 'हिं'}
+                  </button>
+                ))}
+              </div>
+            )}
             {!compact && (
               <>
+                <ToolButton label={classic ? 'Colour style' : 'Classic print style'} onClick={() => setClassic((c) => !c)} icon={<Palette className="h-4 w-4" />} />
                 <ToolButton label="Expand all (E)" onClick={expandAll} icon={<UnfoldVertical className="h-4 w-4" />} text="Expand all" />
                 <ToolButton label="Collapse to topics (C)" onClick={collapseAll} icon={<FoldVertical className="h-4 w-4" />} text="Collapse" />
                 <ToolButton label="Fit to screen (0)" onClick={fit} icon={<Scan className="h-4 w-4" />} />
@@ -1104,6 +1169,11 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                     </DropdownMenuItem>
                   </>
                 )}
+                {compact && (
+                  <DropdownMenuItem onSelect={() => setClassic((c) => !c)}>
+                    <Palette className="h-4 w-4" /> {classic ? 'Colour style' : 'Classic print style'}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={() => print('pdf')}>
                   <FileDown className="h-4 w-4" /> Download PDF
                 </DropdownMenuItem>
@@ -1117,11 +1187,11 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
             </DropdownMenu>
           </div>
         </div>
-        <TopicChips topics={topicChips} activeId={activeTopicId} onSelect={onTopicChip} progressLabel={quiz ? 'recalled' : 'explored'} />
+        <TopicChips topics={topicChips} activeId={activeTopicId} onSelect={onTopicChip} progressLabel={quiz ? 'recalled' : 'explored'} classic={classic} />
       </div>
 
       {/* Map area */}
-      <div className={cn('relative', !compact && 'min-h-0 flex-1')}>
+      <div className={cn('relative', !compact && 'min-h-0 flex-1 overflow-hidden')}>
         {compact && coach && (
           <div data-mindmap-chrome className="mx-3 mt-3 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm text-foreground">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
@@ -1138,7 +1208,7 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
           ref={viewportRef}
           role={compact ? 'group' : 'application'}
           aria-label={compact ? `${title.chapter} mind map` : `${title.chapter} mind map. Use Tab to move between topics, arrow keys to expand and navigate. Press ? for shortcuts.`}
-          className={compact ? 'relative px-3 pt-3 pb-5' : 'absolute inset-0 cursor-grab touch-none select-none active:cursor-grabbing'}
+          className={cn(compact ? 'relative px-3 pt-3 pb-5' : 'absolute inset-0 cursor-grab touch-none select-none active:cursor-grabbing', classic && 'bg-white text-neutral-950')}
           onPointerDown={compact ? undefined : onPointerDown}
           onPointerMove={compact ? undefined : onPointerMove}
           onPointerUp={compact ? undefined : onPointerUp}
@@ -1150,7 +1220,7 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
             compact
               ? undefined
               : {
-                  backgroundImage: 'radial-gradient(circle, color-mix(in oklab, var(--border) 80%, transparent) 1px, transparent 1px)',
+                  backgroundImage: classic ? 'radial-gradient(circle, #e5e5e5 1px, transparent 1px)' : 'radial-gradient(circle, color-mix(in oklab, var(--border) 80%, transparent) 1px, transparent 1px)',
                   backgroundSize: '22px 22px',
                 }
           }
@@ -1175,27 +1245,37 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                   pathLength={1}
                   fill="none"
                   strokeLinecap="round"
-                  strokeWidth={l.depth === 1 ? 3 : 2}
-                  className={cn('mm-draw', colourFor(l.branch).stroke, l.depth > 1 && 'opacity-60', searching && !matchSet.has(l.id) && 'opacity-20', 'transition-opacity')}
+                  strokeWidth={l.depth === 1 ? 3.5 : l.depth === 2 ? 2 : 1.4}
+                  className={cn('mm-draw', paint(l.branch).stroke, l.depth > 2 && 'opacity-70', searching && !matchSet.has(l.id) && 'opacity-20', 'transition-opacity')}
                 />
               ))}
             </svg>
 
             {/* Central node */}
             <div
-              className={cn('absolute flex flex-col items-center justify-center rounded-2xl border-2 px-4 text-center shadow-lg', CENTRE_CLASSES)}
+              className={cn('absolute flex flex-col items-center justify-center rounded-2xl border-2 px-4 text-center shadow-lg', classic ? CLASSIC_CENTRE_CLASSES : CENTRE_CLASSES)}
               style={{ left: centreBox.x, top: centreBox.y, width: centreBox.w, height: centreBox.h }}
             >
-              <span className="text-[10px] font-semibold tracking-widest uppercase opacity-80">
-                {title.eyebrow} · {title.subject}
-              </span>
-              <span className="mt-1 line-clamp-2 text-base leading-tight font-bold">{title.chapter}</span>
+              {classic ? (
+                <NextImage src="/logo.svg" alt="" width={110} height={21} className="h-auto w-[110px] opacity-90" />
+              ) : (
+                <span className="text-[10px] font-semibold tracking-widest uppercase opacity-80">
+                  {title.eyebrow} · {title.subject}
+                </span>
+              )}
+              <span className={cn('mt-1.5 line-clamp-2 leading-tight font-bold', classic ? 'text-xl' : 'text-lg')}>{title.chapter}</span>
+              {classic && <span className="mt-0.5 text-[10px] font-medium tracking-wider uppercase opacity-60">{title.subject}</span>}
             </div>
 
           {/* Topic nodes */}
           {layout.nodes.map((n) => {
-            const colour = colourFor(n.branch);
             const entry = index.get(n.id);
+            const colour = paint(n.branch);
+            const type = typeFor(n.depth, entry?.node);
+            const nodeStyle = entry?.node.style;
+            const tags = entry?.node.tags;
+            // Left side mirrors the right: text sits next to its connector.
+            const mirrored = !compact && n.side === -1;
             const res = resources[n.id];
             const isSelected = selectedId === n.id;
             const isMatch = matchSet.has(n.id);
@@ -1228,17 +1308,22 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                       : `${n.label}${hint ? `, ${hint}` : ''}${n.childCount > 0 ? (n.expanded ? ', expanded' : ', collapsed') : ''}`
                   }
                   className={cn(
-                    'relative flex h-full w-full scroll-mt-40 items-center gap-2 rounded-xl text-left shadow-sm transition-[box-shadow,transform,opacity] duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95',
-                    n.depth === 1 ? cn('border-2 px-3', colour.topic) : cn('border px-3', colour.sub),
+                    'relative flex h-full w-full scroll-mt-40 items-center gap-2 rounded-xl shadow-sm transition-[box-shadow,transform,opacity] duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95',
+                    mirrored ? 'flex-row-reverse text-right' : 'text-left',
+                    n.depth === 1 ? cn('border-2', classic && 'rounded-full', colour.topic) : cn('border', colour.sub),
+                    // A heading introduces the facts after it: a title with an underline, no box.
+                    nodeStyle?.heading && n.depth > 1 && 'rounded-none border-0 border-b-2 bg-transparent shadow-none hover:shadow-none',
+                    nodeStyle?.border === 'dashed' && 'border-dashed',
+                    nodeStyle?.border === 'dotted' && 'border-dotted',
                     colour.ring.replace('ring-', 'focus-visible:ring-'),
                     isSelected && cn('ring-2 ring-offset-2 ring-offset-background', colour.ring),
                     isMatch && 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-background',
                     searching && !isMatch && 'opacity-40',
                     hidden && 'border-dashed',
-                    compact && n.depth === 1 && 'text-base',
                   )}
+                  style={{ paddingInline: type.padX, paddingBlock: type.padY }}
                 >
-                  {n.depth > 1 && <span className={cn('h-2 w-2 shrink-0 rounded-full', colour.dot)} aria-hidden />}
+                  {n.depth > 1 && !nodeStyle?.heading && <span className={cn('h-2 w-2 shrink-0 rounded-full', colour.dot)} aria-hidden />}
                   {hidden ? (
                     // Placeholder bars instead of the label; the real text isn't rendered at all.
                     <span className="flex min-w-0 flex-1 items-center gap-2" aria-hidden>
@@ -1249,7 +1334,24 @@ export function MindMap({ title, nodes, resources = {}, storageKey, analytics, s
                       <span className="shrink-0 text-[11px] font-semibold opacity-60">Tap</span>
                     </span>
                   ) : (
-                    <span className={cn('line-clamp-2 min-w-0 flex-1 leading-snug', n.depth === 1 ? 'text-sm font-semibold' : 'text-[13px] font-medium', compact && showInfo && 'pr-9')}>{n.label}</span>
+                    <span className={cn('min-w-0 flex-1 break-words', compact && showInfo && 'pr-9')}>
+                      {/* Exactly the sizes the layout measured with (TYPE in layout.ts). */}
+                      <span
+                        className={cn(type.bold ? 'font-semibold' : 'font-normal', nodeStyle?.highlight && 'box-decoration-clone bg-[linear-gradient(transparent_50%,rgb(253_224_71/0.75)_50%)] text-inherit dark:bg-[linear-gradient(transparent_50%,rgb(202_138_4/0.6)_50%)]')}
+                        style={{ fontSize: type.font, lineHeight: `${type.line}px` }}
+                      >
+                        {n.label}
+                      </span>
+                      {tags && tags.length > 0 && (
+                        <span className={cn('mt-1 flex flex-wrap gap-1 overflow-hidden', mirrored && 'justify-end')} style={{ height: TYPE.tagRow - 4 }}>
+                          {tags.map((t) => (
+                            <span key={t} className="rounded bg-foreground/10 px-1.5 text-[10px] leading-4 font-semibold tracking-wide uppercase opacity-80">
+                              {t}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </span>
                   )}
                   {quizMark === 'knew' && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="You knew this" />}
                   {quizMark === 'missed' && <XCircle className="h-4 w-4 shrink-0 text-warning" aria-label="You missed this" />}

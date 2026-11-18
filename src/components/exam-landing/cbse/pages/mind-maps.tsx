@@ -217,8 +217,9 @@ function ChapterPage({ board, data }: { board: CbseBoard; data: ChapterMindMap }
           analytics={analytics}
           shareUrl={absoluteUrl(path)}
           focusIndex={data.focusIndex}
+          theme={data.snapshot.theme}
         />
-        <p className="mt-2 text-xs text-muted-foreground">Tap a topic to expand it and see its practice questions. On a phone, drag to move and pinch to zoom.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Tap a topic to open it and see its practice questions. Use Quiz me to test your recall.</p>
       </section>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">

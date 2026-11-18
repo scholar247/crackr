@@ -86,6 +86,9 @@ async function listNodes(mindMapId: string): Promise<FlatMindMapNode[]> {
       description: mindMapNodes.description,
       content: mindMapNodes.content,
       displayOrder: mindMapNodes.displayOrder,
+      labelHi: mindMapNodes.labelHi,
+      style: mindMapNodes.style,
+      tags: mindMapNodes.tags,
     })
     .from(mindMapNodes)
     .where(eq(mindMapNodes.mindMapId, mindMapId))
@@ -124,6 +127,7 @@ async function saveDraft(id: string, input: SaveMindMapInput, updatedBy: string 
         intro: input.intro,
         revisionNotes: input.revisionNotes,
         faqs: input.faqs,
+        ...(input.theme ? { theme: input.theme } : {}),
         updatedBy,
         updatedAt: now(),
       })

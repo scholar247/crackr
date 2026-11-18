@@ -161,6 +161,7 @@ export async function changeMindMapStatus(id: string, action: MindMapAction, use
       revisionNotes: map.revisionNotes,
       faqs: map.faqs ?? [],
       nodes,
+      theme: map.theme,
     };
     await mindMapRepository.setStatus(id, next, userId, snapshot);
   } else {

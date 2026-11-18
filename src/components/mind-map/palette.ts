@@ -59,3 +59,16 @@ export const BRANCH_COLOURS: BranchColour[] = [
 export const colourFor = (branch: number) => BRANCH_COLOURS[branch % BRANCH_COLOURS.length];
 
 export const CENTRE_CLASSES = 'border-indigo-950 bg-indigo-900 text-white dark:border-indigo-400 dark:bg-indigo-700';
+
+/**
+ * Classic (print) theme: monochrome on white paper, in light and dark mode alike — black
+ * text, dark borders on main topics, grey connectors. Prints and photocopies cleanly.
+ */
+export const CLASSIC_COLOUR: BranchColour = {
+  topic: 'border-neutral-800 bg-white text-neutral-950',
+  sub: 'border-neutral-400 bg-white text-neutral-900',
+  stroke: 'stroke-neutral-500',
+  dot: 'bg-neutral-500',
+  ring: 'ring-neutral-900',
+};
+export const CLASSIC_CENTRE_CLASSES = 'border-neutral-300 bg-gradient-to-b from-[#f2f2f2] to-[#d9d9d9] text-neutral-950 shadow-xl';
