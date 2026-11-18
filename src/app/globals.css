@@ -1088,3 +1088,24 @@ html[data-mindmap-quiz] [data-quiz-conceal]::after {
 @media print {
   .mm-draw { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
 }
+
+/* Exam home: soft floating glow blobs in the hero (decorative; motion-safe only). */
+@media (prefers-reduced-motion: no-preference) {
+  .exam-float {
+    animation: exam-float 14s ease-in-out infinite;
+  }
+  .exam-float-slow {
+    animation: exam-float 20s ease-in-out infinite reverse;
+  }
+  @keyframes exam-float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(24px, -18px) scale(1.06); }
+  }
+  .exam-pop {
+    animation: exam-pop 3.2s ease-in-out infinite;
+  }
+  @keyframes exam-pop {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+}

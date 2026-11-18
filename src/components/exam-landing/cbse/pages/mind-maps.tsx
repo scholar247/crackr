@@ -208,6 +208,8 @@ function ChapterPage({ board, data }: { board: CbseBoard; data: ChapterMindMap }
       title={title}
       intro={intro}
       compact
+      // The map has its own bottom controls (study sheet, presentation bar) on phones.
+      dock={false}
     >
       <section id={MIND_MAP_ANCHOR} aria-label={`${data.chapter.name} interactive mind map`} className="scroll-mt-32">
         <MindMap
@@ -249,7 +251,7 @@ function ChapterPage({ board, data }: { board: CbseBoard; data: ChapterMindMap }
           </div>
         </PageSection>
 
-        <aside className="space-y-4 lg:sticky lg:top-32" aria-label="Revision and practice">
+        <aside className="space-y-4 lg:sticky lg:top-28" aria-label="Revision and practice">
           <RevisionChecklist storageKey={`mindmap-revised:${board.examSlug}:${data.chapter.id}`} topics={topics.map((t) => ({ id: t.id, label: t.label, subtopics: countNodes(t.children) }))} />
 
           <div className="rounded-2xl border border-border bg-card p-5">

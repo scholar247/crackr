@@ -2,7 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 import { BookOpen, CalendarDays, FileCheck2, GraduationCap } from 'lucide-react';
 import type { ExamSubpage } from '@/components/exam-landing/registry';
 import type { Crumb } from '@/components/exam-landing/shared/breadcrumbs';
-import { ExamPageShell, type NextStep } from '@/components/exam-landing/shared/exam-page-shell';
+import { ExamPageShell, SECTION_HEADING, type NextStep } from '@/components/exam-landing/shared/exam-page-shell';
+import { MobileDock } from '../mobile-dock';
 import { JsonLd } from '@/components/exam-landing/shared/json-ld';
 import { SamplePaperStepper, samplePaperSteps } from '@/components/sample-papers/sample-paper-stepper';
 import { YearGrid, summariseYears } from '@/components/sample-papers/year-grid';
@@ -48,6 +49,8 @@ function Shell({
     <ExamPageShell
       {...rest}
       nav={<CbseNav board={board} current="sample-papers" />}
+      sectionKey="sample-papers"
+      dock={<MobileDock board={board} current="sample-papers" />}
       crumbs={[{ label: 'Home', href: '/' }, { label: 'Exams', href: '/exams' }, { label: board.label, href: cbsePath(board.examSlug) }, ...crumbs]}
       nextStepsTitle={nextStepsTitle}
       nextSteps={nextSteps}
@@ -102,7 +105,7 @@ function HubPage({ board, data }: { board: CbseBoard; data: Data }) {
       <SamplePaperStepper steps={stepper} current={current} />
 
       <section aria-labelledby="sessions-heading">
-        <h2 id="sessions-heading" className="text-headline-md text-foreground">
+        <h2 id="sessions-heading" className={SECTION_HEADING}>
           Choose a session
         </h2>
         <p className="text-body-md mt-1.5 text-muted-foreground">Start with the latest paper; earlier sessions are good extra practice on the same chapters.</p>
@@ -171,7 +174,7 @@ function YearPage({ board, data, year }: { board: CbseBoard; data: Data; year: n
       <section aria-labelledby="subjects-heading">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 id="subjects-heading" className="text-headline-md text-foreground">
+            <h2 id="subjects-heading" className={SECTION_HEADING}>
               Choose a subject
             </h2>
             <p className="text-body-md mt-1.5 text-muted-foreground">
@@ -245,7 +248,7 @@ function PaperPage({ board, data, paper }: { board: CbseBoard; data: Data; paper
       </section>
 
       <section aria-labelledby="about-heading">
-        <h2 id="about-heading" className="text-headline-md text-foreground">
+        <h2 id="about-heading" className={SECTION_HEADING}>
           About this sample paper
         </h2>
         <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -263,7 +266,7 @@ function PaperPage({ board, data, paper }: { board: CbseBoard; data: Data; paper
       </section>
 
       <section aria-labelledby="how-heading">
-        <h2 id="how-heading" className="text-headline-md text-foreground">
+        <h2 id="how-heading" className={SECTION_HEADING}>
           How to practise with the {paper.subject} sample paper
         </h2>
         <ol className="text-body-md mt-4 list-decimal space-y-2 pl-5 text-muted-foreground marker:font-semibold marker:text-primary">
@@ -276,7 +279,7 @@ function PaperPage({ board, data, paper }: { board: CbseBoard; data: Data; paper
 
       {sameYear.length > 0 && (
         <section aria-labelledby="more-heading">
-          <h2 id="more-heading" className="text-headline-md text-foreground">
+          <h2 id="more-heading" className={SECTION_HEADING}>
             Other {config.label} sample papers {period}
           </h2>
           <div className="mt-5">

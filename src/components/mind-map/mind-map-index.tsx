@@ -1,5 +1,6 @@
 'use client';
 
+import { SECTION_HEADING } from '@/components/exam-landing/shared/exam-nav-icons';
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Network, Search } from 'lucide-react';
@@ -47,7 +48,7 @@ export function MindMapIndex({ subjects, classLabel, analyticsExam }: { subjects
           {filtered.map((s) => (
             <section key={s.id} aria-labelledby={`mm-${s.id}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 id={`mm-${s.id}`} className="text-headline-md text-foreground">
+                <h2 id={`mm-${s.id}`} className={SECTION_HEADING}>
                   <Link href={s.href} className="hover:text-primary">
                     {classLabel} {s.name} mind maps
                   </Link>

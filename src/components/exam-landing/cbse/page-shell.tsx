@@ -3,6 +3,7 @@ import type { Crumb } from '@/components/exam-landing/shared/breadcrumbs';
 import { ExamNav, ExamPageShell } from '@/components/exam-landing/shared/exam-page-shell';
 import type { CbseBoard } from '@/content/exams/cbse/types';
 import { cbseNavItems, cbsePath, cbseSteps, type CbseNavKey } from './paths';
+import { MobileDock } from './mobile-dock';
 
 /** The CBSE section menu (Overview, Syllabus, Paper pattern…) for one class. */
 export function CbseNav({ board, current }: { board: CbseBoard; current?: CbseNavKey }) {
@@ -16,6 +17,7 @@ export function CbsePageShell({
   current,
   crumbs = [],
   next,
+  dock = true,
   ...rest
 }: {
   board: CbseBoard;
@@ -28,6 +30,8 @@ export function CbsePageShell({
   intro: ReactNode;
   aside?: ReactNode;
   compact?: boolean;
+  /** Phone/tablet bottom bar (off where the page has its own bottom controls). */
+  dock?: boolean;
   children: ReactNode;
 }) {
   const steps = cbseSteps(board);
@@ -38,6 +42,8 @@ export function CbsePageShell({
     <ExamPageShell
       {...rest}
       nav={<CbseNav board={board} current={current} />}
+      sectionKey={current}
+      dock={dock ? <MobileDock board={board} current={current} /> : undefined}
       crumbs={[
         { label: 'Home', href: '/' },
         { label: 'Exams', href: '/exams' },

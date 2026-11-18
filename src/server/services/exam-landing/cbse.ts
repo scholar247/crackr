@@ -40,6 +40,8 @@ export interface LandingChapter {
   notesHref: string;
   /** Published mind map for this chapter, if any. */
   mindMapHref: string | null;
+  /** Main topics in that mind map (0 when none). */
+  mindMapTopics: number;
 }
 
 export interface LandingSubject {
@@ -101,6 +103,7 @@ export async function getCbseLandingData(exam: LandingExam, userId: string | nul
     mindMapRepository.listPublishedByExam(exam.id),
   ]);
   const publishedMindMaps = new Set(mindMaps.map((m) => m.chapterNodeId));
+  const mindMapTopics = new Map(mindMaps.map((m) => [m.chapterNodeId, m.topicCount]));
 
   const questionCounts = await questionRepository.countPublishedByNodes([...collectIds(syllabus)], exam.id);
 
@@ -136,8 +139,23 @@ export async function getCbseLandingData(exam: LandingExam, userId: string | nul
         practiceHref: practiceHref(exam.slug, subject.id, chapter.id),
         notesHref: blogsPath(exam.slug, [subject, chapter]),
         mindMapHref: publishedMindMaps.has(chapter.id) ? mindMapsPath(exam.slug, subject.slug, chapter.slug) : null,
+        mindMapTopics: mindMapTopics.get(chapter.id) ?? 0,
       })),
   }));
+
+  // Chapters with a published mind map, interleaved across subjects so the home page's
+  // spotlight shows variety (Science, Maths, English… rather than one subject first).
+  // Subjects with the most maps lead; within a subject, the richest maps first.
+  const bySubject = subjects
+    .map((s) =>
+      s.chapters
+        .filter((c) => c.mindMapHref)
+        .sort((a, b) => b.mindMapTopics - a.mindMapTopics)
+        .map((c) => ({ chapterId: c.id, chapter: c.name, subject: s.name, subjectKey: s.key, href: c.mindMapHref!, topics: c.mindMapTopics })),
+    )
+    .sort((a, b) => b.length - a.length);
+  const featuredMindMaps: { chapterId: string; chapter: string; subject: string; subjectKey: CbseSubjectKey | null; href: string; topics: number }[] = [];
+  for (let i = 0; bySubject.some((list) => i < list.length); i++) for (const list of bySubject) if (list[i]) featuredMindMaps.push(list[i]);
 
   const mocks: LandingMock[] = [
     ...officialMocks.map((m) => ({ id: m.id, title: m.title, durationSeconds: m.durationSeconds, kind: 'official' as const })),
@@ -157,6 +175,13 @@ export async function getCbseLandingData(exam: LandingExam, userId: string | nul
     // `isNew` is decided here (request time) rather than in a component, so render stays pure.
     notifications: notifications.map((n) => ({ ...n, isNew: Date.now() - n.publishedAt.getTime() < NEW_NOTICE_DAYS * 86_400_000 })),
     samplePaperCount: samplePapers.length,
+    featuredMindMaps,
+    mindMapCount: featuredMindMaps.length,
+    // Whole days until the board exam starts (request time, like isNew above); null once it has begun.
+    daysToExam: (() => {
+      const days = Math.ceil((new Date(board.boardExam.startsOn).getTime() - Date.now()) / 86_400_000);
+      return days > 0 ? days : null;
+    })(),
     links: {
       practice: practiceHref(exam.slug),
       practiceHub: `/practice/exams/${exam.slug}`,

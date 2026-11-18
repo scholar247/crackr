@@ -17,6 +17,8 @@ const clip = (s: string | null, max: number) => {
 
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams;
+  // kind=exam: the exam home page card (subjects around the board name).
+  const exam = q.get('kind') === 'exam';
   const chapter = clip(q.get('chapter'), 70) || 'Mind map';
   const subject = clip(q.get('subject'), 40);
   const eyebrow = clip(q.get('eyebrow'), 40);
@@ -50,11 +52,11 @@ export async function GET(req: Request) {
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#4f46e5', letterSpacing: 2, textTransform: 'uppercase' }}>{[eyebrow, subject].filter(Boolean).join(' · ')}</div>
             <div style={{ marginTop: 18, fontSize: chapter.length > 32 ? 52 : 64, fontWeight: 800, color: '#111827', lineHeight: 1.08 }}>{chapter}</div>
-            <div style={{ marginTop: 18, fontSize: 30, color: '#374151' }}>Mind Map</div>
+            <div style={{ marginTop: 18, fontSize: 30, color: '#374151' }}>{exam ? 'Board Exam Preparation' : 'Mind Map'}</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', gap: 12 }}>
-              {['Interactive', 'Quiz me', 'Flashcards'].map((t) => (
+              {(exam ? ['Mind maps', 'MCQs', 'Sample papers'] : ['Interactive', 'Quiz me', 'Flashcards']).map((t) => (
                 <div key={t} style={{ display: 'flex', padding: '8px 16px', borderRadius: 999, background: '#e0e7ff', color: '#3730a3', fontSize: 20, fontWeight: 600 }}>
                   {t}
                 </div>

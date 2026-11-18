@@ -1262,7 +1262,7 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
           : fullscreen
             ? 'h-screen rounded-none'
             : size === 'tall'
-              ? 'h-[calc(100svh-8.5rem)] max-h-[960px] min-h-[560px]' // below the site header + section nav
+              ? 'h-[calc(100svh-7.25rem)] max-h-[960px] min-h-[560px]' // below the site header (56px) + section bar (44px)
               : 'h-[min(78vh,720px)] min-h-[480px]',
         className,
       )}

@@ -10,19 +10,22 @@ import { NotificationTicker } from '@/components/notifications/notification-tick
 import { NotificationContent } from '@/components/notifications/notification-content';
 import { CbseHero } from './hero';
 import { CbseNav } from './page-shell';
-import { ResourceCards } from './resource-cards';
+import { QuickActions } from './quick-actions';
+import { MindMapSpotlight } from './mind-map-spotlight';
+import { MobileDock } from './mobile-dock';
 import { ExamGlance } from './exam-glance';
 import { SubjectResources } from './subject-resources';
 import { NotesGrid } from './study-notes';
 import { PrepRoadmap } from './prep-roadmap';
 import { FinalCta } from './final-cta';
 import { cbsePath, cbseSteps } from './paths';
-import { collectionPageJsonLd } from './seo';
+import { absoluteUrl, collectionPageJsonLd } from './seo';
 
-// The exam home: a hub that answers "where do I start?" and routes to each resource's own
-// page. What's new comes first — a headline ticker and the notification board, where
-// notices are read in full (they have no pages of their own) — then resources → key facts →
-// subjects → reading → where I am in the year → common questions.
+// The exam home: a hub that answers "where do I start?" and deep-links into each tool.
+// Order: what's new (ticker + notification board, read in full here) and a countdown →
+// quick actions → the mind-map spotlight (with the visitor's own "continue" row) → key
+// facts → subjects → notes → where I am in the year → common questions. Phones and
+// tablets also get an app-style bottom bar.
 export function CbseLanding({ data }: { data: CbseLandingData }) {
   const { board, subjects, stats, links } = data;
   const phase = currentPhase(board.roadmap);
@@ -44,7 +47,7 @@ export function CbseLanding({ data }: { data: CbseLandingData }) {
   }));
 
   return (
-    <main>
+    <main id="top" className="scroll-mt-32 pb-20 lg:pb-0">
       <CbseNav board={board} current="overview" />
       <NotificationTicker
         notices={notices.slice(0, 8).map(({ id, slug: s, title, publishedAt, isImportant }) => ({ id, slug: s, title, publishedAt, isImportant }))}
@@ -54,6 +57,9 @@ export function CbseLanding({ data }: { data: CbseLandingData }) {
         practiceHref={links.practice}
         phase={phase}
         stats={stats}
+        mindMapCount={data.mindMapCount}
+        samplePaperCount={data.samplePaperCount}
+        daysToExam={data.daysToExam}
         notifications={
           <NotificationBoard
             notices={notices}
@@ -63,7 +69,7 @@ export function CbseLanding({ data }: { data: CbseLandingData }) {
         }
       />
 
-      <ResourceCards
+      <QuickActions
         board={board}
         counts={{
           subjects: stats.subjects,
@@ -72,8 +78,11 @@ export function CbseLanding({ data }: { data: CbseLandingData }) {
           articles: stats.articles,
           mocks: data.mocks.length,
           samplePapers: data.samplePaperCount,
+          mindMaps: data.mindMapCount,
         }}
       />
+
+      <MindMapSpotlight board={board} maps={data.featuredMindMaps} />
 
       <ExamGlance board={board} />
 
@@ -107,12 +116,24 @@ export function CbseLanding({ data }: { data: CbseLandingData }) {
           path: cbsePath(slug),
           name: `${board.label} Board Exam Preparation`,
           description: board.heroDescription,
-          items: (['syllabus', 'paper-pattern', 'practice', 'notes', 'mock-tests', 'sample-papers'] as const).map((k) => ({
+          items: (['syllabus', 'paper-pattern', 'practice', 'mind-maps', 'notes', 'mock-tests', 'sample-papers'] as const).map((k) => ({
             name: steps[k].label,
             path: steps[k].href,
           })),
         })}
       />
+      {data.featuredMindMaps.length > 0 && (
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: `${board.label} chapter mind maps`,
+            itemListElement: data.featuredMindMaps.map((m, i) => ({ '@type': 'ListItem', position: i + 1, name: `${m.subject} — ${m.chapter} mind map`, url: absoluteUrl(m.href) })),
+          }}
+        />
+      )}
+
+      <MobileDock board={board} current="overview" practiceHref={links.practice} hasMindMaps={data.mindMapCount > 0} newNotices={data.notifications.filter((n) => n.isNew).length} />
     </main>
   );
 }

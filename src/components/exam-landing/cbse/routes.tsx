@@ -78,8 +78,14 @@ export function cbseLanding(board: CbseBoard): ExamLanding {
     metadata: () =>
       cbseMeta(
         cbsePath(slug),
-        `${label} Board Exam ${session}: Syllabus, Papers & MCQs`,
-        `Prepare for the ${label} board exam ${session} with the chapter-wise syllabus, paper pattern, MCQs, notes, mock tests, sample papers and CBSE notifications.`,
+        `${label} Board Exam ${session}: Syllabus, Mind Maps & MCQs`,
+        `Free ${label} board exam ${session} prep: chapter-wise syllabus, interactive mind maps, MCQs with solutions, sample papers, mock tests and the latest CBSE notices.`,
+        {
+          image: {
+            url: `/api/og/mind-map?${new URLSearchParams({ kind: 'exam', chapter: label, eyebrow: `Session ${session}`, topics: board.coreSubjects.replace(/ and /, ', ').split(', ').join('|') })}`,
+            alt: `${label} board exam preparation: syllabus, mind maps, MCQs and sample papers`,
+          },
+        },
       ),
     render: async (exam, { userId }) => <CbseLanding data={await getCbseLandingData(exam, userId, board)} />,
     // Sample papers: hub, session and paper pages. Notifications have no inner pages —
