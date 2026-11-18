@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import NextImage from 'next/image';
 import { Noto_Sans_Devanagari } from 'next/font/google';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import {
   BookOpen,
@@ -24,15 +25,18 @@ import {
   Star,
   ChevronUp,
   Crosshair,
-  FileDown,
   FoldVertical,
   Info,
   Keyboard,
   Palette,
+  ImageIcon,
+  Lock,
   Link2,
+  Share2,
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  LogIn,
   Printer,
   RotateCcw,
   Scan,
@@ -52,6 +56,8 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { buildFlashcards, generateQuestions, presentationOrder } from '@/lib/mind-map-study';
 import { dayNumber, isDue, masteryLevel, masteryScore, type MasteryLevel } from '@/lib/spaced-repetition';
 import { useStudyState } from './study-store';
+import { exportFilename, renderMindMapSvg, svgToPng } from './export-image';
+import { SITE_NAME } from '@/lib/site-config';
 import { Flashcards } from './flashcards';
 import { PracticeTest } from './practice-test';
 import { SIZES, TYPE, typeFor, branchBounds, expandableIds, fitView, layoutMindMap, layoutVertical, quizTargets, searchTree, subtreeIds, subtreeProgress, topicOf, type LaidOutNode } from './layout';
@@ -100,6 +106,13 @@ interface MindMapProps {
   focusIndex?: Record<string, string>;
   /** Initial look: a colour per branch, or the monochrome print style. Readers can switch. */
   theme?: MindMapTheme;
+  /**
+   * Public pages: flashcards, tests, the mastery heatmap, stars and printing ask visitors to
+   * sign in (free). Exploring, Quiz me, presenting and sharing stay open to everyone.
+   */
+  membersOnly?: boolean;
+  /** "tall" fills most of the screen (the public chapter page); "default" suits previews. */
+  size?: 'default' | 'tall';
   className?: string;
 }
 
@@ -245,11 +258,46 @@ const MASTERY_CLASSES: Record<MasteryLevel, string> = {
 const MASTERY_DOTS: Record<MasteryLevel, string> = { new: 'bg-neutral-300', weak: 'bg-red-500', learning: 'bg-amber-500', strong: 'bg-emerald-500' };
 const MASTERY_LABELS: Record<MasteryLevel, string> = { new: 'Not reviewed', weak: 'Weak', learning: 'Learning', strong: 'Strong' };
 
+/** Whether this device can share image files (phones' share sheet). Stable per device. */
+let shareFilesSupport: boolean | null = null;
+function canShareFiles() {
+  if (shareFilesSupport === null) {
+    try {
+      shareFilesSupport = typeof navigator !== 'undefined' && !!navigator.canShare?.({ files: [new File([''], 'map.png', { type: 'image/png' })] });
+    } catch {
+      shareFilesSupport = false;
+    }
+  }
+  return shareFilesSupport;
+}
+const noopSubscribe = () => () => {};
+
+/** Study tools that need a (free) account on public pages. */
+type MemberFeature = 'flashcards' | 'test' | 'heatmap' | 'stars' | 'print';
+const MEMBER_FEATURES: Record<MemberFeature, string> = {
+  flashcards: 'Flashcards',
+  test: 'Practice tests',
+  heatmap: 'Mastery heatmap',
+  stars: 'Starred revision list',
+  print: 'Printing',
+};
+
 const scrollBehavior = (): ScrollBehavior => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey, analytics, shareUrl, focusIndex, theme = 'COLOUR', className }: MindMapProps) {
+export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey, analytics, shareUrl, focusIndex, theme = 'COLOUR', size = 'default', membersOnly = false, className }: MindMapProps) {
+  const { status: sessionStatus } = useSession();
+  const pathname = usePathname();
+  const locked = membersOnly && sessionStatus !== 'authenticated';
+  const [signInFor, setSignInFor] = useState<MemberFeature | null>(null);
+  /** Runs `action` for members; otherwise explains the feature and offers sign-in. */
+  const member = (feature: MemberFeature, action: () => void) => {
+    if (!locked) return action();
+    setSignInFor(feature);
+    if (analytics) trackEvent('mindmap_signin_prompt', { ...analytics, feature });
+  };
+  const shareFiles = useSyncExternalStore(noopSubscribe, canShareFiles, () => false);
   const [classic, setClassic] = useState(theme === 'CLASSIC');
   const paint = (branch: number) => (classic ? CLASSIC_COLOUR : colourFor(branch));
   // Language: Hindi labels where the editor added them.
@@ -605,21 +653,25 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
   }, [study.state.starred, index]);
 
   const toggleStarredOnly = () => {
+    if (locked) return setSignInFor('stars');
     const on = !starredOnly;
     setStarredOnly(on);
     if (on) setExpanded((prev) => new Set([...prev, ...[...starVisible].filter((id) => (index.get(id)?.node.children.length ?? 0) > 0)]));
   };
   const toggleHeatmap = () => {
+    if (locked && !heatmap) return member('heatmap', () => undefined);
     setHeatmap((h) => !h);
     if (analytics && !heatmap) trackEvent('mindmap_heatmap_viewed', analytics);
   };
   const toggleStar = (id: string) => {
+    if (locked) return member('stars', () => undefined);
     const on = study.toggleStar(id);
     if (analytics && on) trackEvent('mindmap_node_starred', analytics);
   };
 
   /** Flashcards or a practice test for the focused topic (or the chapter), optionally starred only. */
   const openDeck = (kind: 'cards' | 'test') => {
+    if (locked) return member(kind === 'cards' ? 'flashcards' : 'test', () => undefined);
     const scopeId = activeTopicIdRef.current;
     const roots = scopeId ? nodes.filter((r) => r.id === scopeId) : nodes;
     const seed = Date.now() % 1_000_000_007;
@@ -848,8 +900,8 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
     }
   };
 
-  // ── Print / PDF: vector output of the fully expanded map via a print stylesheet ──
-  const print = (kind: 'print' | 'pdf') => {
+  // ── Print: vector output of the fully expanded map via a print stylesheet ──
+  const print = () => {
     const all = expandableIds(nodes);
     const fullLayout = layoutMindMap(nodes, all);
     const before = { expanded, view, quiz };
@@ -871,12 +923,23 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
       window.removeEventListener('afterprint', cleanup);
     };
     window.addEventListener('afterprint', cleanup);
-    if (kind === 'pdf') {
-      toast.info('Choose “Save as PDF” as the destination to download.', { duration: 6000 });
-      if (analytics) trackEvent('mindmap_pdf_downloaded', analytics);
-    }
+    if (analytics) trackEvent('mindmap_printed', analytics);
     // Two frames so the expanded layout is painted before the print snapshot.
     requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+  };
+
+  /** Shares an image of the whole map (with a link back) through the phone's share sheet. */
+  const shareImage = async () => {
+    const url = shareUrl ?? window.location.href.split(/[?#]/)[0];
+    const { svg, width, height } = renderMindMapSvg({ title, nodes, theme: classic ? 'CLASSIC' : 'COLOUR', link: url.replace(/^https?:\/\//, ''), siteName: SITE_NAME });
+    try {
+      const png = await svgToPng(svg, width, height);
+      const file = new File([png], exportFilename(title.chapter, 'png'), { type: 'image/png' });
+      await navigator.share({ files: [file], title: `${title.chapter} mind map`, text: `${title.chapter} mind map — open the interactive version with quiz & flashcards: ${url}` });
+      if (analytics) trackEvent('mindmap_image_shared', analytics);
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') toast.error('Could not share the image — try sharing the link.');
+    }
   };
 
   const copyLink = async () => {
@@ -1194,7 +1257,13 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
       className={cn(
         'relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface-container-lowest',
         devanagari.variable,
-        compact ? fullscreen && 'h-screen overflow-y-auto rounded-none' : fullscreen ? 'h-screen rounded-none' : 'h-[min(78vh,720px)] min-h-[480px]',
+        compact
+          ? fullscreen && 'h-screen overflow-y-auto rounded-none'
+          : fullscreen
+            ? 'h-screen rounded-none'
+            : size === 'tall'
+              ? 'h-[calc(100svh-8.5rem)] max-h-[960px] min-h-[560px]' // below the site header + section nav
+              : 'h-[min(78vh,720px)] min-h-[480px]',
         className,
       )}
       // Latin from the site font, Devanagari (Hindi / Hinglish) from Noto Sans Devanagari.
@@ -1320,11 +1389,15 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
                   </p>
                   <DropdownMenuItem onSelect={() => openDeck('cards')}>
                     <Layers className="h-4 w-4" /> Flashcards
-                    <span className="ml-auto text-xs text-muted-foreground tabular-nums">{dueCount ? `${dueCount} due` : `${allCards.length} cards`}</span>
+                    {locked ? (
+                      <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground" aria-label="Sign in required" />
+                    ) : (
+                      <span className="ml-auto text-xs text-muted-foreground tabular-nums">{dueCount ? `${dueCount} due` : `${allCards.length} cards`}</span>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => openDeck('test')}>
                     <ClipboardCheck className="h-4 w-4" /> Test yourself
-                    <span className="ml-auto text-xs text-muted-foreground">10 Qs</span>
+                    {locked ? <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground" aria-label="Sign in required" /> : <span className="ml-auto text-xs text-muted-foreground">10 Qs</span>}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={startPresent}>
                     <Presentation className="h-4 w-4" /> Present step by step
@@ -1333,9 +1406,11 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
                   <DropdownMenuSeparator />
                   <DropdownMenuCheckboxItem checked={heatmap} onCheckedChange={toggleHeatmap} onSelect={(e) => e.preventDefault()}>
                     <Flame className="h-4 w-4" /> Mastery heatmap
+                    {locked && <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground" aria-label="Sign in required" />}
                   </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem checked={starredOnly} disabled={starredCount === 0 && !starredOnly} onCheckedChange={toggleStarredOnly} onSelect={(e) => e.preventDefault()}>
+                  <DropdownMenuCheckboxItem checked={starredOnly} disabled={!locked && starredCount === 0 && !starredOnly} onCheckedChange={toggleStarredOnly} onSelect={(e) => e.preventDefault()}>
                     <Star className="h-4 w-4" /> Starred only ({starredCount})
+                    {locked && <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground" aria-label="Sign in required" />}
                   </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -1367,6 +1442,29 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Share"
+                  title="Share this mind map"
+                  className="flex items-center gap-1.5 rounded-lg p-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground pointer-coarse:p-2.5"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span className="hidden text-xs font-medium xl:inline">Share</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuItem onSelect={copyLink}>
+                  <Link2 className="h-4 w-4" /> Share link
+                </DropdownMenuItem>
+                {shareFiles && (
+                  <DropdownMenuItem onSelect={() => void shareImage()}>
+                    <ImageIcon className="h-4 w-4" /> Share as image
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button type="button" aria-label="More options" className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground pointer-coarse:p-2.5">
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
@@ -1390,14 +1488,9 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
                     <Palette className="h-4 w-4" /> {classic ? 'Colour style' : 'Classic print style'}
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onSelect={() => print('pdf')}>
-                  <FileDown className="h-4 w-4" /> Download PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => print('print')}>
+                <DropdownMenuItem onSelect={() => member('print', print)}>
                   <Printer className="h-4 w-4" /> Print
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={copyLink}>
-                  <Link2 className="h-4 w-4" /> Copy link
+                  {locked && <Lock className="ml-auto h-3.5 w-3.5 text-muted-foreground" aria-label="Sign in required" />}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1773,6 +1866,56 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
           onRetry={() => setDeck((d) => d && { ...d, seed: d.seed + 1 })}
           onClose={() => setDeck(null)}
         />
+      )}
+
+      {signInFor && (
+        <div data-mindmap-chrome className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setSignInFor(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mm-signin-title"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-t-3xl border border-border bg-card p-6 shadow-2xl motion-safe:animate-in motion-safe:slide-in-from-bottom-4 sm:rounded-3xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <GraduationCap className="h-6 w-6" aria-hidden />
+              </span>
+              <button type="button" onClick={() => setSignInFor(null)} aria-label="Close" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p id="mm-signin-title" className="mt-4 text-lg font-semibold text-foreground">
+              Unlock {MEMBER_FEATURES[signInFor].toLowerCase()} — free
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Sign in to unlock every study tool on all mind maps — it takes a few seconds and costs nothing.</p>
+            <ul className="mt-4 space-y-2 text-sm text-foreground">
+              {[
+                ['Flashcards', 'that remind you just before you forget'],
+                ['Practice tests', 'generated from each chapter'],
+                ['Mastery heatmap', 'to see your weak topics at a glance'],
+                ['Starred revision list', 'and printable maps'],
+              ].map(([a, b]) => (
+                <li key={a} className="flex gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                  <span>
+                    <span className="font-medium">{a}</span> <span className="text-muted-foreground">{b}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <a
+              href={`/sign-in?callbackUrl=${encodeURIComponent(pathname ?? '/')}`}
+              onClick={() => analytics && trackEvent('mindmap_signin_clicked', { ...analytics, feature: signInFor })}
+              className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <LogIn className="h-4 w-4" /> Sign in free
+            </a>
+            <button type="button" onClick={() => setSignInFor(null)} className="mt-2 w-full rounded-xl py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted">
+              Keep exploring the map
+            </button>
+          </div>
+        </div>
       )}
 
       {confetti !== null && <Confetti key={confetti} />}

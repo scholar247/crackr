@@ -98,3 +98,51 @@ export function addMissingCurriculum(tree: Tree, chapter: CurriculumSource): { t
   }
   return { tree: next, added: missing.length };
 }
+
+/** True if `id` is `ancestorId` or somewhere inside its branch. */
+export function isInBranch(tree: Tree, ancestorId: string, id: string): boolean {
+  const at = locate(tree, ancestorId);
+  if (!at) return false;
+  const walk = (n: MindMapTreeNode): boolean => n.id === id || n.children.some(walk);
+  return walk(at.siblings[at.index]);
+}
+
+/**
+ * Drag & drop: moves `id` (with its branch) before/after `targetId`, or makes it the last
+ * child of `targetId` ('inside'). Dropping a node onto itself or into its own branch is a
+ * no-op (it would detach the branch).
+ */
+export function moveNodeTo(tree: Tree, id: string, targetId: string, position: 'before' | 'after' | 'inside'): Tree {
+  if (id === targetId || isInBranch(tree, id, targetId)) return tree;
+  const next = clone(tree);
+  const from = locate(next, id);
+  if (!from) return tree;
+  const [node] = from.siblings.splice(from.index, 1);
+  const to = locate(next, targetId);
+  if (!to) return tree;
+  if (position === 'inside') to.siblings[to.index].children.push(node);
+  else to.siblings.splice(position === 'before' ? to.index : to.index + 1, 0, node);
+  return next;
+}
+
+/** Inserts `node` right after `afterId` among its siblings (Enter in the outline editor). */
+export function insertSiblingAfter(tree: Tree, afterId: string, node: MindMapTreeNode): Tree {
+  const next = clone(tree);
+  const at = locate(next, afterId);
+  if (!at) return tree;
+  at.siblings.splice(at.index + 1, 0, node);
+  return next;
+}
+
+/** Ids in visible outline order (depth-first) — for moving focus with ↑/↓. */
+export function outlineOrder(tree: Tree): string[] {
+  const out: string[] = [];
+  const walk = (list: Tree) => {
+    for (const n of list) {
+      out.push(n.id);
+      walk(n.children);
+    }
+  };
+  walk(tree);
+  return out;
+}

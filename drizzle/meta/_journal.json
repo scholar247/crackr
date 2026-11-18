@@ -169,6 +169,13 @@
       "when": 1795017686446,
       "tag": "0023_mind_map_styles",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1795020120574,
+      "tag": "0024_mind_map_versions",
+      "breakpoints": true
     }
   ]
 }

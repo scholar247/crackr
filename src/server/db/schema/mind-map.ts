@@ -72,3 +72,27 @@ export const mindMapNodes = mysqlTable(
   },
   (table) => [index('mind_map_nodes_map_parent_idx').on(table.mindMapId, table.parentId, table.displayOrder)],
 );
+
+/**
+ * Every published version of a map (the snapshot as it went live), newest = highest
+ * `version`. Lets editors see what changed over time and restore an older version into the
+ * draft. Rows are only ever inserted.
+ */
+export const mindMapVersions = mysqlTable(
+  'mind_map_versions',
+  {
+    id: varchar('id', { length: 36 })
+      .primaryKey()
+      .$defaultFn(() => randomUUID()),
+    mindMapId: varchar('mind_map_id', { length: 36 })
+      .notNull()
+      .references(() => mindMaps.id, { onDelete: 'cascade' }),
+    version: int('version').notNull(),
+    snapshot: json('snapshot').$type<MindMapSnapshot>().notNull(),
+    /** Null for versions back-filled from before history was kept. */
+    nodeCount: int('node_count'),
+    publishedBy: varchar('published_by', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+    publishedAt: timestamp('published_at').notNull(),
+  },
+  (table) => [uniqueIndex('mind_map_versions_map_version_idx').on(table.mindMapId, table.version)],
+);

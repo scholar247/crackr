@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -11,6 +11,15 @@ import {
   ArrowUp,
   ChevronRight,
   CircleCheck,
+  Download,
+  Eye,
+  FileUp,
+  GripVertical,
+  History,
+  Keyboard,
+  Redo2,
+  RotateCcw,
+  Undo2,
   ExternalLink,
   IndentDecrease,
   IndentIncrease,
@@ -27,6 +36,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MindMap } from '@/components/mind-map/mind-map';
 import { colourFor } from '@/components/mind-map/palette';
 import { cn, formatDate } from '@/lib/utils';
@@ -49,7 +59,20 @@ import {
   type MindMapTreeNode,
   MIND_MAP_LIMITS,
 } from '@/lib/mind-maps';
-import { addChild, addMissingCurriculum, indentNode, moveNode, newNode, outdentNode, removeNode, updateNode } from '@/lib/mind-map-tree-ops';
+import {
+  addChild,
+  addMissingCurriculum,
+  indentNode,
+  insertSiblingAfter,
+  moveNode,
+  moveNodeTo,
+  newNode,
+  outdentNode,
+  outlineOrder,
+  removeNode,
+  updateNode,
+} from '@/lib/mind-map-tree-ops';
+import { importOutline, toMarkdownOutline, type ImportResult } from '@/lib/mind-map-import';
 import { STATUS_BADGE } from '../mind-maps-client';
 
 interface EditorData {
@@ -72,7 +95,31 @@ interface EditorData {
   nodes: FlatMindMapNode[];
   publishedNodes: MindMapTreeNode[] | null;
   publicPath: string | null;
+  versions: { id: string; version: number; nodeCount: number | null; publishedAt: string; publishedBy: string | null }[];
 }
+
+type Tree = MindMapTreeNode[];
+type DropPosition = 'before' | 'after' | 'inside';
+
+/** Row-level operations shared by every TreeRows level. */
+interface RowOps {
+  disabled: boolean;
+  openRow: string | null;
+  setOpenRow: (id: string | null) => void;
+  options: { id: string; name: string; depth: number }[];
+  optionName: Map<string, string>;
+  onChange: (fn: (tree: Tree) => Tree, coalesce?: string) => void;
+  onKey: (e: React.KeyboardEvent<HTMLInputElement>, n: MindMapTreeNode, depth: number, index: number) => void;
+  drag: { id: string | null; over: { id: string; pos: DropPosition } | null };
+  setDrag: (d: { id: string | null; over: { id: string; pos: DropPosition } | null }) => void;
+  onDrop: () => void;
+}
+
+const HISTORY_LIMIT = 100;
+const focusRow = (id: string | undefined) => {
+  if (!id) return;
+  requestAnimationFrame(() => document.querySelector<HTMLInputElement>(`[data-row-input="${id}"]`)?.focus());
+};
 
 interface Fields {
   seoTitle: string;
@@ -138,9 +185,138 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
   const missing = useMemo(() => (data.curriculum ? missingCurriculumItems(data.curriculum, tree) : []), [data.curriculum, tree]);
   const diff = useMemo(() => diffMindMaps(data.publishedNodes, tree), [data.publishedNodes, tree]);
 
-  const edit = (next: MindMapTreeNode[]) => {
+  // Undo / redo over the whole tree. Typing in one field is merged into a single step.
+  const [past, setPast] = useState<Tree[]>([]);
+  const [future, setFuture] = useState<Tree[]>([]);
+  const lastEdit = useRef<{ key: string; at: number } | null>(null);
+  const edit = (next: Tree, coalesce?: string) => {
+    const at = Date.now();
+    const merge = !!coalesce && lastEdit.current?.key === coalesce && at - lastEdit.current.at < 1500;
+    lastEdit.current = coalesce ? { key: coalesce, at } : null;
+    if (!merge) setPast((p) => [...p.slice(-HISTORY_LIMIT + 1), tree]);
+    setFuture([]);
     setTree(next);
     setDirty(true);
+  };
+  const undo = () => {
+    if (past.length === 0) return;
+    setFuture((f) => [tree, ...f]);
+    setTree(past[past.length - 1]);
+    setPast((p) => p.slice(0, -1));
+    lastEdit.current = null;
+    setDirty(true);
+  };
+  const redo = () => {
+    if (future.length === 0) return;
+    setPast((p) => [...p, tree]);
+    setTree(future[0]);
+    setFuture((f) => f.slice(1));
+    lastEdit.current = null;
+    setDirty(true);
+  };
+  const historyKeys = useRef({ undo, redo, archived: false });
+  useEffect(() => {
+    historyKeys.current = { undo, redo, archived: status === 'ARCHIVED' };
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || historyKeys.current.archived) return;
+      // Leave native undo to long-form text fields (descriptions, notes, FAQs).
+      if (e.target instanceof HTMLTextAreaElement) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        historyKeys.current.undo();
+      } else if ((k === 'z' && e.shiftKey) || k === 'y') {
+        e.preventDefault();
+        historyKeys.current.redo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Drag & drop between rows.
+  const [drag, setDrag] = useState<{ id: string | null; over: { id: string; pos: DropPosition } | null }>({ id: null, over: null });
+  const onDrop = () => {
+    if (drag.id && drag.over) edit(moveNodeTo(tree, drag.id, drag.over.id, drag.over.pos));
+    setDrag({ id: null, over: null });
+  };
+
+  /** Outline keyboard: Enter new point, Tab / Shift+Tab nest, Alt+↑↓ reorder, ↑↓ move focus. */
+  const onRowKey = (e: React.KeyboardEvent<HTMLInputElement>, n: MindMapTreeNode, depth: number, index: number) => {
+    const order = outlineOrder(tree);
+    const at = order.indexOf(n.id);
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      const fresh = newNode('');
+      edit(e.ctrlKey || e.metaKey ? addChild(tree, n.id, fresh) : insertSiblingAfter(tree, n.id, fresh));
+      focusRow(fresh.id);
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      if (e.shiftKey ? depth > 0 : index > 0) edit(e.shiftKey ? outdentNode(tree, n.id) : indentNode(tree, n.id));
+      focusRow(n.id);
+    } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      edit(moveNode(tree, n.id, e.key === 'ArrowUp' ? -1 : 1));
+      focusRow(n.id);
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusRow(order[at + (e.key === 'ArrowUp' ? -1 : 1)]);
+    } else if (e.key === 'Backspace' && n.label === '' && n.children.length === 0) {
+      e.preventDefault();
+      edit(removeNode(tree, n.id));
+      focusRow(order[at - 1] ?? order[at + 1]);
+    }
+  };
+
+  // Import an outline (Markdown, indented text, OPML).
+  const [importing, setImporting] = useState(false);
+  const [importText, setImportText] = useState('');
+  const importPreview: ImportResult | null = useMemo(() => (importText.trim() ? importOutline(importText) : null), [importText]);
+  const applyImport = (mode: 'replace' | 'append') => {
+    if (!importPreview || importPreview.count === 0) return;
+    if (mode === 'replace' && tree.length > 0 && !confirm('Replace the whole map with the imported outline? You can undo this.')) return;
+    edit(mode === 'replace' ? importPreview.nodes : [...tree, ...importPreview.nodes]);
+    toast.success(`Imported ${importPreview.count} node${importPreview.count === 1 ? '' : 's'}${importPreview.truncated ? ` (${importPreview.truncated} long labels shortened)` : ''}. Imported nodes are custom — check them against the syllabus.`);
+    setImporting(false);
+    setImportText('');
+  };
+  const downloadOutline = () => {
+    const blob = new Blob([toMarkdownOutline(data.chapter?.name ?? 'Mind map', tree)], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${data.chapter?.slug ?? 'mind-map'}-outline.md`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  // Version history: restore a published version into the draft.
+  const [previewVersion, setPreviewVersion] = useState<{ version: number; nodes: Tree; publishedAt: string } | null>(null);
+  const loadVersion = async (versionId: string) => {
+    const res = await api<{ data: { version: number; snapshot: { nodes: Tree; seoTitle: string | null; seoDescription: string | null; intro: string | null; revisionNotes: string | null; faqs: MindMapFaq[]; theme?: MindMapTheme }; publishedAt: string } }>(
+      `/api/v1/admin/mind-maps/${data.map.id}/versions/${versionId}`,
+    );
+    return res.data;
+  };
+  const restoreVersion = async (versionId: string) => {
+    try {
+      const v = await loadVersion(versionId);
+      if (!confirm(`Replace the draft with version ${v.version}? The live page doesn't change until you publish. You can undo this.`)) return;
+      edit(v.snapshot.nodes);
+      setFields({
+        seoTitle: v.snapshot.seoTitle ?? '',
+        seoDescription: v.snapshot.seoDescription ?? '',
+        intro: v.snapshot.intro ?? '',
+        revisionNotes: v.snapshot.revisionNotes ?? '',
+        faqs: v.snapshot.faqs ?? [],
+        theme: v.snapshot.theme ?? 'COLOUR',
+      });
+      toast.success(`Version ${v.version} restored into the draft — review and publish when ready.`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
   const setField = <K extends keyof Fields>(k: K, v: Fields[K]) => {
     setFields((f) => ({ ...f, [k]: v }));
@@ -237,6 +413,16 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
             </Button>
           )}
           {!archived && (
+            <div className="flex items-center rounded-md border border-border">
+              <Button variant="ghost" size="sm" onClick={undo} disabled={past.length === 0} aria-label="Undo (Ctrl+Z)" title="Undo (Ctrl+Z)" className="rounded-r-none">
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={redo} disabled={future.length === 0} aria-label="Redo (Ctrl+Shift+Z)" title="Redo (Ctrl+Shift+Z)" className="rounded-l-none">
+                <Redo2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          {!archived && (
             <Button variant="outline" size="sm" onClick={() => save.mutate()} disabled={!dirty || save.isPending}>
               <Save className="h-4 w-4" /> {save.isPending ? 'Saving…' : 'Save draft'}
             </Button>
@@ -270,6 +456,7 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
             Review
             {diff.hasChanges && <span className="ml-1.5 h-2 w-2 rounded-full bg-warning" aria-label="has changes" />}
           </TabsTrigger>
+          <TabsTrigger value="history">History ({data.versions.length})</TabsTrigger>
         </TabsList>
 
         {/* ── Structure ── */}
@@ -286,6 +473,12 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
                 <Button size="sm" variant="ghost" disabled={archived || !data.curriculum} onClick={regenerate}>
                   <RefreshCw className="h-4 w-4" /> Regenerate
                 </Button>
+                <Button size="sm" variant="ghost" disabled={archived} onClick={() => setImporting(true)}>
+                  <FileUp className="h-4 w-4" /> Import outline
+                </Button>
+                <Button size="sm" variant="ghost" disabled={tree.length === 0} onClick={downloadOutline}>
+                  <Download className="h-4 w-4" /> Export outline
+                </Button>
               </div>
 
               <div className="mt-3 rounded-xl border border-border bg-card">
@@ -296,16 +489,28 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
                     nodes={tree}
                     depth={0}
                     branch={null}
-                    disabled={archived}
-                    openRow={openRow}
-                    setOpenRow={setOpenRow}
-                    options={options}
-                    optionName={optionName}
-                    onChange={(fn) => edit(fn(tree))}
+                    ops={{
+                      disabled: archived,
+                      openRow,
+                      setOpenRow,
+                      options,
+                      optionName,
+                      onChange: (fn, coalesce) => edit(fn(tree), coalesce),
+                      onKey: onRowKey,
+                      drag,
+                      setDrag,
+                      onDrop,
+                    }}
                   />
                 )}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Main topics come from the chapter&apos;s curriculum. Indent to nest, arrows to reorder. Custom nodes (no linked topic) are flagged for review.</p>
+              <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
+                <Keyboard className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span>
+                  Type like an outline: <kbd>Enter</kbd> new point · <kbd>Ctrl+Enter</kbd> child · <kbd>Tab</kbd>/<kbd>Shift+Tab</kbd> nest · <kbd>Alt+↑↓</kbd> reorder · <kbd>↑↓</kbd> move ·{' '}
+                  <kbd>Backspace</kbd> on an empty point deletes it · <kbd>Ctrl+Z</kbd> undo. Drag rows by the handle to move whole branches. Custom nodes (no linked topic) are flagged for review.
+                </span>
+              </p>
             </div>
 
             <div className="xl:sticky xl:top-20 xl:self-start">
@@ -436,7 +641,92 @@ function EditorBody({ data, onSaved, onReload }: { data: EditorData; onSaved: (d
             </ul>
           </div>
         </TabsContent>
+        {/* ── History ── */}
+        <TabsContent value="history" className="mt-4 max-w-3xl">
+          {data.versions.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">No published versions yet. Each time you publish, a version is saved here.</p>
+          ) : (
+            <ol className="divide-y divide-border rounded-xl border border-border bg-card">
+              {data.versions.map((v, i) => (
+                <li key={v.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                  <History className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      Version {v.version} {i === 0 && <Badge variant="secondary">Live</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(v.publishedAt)}
+                      {v.publishedBy ? ` · ${v.publishedBy}` : ''}
+                      {v.nodeCount !== null ? ` · ${v.nodeCount} nodes` : ''}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={async () => {
+                      try {
+                        const full = await loadVersion(v.id);
+                        setPreviewVersion({ version: full.version, nodes: full.snapshot.nodes, publishedAt: full.publishedAt });
+                      } catch (e) {
+                        toast.error((e as Error).message);
+                      }
+                    }}
+                  >
+                    <Eye className="h-4 w-4" /> Preview
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={archived} onClick={() => restoreVersion(v.id)}>
+                    <RotateCcw className="h-4 w-4" /> Restore into draft
+                  </Button>
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="mt-3 text-xs text-muted-foreground">Restoring replaces the draft only (undoable). The live page changes when you publish again.</p>
+        </TabsContent>
       </Tabs>
+
+      <Dialog open={importing} onOpenChange={setImporting}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import an outline</DialogTitle>
+            <DialogDescription>Paste Markdown bullets or headings, indented text, or OPML exported from XMind, MindNode, Workflowy and others — or choose a file.</DialogDescription>
+          </DialogHeader>
+          <input
+            type="file"
+            accept=".md,.markdown,.txt,.opml,.xml,text/plain,text/markdown"
+            className="text-sm"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (file) setImportText(await file.text());
+            }}
+          />
+          <Textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={12} className="font-mono text-xs" placeholder={'# Vice-President\n- Article 63\n  - There shall be a Vice-President of India\n- Article 66\n  - Election of Vice-President'} />
+          {importPreview && (
+            <p className="text-sm text-muted-foreground">
+              {importPreview.count} nodes · {importPreview.nodes.length} main topics · detected {importPreview.format.toUpperCase()}
+              {importPreview.truncated ? ` · ${importPreview.truncated} long labels will be shortened` : ''}
+            </p>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" disabled={!importPreview?.count} onClick={() => applyImport('append')}>
+              Add as new topics
+            </Button>
+            <Button disabled={!importPreview?.count} onClick={() => applyImport('replace')}>
+              Replace map
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewVersion} onOpenChange={(o) => !o && setPreviewVersion(null)}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Version {previewVersion?.version}</DialogTitle>
+            <DialogDescription>Published {previewVersion ? formatDate(previewVersion.publishedAt) : ''}</DialogDescription>
+          </DialogHeader>
+          {previewVersion && <MindMap title={title} nodes={previewVersion.nodes} className="h-[60vh] min-h-0" />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -450,44 +740,63 @@ function ChecklistItem({ ok, warn, text }: { ok: boolean; warn?: boolean; text: 
   );
 }
 
-function TreeRows({
-  nodes,
-  depth,
-  branch,
-  disabled,
-  openRow,
-  setOpenRow,
-  options,
-  optionName,
-  onChange,
-}: {
-  nodes: MindMapTreeNode[];
-  depth: number;
-  branch: number | null;
-  disabled: boolean;
-  openRow: string | null;
-  setOpenRow: (id: string | null) => void;
-  options: { id: string; name: string; depth: number }[];
-  optionName: Map<string, string>;
-  onChange: (fn: (tree: MindMapTreeNode[]) => MindMapTreeNode[]) => void;
-}) {
+function TreeRows({ nodes, depth, branch, ops }: { nodes: Tree; depth: number; branch: number | null; ops: RowOps }) {
+  const { disabled, openRow, setOpenRow, optionName, drag } = ops;
   return (
     <ul className={cn(depth === 0 ? 'divide-y divide-border' : '')}>
       {nodes.map((n, i) => {
         const b = branch ?? i;
         const open = openRow === n.id;
+        const over = drag.over?.id === n.id ? drag.over.pos : null;
         return (
-          <li key={n.id}>
-            <div className="flex items-center gap-1.5 py-1.5 pr-2" style={{ paddingLeft: 8 + depth * 20 }}>
+          <li key={n.id} className={cn(drag.id === n.id && 'opacity-40')}>
+            <div
+              className={cn(
+                'relative flex items-center gap-1.5 py-1.5 pr-2',
+                over === 'inside' && 'bg-primary/10 ring-1 ring-primary/40 ring-inset',
+                over === 'before' && 'before:absolute before:inset-x-2 before:top-0 before:h-0.5 before:rounded before:bg-primary',
+                over === 'after' && 'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded after:bg-primary',
+              )}
+              style={{ paddingLeft: 4 + depth * 20 }}
+              onDragOver={(e) => {
+                if (!drag.id || drag.id === n.id) return;
+                e.preventDefault();
+                const r = e.currentTarget.getBoundingClientRect();
+                const y = (e.clientY - r.top) / r.height;
+                const pos: DropPosition = y < 0.28 ? 'before' : y > 0.72 ? 'after' : 'inside';
+                if (drag.over?.id !== n.id || drag.over.pos !== pos) ops.setDrag({ ...drag, over: { id: n.id, pos } });
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                ops.onDrop();
+              }}
+            >
+              <span
+                draggable={!disabled}
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', n.label);
+                  ops.setDrag({ id: n.id, over: null });
+                }}
+                onDragEnd={() => ops.setDrag({ id: null, over: null })}
+                className={cn('rounded p-0.5 text-muted-foreground/60', disabled ? 'cursor-not-allowed' : 'cursor-grab hover:bg-muted hover:text-foreground active:cursor-grabbing')}
+                title="Drag to move (with its sub-points)"
+                aria-hidden
+              >
+                <GripVertical className="h-4 w-4" />
+              </span>
               <button type="button" onClick={() => setOpenRow(open ? null : n.id)} aria-label={open ? 'Hide details' : 'Edit details'} aria-expanded={open} className="rounded p-1 text-muted-foreground hover:bg-muted">
                 <ChevronRight className={cn('h-4 w-4 transition-transform', open && 'rotate-90')} />
               </button>
               <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', colourFor(b).dot)} aria-hidden />
               <Input
+                data-row-input={n.id}
                 value={n.label}
                 disabled={disabled}
                 maxLength={MIND_MAP_LIMITS.label}
-                onChange={(e) => onChange((t) => updateNode(t, n.id, { label: e.target.value }))}
+                placeholder="Type a point…"
+                onChange={(e) => ops.onChange((t) => updateNode(t, n.id, { label: e.target.value }), `label:${n.id}`)}
+                onKeyDown={(e) => ops.onKey(e, n, depth, i)}
                 aria-label="Node label"
                 className={cn('h-8 min-w-0 flex-1', depth === 0 && 'font-semibold')}
               />
@@ -501,16 +810,16 @@ function TreeRows({
                 </Badge>
               )}
               <div className="flex shrink-0 items-center">
-                <IconAction label="Move up" disabled={disabled || i === 0} onClick={() => onChange((t) => moveNode(t, n.id, -1))} icon={<ArrowUp className="h-3.5 w-3.5" />} />
-                <IconAction label="Move down" disabled={disabled || i === nodes.length - 1} onClick={() => onChange((t) => moveNode(t, n.id, 1))} icon={<ArrowDown className="h-3.5 w-3.5" />} />
-                <IconAction label="Outdent" disabled={disabled || depth === 0} onClick={() => onChange((t) => outdentNode(t, n.id))} icon={<IndentDecrease className="h-3.5 w-3.5" />} />
-                <IconAction label="Indent" disabled={disabled || i === 0} onClick={() => onChange((t) => indentNode(t, n.id))} icon={<IndentIncrease className="h-3.5 w-3.5" />} />
-                <IconAction label="Add child" disabled={disabled} onClick={() => onChange((t) => addChild(t, n.id, newNode('New subtopic')))} icon={<Plus className="h-3.5 w-3.5" />} />
+                <IconAction label="Move up (Alt+↑)" disabled={disabled || i === 0} onClick={() => ops.onChange((t) => moveNode(t, n.id, -1))} icon={<ArrowUp className="h-3.5 w-3.5" />} />
+                <IconAction label="Move down (Alt+↓)" disabled={disabled || i === nodes.length - 1} onClick={() => ops.onChange((t) => moveNode(t, n.id, 1))} icon={<ArrowDown className="h-3.5 w-3.5" />} />
+                <IconAction label="Outdent (Shift+Tab)" disabled={disabled || depth === 0} onClick={() => ops.onChange((t) => outdentNode(t, n.id))} icon={<IndentDecrease className="h-3.5 w-3.5" />} />
+                <IconAction label="Indent (Tab)" disabled={disabled || i === 0} onClick={() => ops.onChange((t) => indentNode(t, n.id))} icon={<IndentIncrease className="h-3.5 w-3.5" />} />
+                <IconAction label="Add child (Ctrl+Enter)" disabled={disabled} onClick={() => ops.onChange((t) => addChild(t, n.id, newNode('New subtopic')))} icon={<Plus className="h-3.5 w-3.5" />} />
                 <IconAction
                   label="Delete"
                   disabled={disabled}
                   onClick={() => {
-                    if (n.children.length === 0 || confirm(`Delete "${n.label}" and its ${countNodes(n.children)} child nodes?`)) onChange((t) => removeNode(t, n.id));
+                    if (n.children.length === 0 || confirm(`Delete "${n.label}" and its ${countNodes(n.children)} child nodes?`)) ops.onChange((t) => removeNode(t, n.id));
                   }}
                   icon={<Trash2 className="h-3.5 w-3.5 text-destructive" />}
                 />
@@ -523,12 +832,12 @@ function TreeRows({
                   <Label className="text-xs">Linked curriculum topic</Label>
                   <select
                     value={n.curriculumNodeId ?? ''}
-                    disabled={disabled}
-                    onChange={(e) => onChange((t) => updateNode(t, n.id, { curriculumNodeId: e.target.value || null }))}
+                    disabled={ops.disabled}
+                    onChange={(e) => ops.onChange((t) => updateNode(t, n.id, { curriculumNodeId: e.target.value || null }))}
                     className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                   >
                     <option value="">— Custom node (not in curriculum) —</option>
-                    {options.map((o) => (
+                    {ops.options.map((o) => (
                       <option key={o.id} value={o.id}>
                         {'  '.repeat(o.depth)}
                         {o.name}
@@ -538,18 +847,18 @@ function TreeRows({
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Hindi label (shown when the reader switches to हिं)</Label>
-                  <Input value={n.labelHi ?? ''} disabled={disabled} maxLength={MIND_MAP_LIMITS.label} lang="hi" onChange={(e) => onChange((t) => updateNode(t, n.id, { labelHi: e.target.value || null }))} />
+                  <Input value={n.labelHi ?? ''} disabled={ops.disabled} maxLength={MIND_MAP_LIMITS.label} lang="hi" onChange={(e) => ops.onChange((t) => updateNode(t, n.id, { labelHi: e.target.value || null }), `hi:${n.id}`)} />
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label className="text-xs">Style</Label>
                     <select
                       value={n.style?.heading ? 'heading' : (n.style?.border ?? 'normal')}
-                      disabled={disabled}
+                      disabled={ops.disabled}
                       onChange={(e) => {
                         const v = e.target.value;
                         const style = { ...(n.style ?? {}), heading: v === 'heading' || undefined, border: v === 'dashed' || v === 'dotted' ? (v as 'dashed' | 'dotted') : undefined };
-                        onChange((t) => updateNode(t, n.id, { style }));
+                        ops.onChange((t) => updateNode(t, n.id, { style }));
                       }}
                       className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
                     >
@@ -562,8 +871,8 @@ function TreeRows({
                       <input
                         type="checkbox"
                         checked={!!n.style?.highlight}
-                        disabled={disabled}
-                        onChange={(e) => onChange((t) => updateNode(t, n.id, { style: { ...(n.style ?? {}), highlight: e.target.checked || undefined } }))}
+                        disabled={ops.disabled}
+                        onChange={(e) => ops.onChange((t) => updateNode(t, n.id, { style: { ...(n.style ?? {}), highlight: e.target.checked || undefined } }))}
                       />
                       Highlight (marker pen)
                     </label>
@@ -572,10 +881,10 @@ function TreeRows({
                     <Label className="text-xs">Tags (comma separated, max {MIND_MAP_LIMITS.tags})</Label>
                     <Input
                       defaultValue={(n.tags ?? []).join(', ')}
-                      disabled={disabled}
+                      disabled={ops.disabled}
                       placeholder="PYQ 2023, Important"
                       onBlur={(e) =>
-                        onChange((t) =>
+                        ops.onChange((t) =>
                           updateNode(t, n.id, {
                             tags: e.target.value
                               .split(',')
@@ -590,18 +899,16 @@ function TreeRows({
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Short description (hover card, topic list)</Label>
-                  <Textarea value={n.description ?? ''} disabled={disabled} maxLength={500} rows={2} onChange={(e) => onChange((t) => updateNode(t, n.id, { description: e.target.value || null }))} />
+                  <Textarea value={n.description ?? ''} disabled={ops.disabled} maxLength={500} rows={2} onChange={(e) => ops.onChange((t) => updateNode(t, n.id, { description: e.target.value || null }), `desc:${n.id}`)} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Learning content — definitions, formulas (Markdown, optional)</Label>
-                  <Textarea value={n.content ?? ''} disabled={disabled} rows={4} className="font-mono text-xs" onChange={(e) => onChange((t) => updateNode(t, n.id, { content: e.target.value || null }))} />
+                  <Textarea value={n.content ?? ''} disabled={ops.disabled} rows={4} className="font-mono text-xs" onChange={(e) => ops.onChange((t) => updateNode(t, n.id, { content: e.target.value || null }), `content:${n.id}`)} />
                 </div>
               </div>
             )}
 
-            {n.children.length > 0 && (
-              <TreeRows nodes={n.children} depth={depth + 1} branch={b} disabled={disabled} openRow={openRow} setOpenRow={setOpenRow} options={options} optionName={optionName} onChange={onChange} />
-            )}
+            {n.children.length > 0 && <TreeRows nodes={n.children} depth={depth + 1} branch={b} ops={ops} />}
           </li>
         );
       })}

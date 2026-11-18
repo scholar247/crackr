@@ -27,6 +27,7 @@ export function CbsePageShell({
   title: string;
   intro: ReactNode;
   aside?: ReactNode;
+  compact?: boolean;
   children: ReactNode;
 }) {
   const steps = cbseSteps(board);

@@ -424,3 +424,30 @@ export function subtreeProgress(root: MindMapTreeNode, done: ReadonlySet<string>
 export function topicOf(roots: MindMapTreeNode[], id: string): MindMapTreeNode | null {
   return roots.find((r) => subtreeIds(r).has(id)) ?? null;
 }
+
+/** The wrapped lines themselves (same greedy rule as wrapText) — for SVG/PNG export. */
+export function wrapLines(text: string, maxWidth: number, font: number, bold = false): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = '';
+  const fits = (s: string) => textWidth(s, font, bold) <= maxWidth;
+  for (const w of words) {
+    const candidate = line ? `${line} ${w}` : w;
+    if (fits(candidate)) {
+      line = candidate;
+      continue;
+    }
+    if (line) lines.push(line);
+    // Break a word that is longer than a whole line.
+    let rest = w;
+    while (!fits(rest)) {
+      let cut = rest.length - 1;
+      while (cut > 1 && !fits(rest.slice(0, cut))) cut--;
+      lines.push(rest.slice(0, cut));
+      rest = rest.slice(cut);
+    }
+    line = rest;
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}

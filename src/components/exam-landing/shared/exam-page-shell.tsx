@@ -51,6 +51,7 @@ export function ExamPageShell({
   aside,
   nextStepsTitle,
   nextSteps,
+  compact = false,
   children,
 }: {
   nav: ReactNode;
@@ -62,26 +63,29 @@ export function ExamPageShell({
   aside?: ReactNode;
   nextStepsTitle: string;
   nextSteps: NextStep[];
+  /** A slimmer header for tool pages (e.g. a mind map) so the tool starts above the fold. */
+  compact?: boolean;
   children: ReactNode;
 }) {
   return (
     <main>
       {nav}
       <header className="bg-background">
-        <div className="mx-auto max-w-page px-4 pt-6 pb-8 sm:px-6 lg:px-8">
+        <div className={compact ? 'mx-auto max-w-page px-4 pt-4 pb-4 sm:px-6 lg:px-8' : 'mx-auto max-w-page px-4 pt-6 pb-8 sm:px-6 lg:px-8'}>
           <Breadcrumbs items={crumbs} />
-          <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
+          <div className={compact ? 'mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between' : 'mt-6 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between'}>
+            <div className={compact ? 'max-w-4xl' : 'max-w-3xl'}>
               {eyebrow && <p className="text-label-caps uppercase tracking-wider text-primary">{eyebrow}</p>}
-              <h1 className="text-headline-xl mt-1 text-foreground max-sm:text-[2rem] max-sm:leading-10">{title}</h1>
-              <div className="text-body-lg mt-3 text-muted-foreground">{intro}</div>
+              <h1 className={compact ? 'mt-1 text-2xl leading-tight font-bold tracking-tight text-foreground sm:text-[1.75rem]' : 'text-headline-xl mt-1 text-foreground max-sm:text-[2rem] max-sm:leading-10'}>{title}</h1>
+              {/* Compact: the full intro stays in the page (for readers and search engines), shown in two lines. */}
+              <div className={compact ? 'text-body-sm mt-1.5 line-clamp-2 text-muted-foreground' : 'text-body-lg mt-3 text-muted-foreground'}>{intro}</div>
             </div>
             {aside}
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-page space-y-12 px-4 pb-14 sm:px-6 lg:px-8">{children}</div>
+      <div className={compact ? 'mx-auto max-w-page space-y-12 px-2 pb-14 sm:px-6 lg:px-8' : 'mx-auto max-w-page space-y-12 px-4 pb-14 sm:px-6 lg:px-8'}>{children}</div>
 
       {nextSteps.length > 0 && (
         <section aria-labelledby="next-steps" className="border-t border-border bg-surface-container-lowest">

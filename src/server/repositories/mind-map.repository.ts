@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { curriculumNodes, exams, mindMapNodes, mindMaps, users } from '@/server/db/schema';
-import type { FlatMindMapNode, MindMapSnapshot, MindMapStatus } from '@/lib/mind-maps';
+import { curriculumNodes, exams, mindMapNodes, mindMaps, mindMapVersions, users } from '@/server/db/schema';
+import { countNodes, type FlatMindMapNode, type MindMapSnapshot, type MindMapStatus } from '@/lib/mind-maps';
 import type { SaveMindMapInput } from '@/schemas/mind-map.schema';
 
 export type MindMapRow = typeof mindMaps.$inferSelect;
@@ -140,15 +140,57 @@ async function saveDraft(id: string, input: SaveMindMapInput, updatedBy: string 
 
 async function setStatus(id: string, status: MindMapStatus, updatedBy: string | null, snapshot?: MindMapSnapshot) {
   const at = now();
-  await db
-    .update(mindMaps)
-    .set({
-      status,
-      updatedBy,
-      // Publishing stamps updatedAt == publishedAt, so "pending changes" starts clean.
-      ...(snapshot ? { publishedSnapshot: snapshot, publishedAt: at, updatedAt: at } : {}),
+  await db.transaction(async (tx) => {
+    await tx
+      .update(mindMaps)
+      .set({
+        status,
+        updatedBy,
+        // Publishing stamps updatedAt == publishedAt, so "pending changes" starts clean.
+        ...(snapshot ? { publishedSnapshot: snapshot, publishedAt: at, updatedAt: at } : {}),
+      })
+      .where(eq(mindMaps.id, id));
+    if (!snapshot) return;
+    // Keep every published version (history / restore).
+    const [last] = await tx
+      .select({ version: sql<number>`coalesce(max(${mindMapVersions.version}), 0)` })
+      .from(mindMapVersions)
+      .where(eq(mindMapVersions.mindMapId, id));
+    await tx.insert(mindMapVersions).values({
+      mindMapId: id,
+      version: Number(last?.version ?? 0) + 1,
+      snapshot,
+      nodeCount: countNodes(snapshot.nodes),
+      publishedBy: updatedBy,
+      publishedAt: at,
+    });
+  });
+}
+
+/** Published versions, newest first (without the snapshot JSON). */
+async function listVersions(mindMapId: string) {
+  return db
+    .select({
+      id: mindMapVersions.id,
+      version: mindMapVersions.version,
+      nodeCount: mindMapVersions.nodeCount,
+      publishedAt: mindMapVersions.publishedAt,
+      publishedBy: users.name,
     })
-    .where(eq(mindMaps.id, id));
+    .from(mindMapVersions)
+    .leftJoin(users, eq(users.id, mindMapVersions.publishedBy))
+    .where(eq(mindMapVersions.mindMapId, mindMapId))
+    .orderBy(desc(mindMapVersions.version))
+    .limit(100);
+}
+
+async function findVersion(mindMapId: string, versionId: string) {
+  const [row] = await db
+    .select({ version: mindMapVersions.version, snapshot: mindMapVersions.snapshot, publishedAt: mindMapVersions.publishedAt })
+    .from(mindMapVersions)
+    .where(and(eq(mindMapVersions.mindMapId, mindMapId), eq(mindMapVersions.id, versionId)))
+    .limit(1);
+  return row ?? null;
 }
 
 async function remove(id: string) {
@@ -205,6 +247,8 @@ export const mindMapRepository = {
   listAdmin,
   listChapterIds,
   findById,
+  listVersions,
+  findVersion,
   listNodes,
   create,
   saveDraft,

@@ -113,7 +113,7 @@ export async function getEditorData(id: string) {
   const exam = await taxonomyRepository.findExamById(map.examId);
   if (!exam) return null;
   const found = findChapter(await taxonomyRepository.getSyllabusTree(exam.id), map.chapterNodeId);
-  const nodes = await mindMapRepository.listNodes(id);
+  const [nodes, versions] = await Promise.all([mindMapRepository.listNodes(id), mindMapRepository.listVersions(id)]);
   const tree = buildTree(nodes);
   return {
     map: { ...map, publishedSnapshot: undefined },
@@ -126,6 +126,8 @@ export async function getEditorData(id: string) {
     publishedNodes: map.publishedSnapshot?.nodes ?? null,
     diff: diffMindMaps(map.publishedSnapshot?.nodes ?? null, tree),
     publicPath: found ? `/exams/${exam.slug}/mind-maps/${subjectSegment(found.subject.slug)}/${found.chapter.slug}` : null,
+    /** Published versions, newest first (snapshots fetched on demand). */
+    versions,
   };
 }
 

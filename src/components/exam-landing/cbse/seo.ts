@@ -7,14 +7,21 @@ import { SITE_NAME, SITE_URL } from '@/lib/site-config';
 
 const OG_IMAGE = { url: '/logo.svg', width: 512, height: 512, alt: SITE_NAME };
 
-export function cbseMeta(path: string, title: string, description: string, opts: { noindex?: boolean; type?: 'website' | 'article' } = {}): Metadata {
+export function cbseMeta(
+  path: string,
+  title: string,
+  description: string,
+  opts: { noindex?: boolean; type?: 'website' | 'article'; image?: { url: string; alt: string } } = {},
+): Metadata {
+  // A page-specific 1200×630 image gets the large preview card; otherwise the shared logo.
+  const image = opts.image ? { url: opts.image.url, width: 1200, height: 630, alt: opts.image.alt } : null;
   return {
     title,
     description,
     alternates: { canonical: path },
     // openGraph replaces the root layout's object wholesale, so repeat the shared image.
-    openGraph: { title, description, url: path, type: opts.type ?? 'website', siteName: SITE_NAME, images: [OG_IMAGE] },
-    twitter: { card: 'summary', title, description },
+    openGraph: { title, description, url: path, type: opts.type ?? 'website', siteName: SITE_NAME, images: [image ?? OG_IMAGE] },
+    twitter: image ? { card: 'summary_large_image', title, description, images: [image.url] } : { card: 'summary', title, description },
     ...(opts.noindex ? { robots: { index: false, follow: true } } : {}),
   };
 }

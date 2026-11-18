@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 // styles and large-map layout without creating anything in the database.
 export function SamplesClient() {
   const [sampleId, setSampleId] = useState<string>(MIND_MAP_SAMPLES[0].id);
-  const [theme, setTheme] = useState<MindMapTheme>('CLASSIC');
+  const [theme, setTheme] = useState<MindMapTheme>('COLOUR');
   const sample = MIND_MAP_SAMPLES.find((s) => s.id === sampleId) ?? MIND_MAP_SAMPLES[0];
 
   return (
@@ -39,8 +39,8 @@ export function SamplesClient() {
           </button>
         ))}
         <select value={theme} onChange={(e) => setTheme(e.target.value as MindMapTheme)} className="ml-auto h-9 rounded-md border border-input bg-background px-2 text-sm" aria-label="Default style">
-          <option value="CLASSIC">Classic print</option>
           <option value="COLOUR">Colour branches</option>
+          <option value="CLASSIC">Classic print</option>
         </select>
       </div>
 

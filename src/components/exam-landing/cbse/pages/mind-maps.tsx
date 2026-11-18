@@ -207,6 +207,7 @@ function ChapterPage({ board, data }: { board: CbseBoard; data: ChapterMindMap }
       eyebrow={`CBSE · ${c} · ${subject}`}
       title={title}
       intro={intro}
+      compact
     >
       <section id={MIND_MAP_ANCHOR} aria-label={`${data.chapter.name} interactive mind map`} className="scroll-mt-32">
         <MindMap
@@ -218,6 +219,8 @@ function ChapterPage({ board, data }: { board: CbseBoard; data: ChapterMindMap }
           shareUrl={absoluteUrl(path)}
           focusIndex={data.focusIndex}
           theme={data.snapshot.theme}
+          size="tall"
+          membersOnly
         />
         <p className="mt-2 text-xs text-muted-foreground">Tap a topic to open it and see its practice questions. Use Quiz me to test your recall.</p>
       </section>
@@ -421,7 +424,13 @@ export function mindMapSubpage(board: CbseBoard, rest: string[]): ExamSubpage | 
           data.snapshot.seoTitle ?? `${c} ${subject} ${data.chapter.name} Mind Map`,
           data.snapshot.seoDescription ??
             clip(`Explore the ${label} ${subject} ${data.chapter.name} mind map. Understand ${listFormat.format(topics.slice(0, 4))}${topics.length > 4 ? ' and more' : ''} through an interactive diagram, quick revision and practice questions.`, 160),
-          { type: 'article' },
+          {
+            type: 'article',
+            image: {
+              url: `/api/og/mind-map?${new URLSearchParams({ chapter: data.chapter.name, subject, eyebrow: `CBSE ${c}`, topics: topics.slice(0, 6).join('|') })}`,
+              alt: `${data.chapter.name} mind map: ${listFormat.format(topics.slice(0, 4))}`,
+            },
+          },
         );
       },
       render: async (exam) => {
