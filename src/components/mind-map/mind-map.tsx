@@ -14,6 +14,14 @@ import {
   CheckCircle2,
   Eye,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Flame,
+  GraduationCap,
+  Layers,
+  Presentation,
+  Star,
   ChevronUp,
   Crosshair,
   FileDown,
@@ -40,7 +48,12 @@ import {
 import { cn } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
 import { MIND_MAP_FOCUS_PARAM, type MindMapTheme, type MindMapTreeNode } from '@/lib/mind-maps';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { buildFlashcards, generateQuestions, presentationOrder } from '@/lib/mind-map-study';
+import { dayNumber, isDue, masteryLevel, masteryScore, type MasteryLevel } from '@/lib/spaced-repetition';
+import { useStudyState } from './study-store';
+import { Flashcards } from './flashcards';
+import { PracticeTest } from './practice-test';
 import { SIZES, TYPE, typeFor, branchBounds, expandableIds, fitView, layoutMindMap, layoutVertical, quizTargets, searchTree, subtreeIds, subtreeProgress, topicOf, type LaidOutNode } from './layout';
 import { Confetti } from './confetti';
 import { ProgressRing } from './progress-ring';
@@ -215,8 +228,22 @@ const SHORTCUTS: [string, string][] = [
   ['+  −', 'Zoom in / out'],
   ['← → ↑ ↓', 'Move between topics'],
   ['Esc', 'Close the panel'],
+  ['P', 'Present step by step'],
+  ['→  ←', 'Next / previous step (presenting)'],
+  ['M', 'Mastery heatmap'],
+  ['S', 'Star the selected node'],
   ['?', 'Show these shortcuts'],
 ];
+
+/** Mastery heatmap: red (weak) → amber (learning) → green (strong); never-reviewed stays plain. */
+const MASTERY_CLASSES: Record<MasteryLevel, string> = {
+  new: 'border-neutral-300 bg-background text-muted-foreground dark:border-neutral-600',
+  weak: 'border-red-500 bg-red-50 text-red-950 dark:bg-red-950/60 dark:text-red-50',
+  learning: 'border-amber-500 bg-amber-50 text-amber-950 dark:bg-amber-950/60 dark:text-amber-50',
+  strong: 'border-emerald-500 bg-emerald-50 text-emerald-950 dark:bg-emerald-950/60 dark:text-emerald-50',
+};
+const MASTERY_DOTS: Record<MasteryLevel, string> = { new: 'bg-neutral-300', weak: 'bg-red-500', learning: 'bg-amber-500', strong: 'bg-emerald-500' };
+const MASTERY_LABELS: Record<MasteryLevel, string> = { new: 'Not reviewed', weak: 'Weak', learning: 'Learning', strong: 'Strong' };
 
 const scrollBehavior = (): ScrollBehavior => (window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
 
@@ -233,6 +260,8 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
   const viewportRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef(new Map<string, HTMLButtonElement>());
   const searchRef = useRef<HTMLInputElement>(null);
+  /** Focused topic, readable from event handlers declared before it is computed. */
+  const activeTopicIdRef = useRef<string | null>(null);
 
   // The container's width picks the presentation: a vertical tree on phones (no panning or
   // pinching — it scrolls like a list), the radial canvas on tablets and laptops.
@@ -357,6 +386,26 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
   const targets = useMemo(() => quizTargets(nodes), [nodes]);
   const targetSet = useMemo(() => new Set(targets), [targets]);
   const isHidden = (id: string) => quiz && targetSet.has(id) && !revealed.has(id);
+
+  // ── Study tools: flashcards, practice test, presentation, mastery heatmap, stars ──
+  const study = useStudyState(storageKey);
+  const [today] = useState(dayNumber);
+  const [heatmap, setHeatmap] = useState(false);
+  const [starredOnly, setStarredOnly] = useState(false);
+  const [deck, setDeck] = useState<{ kind: 'cards' | 'test'; scopeId: string | null; starred: boolean; seed: number } | null>(null);
+  const [present, setPresent] = useState<number | null>(null);
+  const order = useMemo(() => presentationOrder(nodes), [nodes]);
+  const orderIndex = useMemo(() => new Map(order.map((step, i) => [step.id, i])), [order]);
+  const allCards = useMemo(() => buildFlashcards(nodes), [nodes]);
+  const dueCount = allCards.filter((c) => study.state.cards[c.id] && isDue(study.state.cards[c.id], today)).length;
+  const starredCount = [...study.state.starred].filter((id) => orderIndex.has(id)).length;
+  const masteryOf = (id: string) => masteryLevel(masteryScore(study.state.cards[id]));
+  /** Presenting: nodes of the current topic not yet reached stay invisible (space reserved). */
+  const presentHidden = (id: string) => {
+    if (present === null) return false;
+    const i = orderIndex.get(id);
+    return i !== undefined && i > present && order[i].topicId === order[present]?.topicId;
+  };
 
   // ── Analytics (each fires once per occurrence) ──
   const viewedSent = useRef(false);
@@ -548,6 +597,65 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
     setSheetOpen(true);
   };
 
+  // Starred nodes plus their ancestors (kept visible when filtering to starred).
+  const starVisible = useMemo(() => {
+    const out = new Set<string>();
+    for (const id of study.state.starred) for (let p: string | null = id; p; p = index.get(p)?.parentId ?? null) out.add(p);
+    return out;
+  }, [study.state.starred, index]);
+
+  const toggleStarredOnly = () => {
+    const on = !starredOnly;
+    setStarredOnly(on);
+    if (on) setExpanded((prev) => new Set([...prev, ...[...starVisible].filter((id) => (index.get(id)?.node.children.length ?? 0) > 0)]));
+  };
+  const toggleHeatmap = () => {
+    setHeatmap((h) => !h);
+    if (analytics && !heatmap) trackEvent('mindmap_heatmap_viewed', analytics);
+  };
+  const toggleStar = (id: string) => {
+    const on = study.toggleStar(id);
+    if (analytics && on) trackEvent('mindmap_node_starred', analytics);
+  };
+
+  /** Flashcards or a practice test for the focused topic (or the chapter), optionally starred only. */
+  const openDeck = (kind: 'cards' | 'test') => {
+    const scopeId = activeTopicIdRef.current;
+    const roots = scopeId ? nodes.filter((r) => r.id === scopeId) : nodes;
+    const seed = Date.now() % 1_000_000_007;
+    const available =
+      kind === 'cards'
+        ? buildFlashcards(roots).filter((c) => !starredOnly || study.state.starred.has(c.id)).length
+        : generateQuestions(roots, { seed, count: 10 }).length;
+    if (available === 0) {
+      toast.info(kind === 'cards' ? (starredOnly ? 'Star some nodes first, or turn off “Starred only”.' : 'No flashcards in this part of the map yet.') : 'Not enough content here for a test — try the whole chapter.');
+      return;
+    }
+    setDeck({ kind, scopeId, starred: kind === 'cards' && starredOnly, seed });
+    if (analytics) trackEvent(kind === 'cards' ? 'mindmap_flashcards_started' : 'mindmap_test_started', { ...analytics, scope: scopeId ? 'topic' : 'chapter' });
+  };
+
+  /** Present step by step: one topic at a time, its points revealed in order. */
+  const goToStep = (i: number) => {
+    const step = order[Math.max(0, Math.min(order.length - 1, i))];
+    if (!step) return;
+    const at = orderIndex.get(step.id)!;
+    if (present === null || order[present]?.topicId !== step.topicId) focusBranch(step.topicId);
+    setPresent(at);
+    setSelectedId(step.id);
+    if (storageKey) markExplored(storageKey, step.id);
+  };
+  const startPresent = () => {
+    if (quiz) exitQuiz();
+    onQueryChange('');
+    goToStep(0);
+    if (analytics) trackEvent('mindmap_present_started', analytics);
+  };
+  const exitPresent = () => {
+    setPresent(null);
+    setSelectedId(null);
+  };
+
   const onNodeClick = (n: LaidOutNode) => {
     if (!tipDismissed) dismissTip();
     // In a quiz, the first tap on a hidden card reveals it.
@@ -592,6 +700,7 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
   };
 
   const startQuiz = () => {
+    setPresent(null);
     onQueryChange('');
     setRevealed(new Set());
     setSelectedId(null);
@@ -617,6 +726,7 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
     next.missed.delete(id);
     (knew ? next.knew : next.missed).add(id);
     writeQuiz(quizKey, next);
+    study.grade(id, knew ? 4 : 1, today);
     if (analytics) trackEvent('mindmap_quiz_answered', { ...analytics, result: knew ? 'knew' : 'missed' });
     const entry = index.get(id);
     const upcoming = entry?.siblings.find((s) => s.id !== id && targetSet.has(s.id) && !revealed.has(s.id));
@@ -802,7 +912,35 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
       const active = document.activeElement;
       const within = !!active && !!wrapperRef.current?.contains(active);
       if (!within && !(inView.current && (!active || active === document.body))) return;
+      if (deck) return; // the flashcard / test dialog handles its own keys
+      if (present !== null) {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+          e.preventDefault();
+          if (present < order.length - 1) goToStep(present + 1);
+          else exitPresent();
+          return;
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          e.preventDefault();
+          goToStep(present - 1);
+          return;
+        }
+        if (e.key === 'Escape') return exitPresent();
+      }
       switch (e.key) {
+        case 'p':
+        case 'P':
+          if (present === null) startPresent();
+          else exitPresent();
+          break;
+        case 'm':
+        case 'M':
+          toggleHeatmap();
+          break;
+        case 's':
+        case 'S':
+          if (selectedId) toggleStar(selectedId);
+          break;
         case '/':
           e.preventDefault();
           if (quiz) exitQuiz();
@@ -876,9 +1014,28 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
   const topicProgress = new Map(topicChips.map((t) => [t.id, t]));
   const openTopics = nodes.filter((r) => expanded.has(r.id));
   const activeTopicId = openTopics.length === 1 ? openTopics[0].id : null;
+  const activeTopic = activeTopicId ? index.get(activeTopicId)?.node : undefined;
+  useEffect(() => {
+    activeTopicIdRef.current = activeTopicId;
+  }, [activeTopicId]);
+  const deckRoots = deck?.scopeId ? nodes.filter((r) => r.id === deck.scopeId) : nodes;
+  const deckTitle = `${deck?.scopeId ? (index.get(deck.scopeId)?.node.label ?? title.chapter) : title.chapter}${deck?.starred ? ' · starred' : ''}`;
+  const masteryCounts = heatmap
+    ? [...orderIndex.keys()].reduce<Record<MasteryLevel, number>>((acc, id) => ((acc[masteryOf(id)] += 1), acc), { new: 0, weak: 0, learning: 0, strong: 0 })
+    : null;
+  const legend = masteryCounts ? (
+    <div data-mindmap-chrome className={cn('z-20 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-border bg-card/95 px-3 py-2 text-[11px] text-muted-foreground shadow-sm backdrop-blur', compact ? 'mx-3 mt-3' : 'absolute top-3 left-3')}>
+      <span className="font-semibold text-foreground">Mastery</span>
+      {(['weak', 'learning', 'strong', 'new'] as const).map((l) => (
+        <span key={l} className="flex items-center gap-1 tabular-nums">
+          <span className={cn('h-2.5 w-2.5 rounded-sm', MASTERY_DOTS[l])} aria-hidden /> {MASTERY_LABELS[l]} {masteryCounts[l]}
+        </span>
+      ))}
+    </div>
+  ) : null;
   const centreBox = layout.centre ?? { x: -SIZES.center.w / 2, y: -SIZES.center.h / 2, w: SIZES.center.w, h: SIZES.center.h };
   const answeredCount = knewCount + missedCount;
-  const showTip = !tipDismissed && !quiz && expanded.size === 0 && !selectedId;
+  const showTip = !tipDismissed && !quiz && present === null && expanded.size === 0 && !selectedId;
   const coach =
     quiz && expanded.size === 0 && !selectedId
       ? 'Pick a topic, recall its subtopics, then tap each card to check yourself.'
@@ -1006,7 +1163,25 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
                 {expanded.has(selected.node.id) ? 'Collapse' : 'Expand'} branch
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => toggleStar(selected.node.id)}
+              aria-pressed={study.state.starred.has(selected.node.id)}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium',
+                study.state.starred.has(selected.node.id) ? 'border-amber-400 bg-amber-400/15 text-amber-700 dark:text-amber-300' : 'border-border hover:border-primary/40',
+              )}
+            >
+              <Star className={cn('h-3.5 w-3.5', study.state.starred.has(selected.node.id) && 'fill-amber-400 text-amber-500')} /> {study.state.starred.has(selected.node.id) ? 'Starred' : 'Star for revision'}
+            </button>
           </div>
+          {study.state.cards[selected.node.id] && (
+            <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className={cn('h-2 w-2 rounded-full', MASTERY_DOTS[masteryOf(selected.node.id)])} aria-hidden />
+              Mastery: {MASTERY_LABELS[masteryOf(selected.node.id)]} · next review{' '}
+              {study.state.cards[selected.node.id].due <= today ? 'today' : `in ${study.state.cards[selected.node.id].due - today}d`}
+            </p>
+          )}
             </>
           )}
         </>
@@ -1124,6 +1299,47 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
                 <Brain className="h-4 w-4" /> Quiz me
               </button>
             )}
+            {!quiz && present === null && totalNodes > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Study tools${dueCount ? `, ${dueCount} flashcards due` : ''}`}
+                    className="flex h-9 items-center gap-1.5 rounded-full border border-primary/40 px-3 text-sm font-semibold text-primary hover:bg-primary/10 pointer-coarse:h-10"
+                  >
+                    <GraduationCap className="h-4 w-4" />
+                    <span className="hidden sm:inline">Study</span>
+                    {dueCount > 0 && <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 text-primary-foreground tabular-nums">{dueCount}</span>}
+                    <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72">
+                  <p className="px-2 py-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                    {activeTopic ? `Topic: ${activeTopic.label}` : 'Whole chapter'}
+                    {starredOnly ? ' · starred' : ''}
+                  </p>
+                  <DropdownMenuItem onSelect={() => openDeck('cards')}>
+                    <Layers className="h-4 w-4" /> Flashcards
+                    <span className="ml-auto text-xs text-muted-foreground tabular-nums">{dueCount ? `${dueCount} due` : `${allCards.length} cards`}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => openDeck('test')}>
+                    <ClipboardCheck className="h-4 w-4" /> Test yourself
+                    <span className="ml-auto text-xs text-muted-foreground">10 Qs</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={startPresent}>
+                    <Presentation className="h-4 w-4" /> Present step by step
+                    <span className="ml-auto text-xs text-muted-foreground">P</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem checked={heatmap} onCheckedChange={toggleHeatmap} onSelect={(e) => e.preventDefault()}>
+                    <Flame className="h-4 w-4" /> Mastery heatmap
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={starredOnly} disabled={starredCount === 0 && !starredOnly} onCheckedChange={toggleStarredOnly} onSelect={(e) => e.preventDefault()}>
+                    <Star className="h-4 w-4" /> Starred only ({starredCount})
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             {hasHindi && (
               <div role="group" aria-label="Language" className="flex rounded-full border border-border p-0.5 text-xs font-semibold">
                 {(['en', 'hi'] as const).map((l) => (
@@ -1192,6 +1408,7 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
 
       {/* Map area */}
       <div className={cn('relative', !compact && 'min-h-0 flex-1 overflow-hidden')}>
+        {legend}
         {compact && coach && (
           <div data-mindmap-chrome className="mx-3 mt-3 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm text-foreground">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
@@ -1246,7 +1463,7 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
                   fill="none"
                   strokeLinecap="round"
                   strokeWidth={l.depth === 1 ? 3.5 : l.depth === 2 ? 2 : 1.4}
-                  className={cn('mm-draw', paint(l.branch).stroke, l.depth > 2 && 'opacity-70', searching && !matchSet.has(l.id) && 'opacity-20', 'transition-opacity')}
+                  className={cn('mm-draw', paint(l.branch).stroke, l.depth > 2 && 'opacity-70', searching && !matchSet.has(l.id) && 'opacity-20', starredOnly && !starVisible.has(l.id) && 'opacity-20', presentHidden(l.id) && 'opacity-0', 'transition-opacity duration-300')}
                 />
               ))}
             </svg>
@@ -1280,6 +1497,9 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
             const isSelected = selectedId === n.id;
             const isMatch = matchSet.has(n.id);
             const hidden = isHidden(n.id);
+            const unseen = presentHidden(n.id);
+            const starred = study.state.starred.has(n.id);
+            const level = heatmap && !hidden ? masteryOf(n.id) : null;
             const quizMark = quiz && targetSet.has(n.id) ? (quizResults.knew.has(n.id) ? 'knew' : quizResults.missed.has(n.id) ? 'missed' : null) : null;
             const progress = n.depth === 1 && n.childCount > 0 ? topicProgress.get(n.id) : undefined;
             const showInfo = n.childCount > 0 && !hidden && !!(entry?.node.description || res?.practiceHref || res?.notesHref);
@@ -1290,7 +1510,8 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
               <div
                 key={n.id}
                 data-node
-                className="group absolute motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out"
+                className={cn('group absolute motion-safe:transition-[transform,opacity] motion-safe:duration-300 motion-safe:ease-out', unseen && 'pointer-events-none opacity-0')}
+                aria-hidden={unseen || undefined}
                 style={{ transform: `translate(${n.x}px, ${n.y}px)`, width: n.w, height: n.h }}
               >
                 <button
@@ -1319,6 +1540,9 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
                     isSelected && cn('ring-2 ring-offset-2 ring-offset-background', colour.ring),
                     isMatch && 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-background',
                     searching && !isMatch && 'opacity-40',
+                    starredOnly && !starVisible.has(n.id) && 'opacity-30',
+                    level && MASTERY_CLASSES[level],
+                    present !== null && isSelected && 'shadow-lg ring-4',
                     hidden && 'border-dashed',
                   )}
                   style={{ paddingInline: type.padX, paddingBlock: type.padY }}
@@ -1373,6 +1597,12 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
                     </span>
                   )}
                 </button>
+
+                {starred && (
+                  <span className={cn('pointer-events-none absolute -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-background shadow-sm', mirrored ? '-right-2' : '-left-2')} aria-label="Starred">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+                  </span>
+                )}
 
                 {/* Phones: branch details behind a small info button (tapping the row opens/closes it). */}
                 {compact && showInfo && (
@@ -1436,7 +1666,7 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
             )}
 
             {/* Details panel for the selected node */}
-            {detailsBody && (
+            {detailsBody && present === null && (
               <aside
                 data-mindmap-chrome
                 aria-label={`${selected!.node.label} details`}
@@ -1450,7 +1680,7 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
       </div>
 
       {/* Phones: details as a bottom sheet */}
-      {compact && sheetOpen && detailsBody && (
+      {compact && sheetOpen && detailsBody && present === null && (
         <>
           <div data-mindmap-chrome className="fixed inset-0 z-40 bg-black/30 motion-safe:animate-in motion-safe:fade-in" onClick={closeDetails} aria-hidden />
           <aside
@@ -1489,6 +1719,60 @@ export function MindMap({ title, nodes: sourceNodes, resources = {}, storageKey,
             </dl>
           </div>
         </div>
+      )}
+
+      {present !== null && (
+        <div data-mindmap-chrome className={cn('z-30 flex justify-center px-3', compact ? 'fixed inset-x-0 bottom-4' : 'absolute inset-x-0 bottom-3')}>
+          <div className="flex items-center gap-1 rounded-full border border-border bg-card/95 p-1 shadow-xl backdrop-blur" role="toolbar" aria-label="Presentation">
+            <button type="button" onClick={() => goToStep(present - 1)} disabled={present === 0} aria-label="Previous step" className="rounded-full p-2.5 hover:bg-muted disabled:opacity-30">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 px-2 text-center">
+              <p className="max-w-[40vw] truncate text-xs font-semibold text-foreground sm:max-w-xs">{index.get(order[present]?.topicId ?? '')?.node.label}</p>
+              <p className="text-[11px] text-muted-foreground tabular-nums" aria-live="polite">
+                Step {present + 1} of {order.length}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => (present < order.length - 1 ? goToStep(present + 1) : exitPresent())}
+              aria-label={present < order.length - 1 ? 'Next step' : 'Finish'}
+              className="rounded-full bg-primary p-2.5 text-primary-foreground hover:bg-primary/90"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={exitPresent} className="ml-1 rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted">
+              Exit
+            </button>
+          </div>
+        </div>
+      )}
+
+
+      {deck?.kind === 'cards' && (
+        <Flashcards
+          key={deck.seed}
+          title={deckTitle}
+          cards={buildFlashcards(deckRoots).filter((c) => !deck.starred || study.state.starred.has(c.id))}
+          progress={study.state.cards}
+          today={today}
+          onGrade={(id, g) => study.grade(id, g, today)}
+          onClose={() => setDeck(null)}
+        />
+      )}
+      {deck?.kind === 'test' && (
+        <PracticeTest
+          key={deck.seed}
+          title={deckTitle}
+          questions={generateQuestions(deckRoots, { seed: deck.seed, count: 10 })}
+          onAnswer={(q, correct) => study.grade(q.nodeId, correct ? 4 : 1, today)}
+          onFinish={(score, total) => {
+            if (score / total >= 0.8) celebrate();
+            if (analytics) trackEvent('mindmap_test_completed', { ...analytics, score, total });
+          }}
+          onRetry={() => setDeck((d) => d && { ...d, seed: d.seed + 1 })}
+          onClose={() => setDeck(null)}
+        />
       )}
 
       {confetti !== null && <Confetti key={confetti} />}
